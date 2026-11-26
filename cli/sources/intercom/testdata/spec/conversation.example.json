@@ -1,0 +1,232 @@
+{
+  "type": "conversation",
+  "id": "503",
+  "created_at": 1734537511,
+  "updated_at": 1734537511,
+  "waiting_since": null,
+  "snoozed_until": null,
+  "source": {
+    "type": "conversation",
+    "id": "403918334",
+    "delivered_as": "admin_initiated",
+    "subject": "",
+    "body": "<p>this is the message body</p>",
+    "author": {
+      "type": "admin",
+      "id": "991267645",
+      "name": "Ciaran176 Lee",
+      "email": "admin176@email.com"
+    },
+    "attachments": [],
+    "url": null,
+    "redacted": false
+  },
+  "contacts": {
+    "type": "contact.list",
+    "contacts": [
+      {
+        "type": "contact",
+        "id": "6762f1261bb69f9f2193bba7",
+        "email": "joe@example.com",
+        "external_id": "70"
+      }
+    ]
+  },
+  "first_contact_reply": null,
+  "admin_assignee_id": 991267715,
+  "team_assignee_id": 5017691,
+  "open": false,
+  "state": "closed",
+  "read": false,
+  "tags": {
+    "type": "tag.list",
+    "tags": [
+      {
+        "type": "tag",
+        "id": "123456",
+        "name": "Test tag",
+        "applied_at": 1663597223,
+        "applied_by": {
+          "type": "contact",
+          "id": "1a2b3c"
+        }
+      }
+    ]
+  },
+  "priority": "none",
+  "sla_applied": null,
+  "statistics": null,
+  "conversation_rating": null,
+  "teammates": null,
+  "title": null,
+  "custom_attributes": {},
+  "topics": {},
+  "ticket": null,
+  "linked_objects": {
+    "type": "list",
+    "data": [],
+    "total_count": 0,
+    "has_more": false
+  },
+  "ai_agent": null,
+  "ai_agent_participated": false,
+  "conversation_parts": {
+    "type": "conversation_part.list",
+    "conversation_parts": [
+      {
+        "type": "conversation_part",
+        "id": "1",
+        "part_type": "comment",
+        "body": "<p>Okay!</p>",
+        "created_at": 1663597223,
+        "updated_at": 1663597260,
+        "notified_at": 1663597260,
+        "assigned_to": null,
+        "author": {
+          "type": "admin",
+          "id": "274",
+          "name": "Operator",
+          "email": "operator+abcd1234@intercom.io"
+        },
+        "attachments": [],
+        "external_id": "abcd1234",
+        "redacted": false,
+        "email_message_metadata": null,
+        "state": "open",
+        "tags": [
+          {
+            "type": "tag",
+            "id": "123456",
+            "name": "Test tag"
+          }
+        ],
+        "event_details": null,
+        "app_package_code": null,
+        "translations": {
+          "original": "en",
+          "en": "<p>Okay!</p>",
+          "es": "<p>¡Vale!</p>"
+        }
+      },
+      {
+        "type": "conversation_part",
+        "id": "2",
+        "part_type": "custom_action_started",
+        "body": null,
+        "created_at": 1740141842,
+        "updated_at": 1740141842,
+        "notified_at": 1740141842,
+        "assigned_to": null,
+        "author": {
+          "type": "admin",
+          "id": "274",
+          "name": "Jamie Oliver",
+          "email": "jamie+abcd1234@intercom.io"
+        },
+        "attachments": [],
+        "external_id": null,
+        "redacted": false,
+        "email_message_metadata": null,
+        "state": "open",
+        "tags": [],
+        "event_details": {
+          "action": {
+            "name": "Jira Create Issue"
+          }
+        },
+        "app_package_code": "test-integration"
+      },
+      {
+        "type": "conversation_part",
+        "id": "3",
+        "part_type": "conversation_attribute_updated_by_admin",
+        "body": null,
+        "created_at": 1740141851,
+        "updated_at": 1740141851,
+        "notified_at": 1740141851,
+        "assigned_to": null,
+        "author": {
+          "type": "bot",
+          "id": "278",
+          "name": "Fin",
+          "email": "operator+abcd1234@intercom.io"
+        },
+        "attachments": [],
+        "external_id": null,
+        "redacted": false,
+        "email_message_metadata": null,
+        "state": "open",
+        "tags": [],
+        "event_details": {
+          "attribute": {
+            "name": "jira_issue_key"
+          },
+          "value": {
+            "name": "PROJ-007"
+          }
+        },
+        "app_package_code": null
+      },
+      {
+        "type": "conversation_part",
+        "id": "4",
+        "part_type": "custom_action_finished",
+        "body": null,
+        "created_at": 1740141857,
+        "updated_at": 1740141857,
+        "notified_at": 1740141857,
+        "assigned_to": null,
+        "author": {
+          "type": "admin",
+          "id": "274",
+          "name": "Jamie Oliver",
+          "email": "jamie+abcd1234@intercom.io"
+        },
+        "attachments": [],
+        "external_id": null,
+        "redacted": false,
+        "email_message_metadata": null,
+        "state": "closed",
+        "tags": [],
+        "event_details": {
+          "action": {
+            "name": "Jira Create Issue",
+            "result": "success"
+          }
+        },
+        "app_package_code": null
+      },
+      {
+        "type": "conversation_part",
+        "id": "7",
+        "part_type": "standalone_platform_handoff",
+        "body": null,
+        "created_at": 1740141910,
+        "updated_at": 1740141910,
+        "notified_at": 1740141910,
+        "assigned_to": null,
+        "author": {
+          "type": "bot",
+          "id": "278",
+          "name": "Fin",
+          "email": "operator+abcd1234@intercom.io"
+        },
+        "attachments": [],
+        "external_id": null,
+        "redacted": false,
+        "email_message_metadata": null,
+        "state": "closed",
+        "tags": [],
+        "event_details": {
+          "handoff": {
+            "type": "zendesk_ticket",
+            "success": true,
+            "data": {}
+          }
+        },
+        "app_package_code": null
+      }
+    ],
+    "total_count": 5
+  }
+}

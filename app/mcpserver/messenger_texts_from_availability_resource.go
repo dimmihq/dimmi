@@ -155,6 +155,8 @@ messengerTextsFromHelpIndex returns the texts from HelpIndex on.
 func messengerTextsFromHelpIndex() map[string]map[string]string {
 	return map[string]map[string]string{
 		"HelpIndex": {
+			"locale": "The language the articles are in, as a code such as fr, when the help center offers " +
+				"more than one. Ask for another with the locale parameter.",
 			"popular": "The slugs of up to five articles to feature first, taken from the start of the " +
 				"articles list.",
 			"url": "The address the help center's pages start at. Empty when the messenger links to no " +

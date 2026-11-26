@@ -7,9 +7,9 @@
 | chosen help center, a batch at a time, each document in its own
 | transaction so one bad article never stops the rest. Its place at the
 | source becomes collections, its pictures are copied so nothing points
-| back at the old tool, a translation lands in the help center of its
-| language when the workspace has one, and its old address redirects to
-| the new article. A document imported before updates its article
+| back at the old tool, a translation becomes the translation of the
+| article it translates, in the same help center, and its old address
+| redirects to the new article. A document imported before updates its article
 | instead of making another, and a document that did not change since is
 | left alone. Synced sources can be turned into articles the same way.
 |
@@ -118,20 +118,32 @@ func (e *Engine) Import(ctx context.Context, job *queue.Job[jobs.ImportKnowledge
 }
 
 /*
-importOne writes one document as an article in its own transaction.
+importOne writes one document as an article in its own transaction. A
+document translating another becomes that article's translation, as
+importTranslation says. The document is read again first, since
+importing a translation may have imported its source already.
 */
 func (e *Engine) importOne(ctx context.Context, s models.KnowledgeSource, doc models.KnowledgeDocument) error {
+	if doc.TranslationOf != nil {
+		return e.importTranslation(ctx, s, doc)
+	}
+
 	body := e.copyImages(ctx, doc)
 
 	return e.inWorkspace(ctx, s.WorkspaceID, func(ctx context.Context, tx *database.Tx, q *models.Queries) error {
-		center, ok, err := helpCenterFor(ctx, tx, s, doc)
+		fresh, err := q.FindKnowledgeDocument(ctx, models.FindKnowledgeDocumentParams{
+			WorkspaceID: doc.WorkspaceID, ID: doc.ID,
+		})
 		if err != nil {
-			return err
+			return fmt.Errorf("find document to import: %w", err)
 		}
 
-		if !ok {
-			return e.link(ctx, q, doc, nil)
+		if fresh.ImportedHash != nil && *fresh.ImportedHash == fresh.ContentHash {
+			return nil
 		}
+
+		doc.LinkedArticleID = fresh.LinkedArticleID
+		center := *s.HelpCenterID
 
 		collection, err := e.collectionsFor(ctx, tx, placeIn{ws: s.WorkspaceID, center: center}, doc)
 		if err != nil {
@@ -155,6 +167,102 @@ func (e *Engine) importOne(ctx context.Context, s models.KnowledgeSource, doc mo
 }
 
 /*
+importTranslation writes a document translating another as that
+article's translation into the document's language, importing the
+source first when it was not yet. The help center turns the language
+on. A translation whose source is gone, or whose language has no place
+in the help center, is skipped.
+*/
+func (e *Engine) importTranslation(ctx context.Context, s models.KnowledgeSource, doc models.KnowledgeDocument) error {
+	source, err := e.importedSourceOf(ctx, s, doc)
+	if err != nil {
+		return err
+	}
+
+	if source == nil || source.LinkedArticleID == nil {
+		return e.inWorkspace(ctx, s.WorkspaceID, func(ctx context.Context, _ *database.Tx, q *models.Queries) error {
+			return e.link(ctx, q, doc, nil)
+		})
+	}
+
+	body := e.copyImages(ctx, doc)
+	article := *source.LinkedArticleID
+
+	return e.inWorkspace(ctx, s.WorkspaceID, func(ctx context.Context, tx *database.Tx, q *models.Queries) error {
+		locale, err := e.Articles.ImportTranslation(ctx, tx, helpcenters.ImportTranslationInput{
+			WorkspaceID: s.WorkspaceID, ArticleID: article, Locale: doc.Locale, Title: doc.Title, Body: body,
+			Publish: !doc.Draft,
+		})
+		if errors.Is(err, helpcenters.ErrArticleNotFound) {
+			return e.link(ctx, q, doc, nil)
+		}
+
+		if err != nil {
+			return fmt.Errorf("import translation %s: %w", doc.ExternalID, err)
+		}
+
+		art, err := q.FindArticle(ctx, models.FindArticleParams{WorkspaceID: s.WorkspaceID, ID: article})
+		if err != nil {
+			return fmt.Errorf("find translated article: %w", err)
+		}
+
+		if err := e.Articles.ImportTranslationRedirect(ctx, tx, helpcenters.ImportedTranslation{
+			Article: art, Locale: locale, FromPath: oldPath(deref(doc.Url)),
+		}); err != nil {
+			return err
+		}
+
+		return e.link(ctx, q, doc, nil)
+	})
+}
+
+/*
+importedSourceOf returns the document a translation translates, imported
+first when it was not yet, nil when the source has none by that id.
+*/
+func (e *Engine) importedSourceOf(ctx context.Context, s models.KnowledgeSource, doc models.KnowledgeDocument,
+) (*models.KnowledgeDocument, error) {
+	source, err := e.sourceOf(ctx, s, doc)
+	if err != nil || source == nil || source.LinkedArticleID != nil || source.Status != "active" {
+		return source, err
+	}
+
+	if err := e.importOne(ctx, s, *source); err != nil {
+		return nil, err
+	}
+
+	return e.sourceOf(ctx, s, doc)
+}
+
+/*
+sourceOf returns the document a translation translates, nil when the
+source has none by that id.
+*/
+func (e *Engine) sourceOf(ctx context.Context, s models.KnowledgeSource, doc models.KnowledgeDocument,
+) (*models.KnowledgeDocument, error) {
+	var out *models.KnowledgeDocument
+
+	err := e.inWorkspace(ctx, s.WorkspaceID, func(ctx context.Context, _ *database.Tx, q *models.Queries) error {
+		found, err := q.FindKnowledgeDocumentByExternalID(ctx, models.FindKnowledgeDocumentByExternalIDParams{
+			WorkspaceID: s.WorkspaceID, SourceID: s.ID, ExternalID: *doc.TranslationOf,
+		})
+		if errors.Is(err, database.ErrNotFound) {
+			return nil
+		}
+
+		if err != nil {
+			return fmt.Errorf("find translated document: %w", err)
+		}
+
+		out = &found
+
+		return nil
+	})
+
+	return out, err
+}
+
+/*
 link records the article a document became, and that its current text
 was imported.
 */
@@ -167,44 +275,6 @@ func (e *Engine) link(ctx context.Context, q *models.Queries, doc models.Knowled
 		ArticleID: article, ImportedHash: &doc.ContentHash, Now: e.Clock.Now(), WorkspaceID: doc.WorkspaceID,
 		ID: doc.ID,
 	}))
-}
-
-/*
-helpCenterFor picks the help center a document goes to: the source's,
-unless the document is in another language a help center of the
-workspace is written in. A translation with no help center of its
-language is skipped.
-*/
-func helpCenterFor(ctx context.Context, tx *database.Tx, s models.KnowledgeSource, doc models.KnowledgeDocument,
-) (ids.UUID, bool, error) {
-	target := *s.HelpCenterID
-
-	locales, err := helpcenters.HelpCenterLocales(ctx, tx, s.WorkspaceID)
-	if err != nil {
-		return target, false, err
-	}
-
-	want := baseLocale(doc.Locale)
-	if want == "" || baseLocale(locales[target]) == want {
-		return target, true, nil
-	}
-
-	for id, locale := range locales {
-		if baseLocale(locale) == want {
-			return id, true, nil
-		}
-	}
-
-	return target, doc.TranslationOf == nil, nil
-}
-
-/*
-baseLocale is a locale's language, lowercase: "en-US" reads "en".
-*/
-func baseLocale(locale string) string {
-	lang, _, _ := strings.Cut(strings.ToLower(strings.ReplaceAll(locale, "_", "-")), "-")
-
-	return lang
 }
 
 /*

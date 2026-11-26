@@ -15,6 +15,7 @@ import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useEasing } from "@/features/shell/use-easing";
 import { useWide } from "@/features/shell/use-wide";
 import type { Article } from "@/lib/api/help-centers";
+import type { ArticleTranslation } from "@/lib/api/translations";
 import { cx } from "@/utils/cx";
 
 import { ReaderFeedback } from "./reader-feedback";
@@ -38,9 +39,11 @@ const visible = { overflow: "visible" } as const;
 export function useHistoryPane(
   workspace: string,
   article: string,
-  onRestored: (article: Article) => void,
+  onRestored: (restored: Article | ArticleTranslation) => void,
   /* Operator's panel for this article, drawn when the pane shows it. */
   operator?: (className: string, close: () => void) => ReactNode,
+  /* The language of the translation being edited, none for the source. */
+  locale?: string,
 ) {
   const wide = useWide(1024);
   const sides = useSidePanes(
@@ -72,6 +75,7 @@ export function useHistoryPane(
       <VersionHistory
         workspace={workspace}
         article={article}
+        locale={locale}
         onRestored={onRestored}
         onClose={close}
         className={className}

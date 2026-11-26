@@ -99,6 +99,7 @@ type site struct {
 	snap    helpcenters.Snapshot
 	search  func(query string) []models.SearchPublishedArticlesRow
 	updates []helpcenter.Update
+	at      pageAt
 }
 
 /*
@@ -107,7 +108,7 @@ anyone.
 */
 func newSite(ctx context.Context, public *helpcenters.Public, snap helpcenters.Snapshot, reader *ids.UUID) *site {
 	return &site{snap: snap, search: func(query string) []models.SearchPublishedArticlesRow {
-		find := helpcenters.Find{Center: snap.HelpCenter, Query: query, Limit: 20, Reader: reader}
+		find := helpcenters.Find{Center: snap.HelpCenter, Locale: snap.Locale, Query: query, Limit: 20, Reader: reader}
 		rows, err := public.Search(ctx, find)
 		if err != nil {
 			return nil
@@ -117,18 +118,26 @@ func newSite(ctx context.Context, public *helpcenters.Public, snap helpcenters.S
 }
 
 /*
-centerOf is the page frame of a help center served under the base.
+centerOf is the page frame of a help center served under the base, with
+the workspace's square logo as its mark, addressed on the app so every
+host can load it.
 */
-func centerOf(h models.HelpCenter, base string) helpcenter.Center {
+func (c *HelpCenterController) centerOf(snap helpcenters.Snapshot, base string) helpcenter.Center {
+	h := snap.HelpCenter
 	s := helpcenters.SettingsOf(h)
 	brand := s.PrimaryColor
 	if brand == "" {
 		brand = "#10b981"
 	}
-	return helpcenter.Center{
-		Name: h.Name, Product: h.Name, Base: base, Brand: brand, Tagline: s.HomeSubtitle, ContactURL: s.ContactURL,
+	center := helpcenter.Center{
+		Lang: c.Lang, Name: h.Name, Product: h.Name, Base: base, Brand: brand, Tagline: s.HomeSubtitle,
+		ContactURL: s.ContactURL,
 		Appearance: s.Appearance, HomeTitle: s.HomeTitle, FooterText: s.FooterText, NoIndex: !h.IndexingEnabled,
 	}
+	if snap.Logo != "" {
+		center.Mark = strings.TrimSuffix(c.AppURL, "/") + "/" + snap.Logo
+	}
+	return center
 }
 
 /*
@@ -189,6 +198,10 @@ func (s *site) Article(_ helpcenter.Center, slug string) (helpcenter.Article, bo
 		Summary: s.summary(a), Trail: s.trail(a.CollectionID), Body: a.BodyHtml, Contents: contents(a.Toc),
 		Author: authorOf(a), Updated: a.VersionCreatedAt,
 		Minutes: max(1, len(strings.Fields(a.BodyMarkdown))/wordsPerMinute),
+	}
+	if s.snap.Originals[a.ID] {
+		page.Untranslated = helpcenters.LanguageOf(s.snap.Locale).Native
+		page.OriginalLang = s.snap.HelpCenter.Locale
 	}
 	siblings := s.in(a.CollectionID)
 	i := indexOf(siblings, a.ID)
@@ -307,6 +320,39 @@ func (s *site) find(slug string) int {
 		}
 	}
 	return -1
+}
+
+/*
+articleIn gives the path of the article with the slug in each language
+it is published in.
+*/
+func (s *site) articleIn(slug string) pageIn {
+	at := s.find(slug)
+	if at < 0 {
+		return func(string) (string, bool) { return "", false }
+	}
+	slugs := s.snap.Alternates.Article(s.snap.Articles[at].ID)
+	return func(locale string) (string, bool) {
+		other, ok := slugs[locale]
+		return "/articles/" + other, ok
+	}
+}
+
+/*
+collectionIn gives the path of the collection with the slug in each
+language it shows in.
+*/
+func (s *site) collectionIn(slug string) pageIn {
+	for _, c := range s.snap.Collections {
+		if c.Slug == slug {
+			slugs := s.snap.Alternates.Collection(c.ID)
+			return func(locale string) (string, bool) {
+				other, ok := slugs[locale]
+				return "/collections/" + other, ok
+			}
+		}
+	}
+	return func(string) (string, bool) { return "", false }
 }
 
 func indexOf(rows []models.ListPublishedArticlesRow, id ids.UUID) int {

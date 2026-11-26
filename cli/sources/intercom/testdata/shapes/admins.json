@@ -1,0 +1,35 @@
+{
+  "admins": [
+    {
+      "away_mode_enabled": false,
+      "away_mode_reassign": false,
+      "email": "\u003cstring\u003e",
+      "has_inbox_seat": true,
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "team_ids": [
+        0,
+        0
+      ],
+      "team_priority_level": {
+        "primary_team_ids": [
+          0,
+          0
+        ]
+      },
+      "type": "admin"
+    },
+    {
+      "away_mode_enabled": false,
+      "away_mode_reassign": false,
+      "email": "\u003cstring\u003e",
+      "has_inbox_seat": false,
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "team_ids": [],
+      "team_priority_level": {},
+      "type": "admin"
+    }
+  ],
+  "type": "admin.list"
+}

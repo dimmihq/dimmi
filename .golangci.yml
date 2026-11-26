@@ -347,6 +347,19 @@ linters:
           allow:
             - "os$"
             - github.com/dimmihq/dimmi/bootstrap
+            - github.com/dimmihq/dimmi/cli$
+
+        # The dimmi CLI runs on customers' machines and talks to dimmi over
+        # its public API only, so it never reaches into the server's code.
+        cli:
+          list-mode: lax
+          files:
+            - "**/cli/**/*.go"
+          deny:
+            - pkg: github.com/dimmihq/dimmi/app
+              desc: "the CLI uses dimmi's public API, not the server's packages"
+            - pkg: github.com/dimmihq/dimmi/bootstrap
+              desc: "the CLI uses dimmi's public API, not the server's packages"
 
         # ---------------- adapter zone: one SDK per dir ----------------
         adapter-llm-openai:
@@ -617,6 +630,13 @@ linters:
       - path: '_test\.go$'
         linters: [forbidigo]
         text: '\[ctx\]'
+      # The dimmi CLI runs on customers' machines, apart from the server:
+      # it prints to its terminal, owns its process's context, keeps time
+      # with the system clock and calls dimmi and other tools with
+      # net/http through its own rate limiter.
+      - path: '^cli/'
+        linters: [forbidigo]
+        text: '\[ctx\]|\[print\]|\[clock\]|\[httpclient\]'
       - path: ^framework/
         linters: [forbidigo]
         text: '\[panic\]'

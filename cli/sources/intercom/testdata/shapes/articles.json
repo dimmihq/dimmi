@@ -1,0 +1,45 @@
+{
+  "data": [
+    {
+      "ai_chatbot_availability": true,
+      "ai_copilot_availability": true,
+      "ai_sales_agent_availability": true,
+      "audience_ids": [],
+      "author_id": 0,
+      "body": "\u003chtml\u003e",
+      "body_markdown": "\u003cstring\u003e",
+      "content_id": "\u003cstring\u003e",
+      "created_at": 0,
+      "created_by_id": 0,
+      "description": "\u003cstring\u003e",
+      "draft_updated_at": null,
+      "exclude_from_article_suggestions": false,
+      "folder_id": 0,
+      "has_unpublished_changes": false,
+      "help_center_audience": "everyone",
+      "id": "\u003cstring\u003e",
+      "parent_ids": [],
+      "scheduled_publish_at": null,
+      "scheduled_unpublish_at": null,
+      "state": "draft",
+      "tags": {
+        "tags": [],
+        "type": "tag.list"
+      },
+      "title": "\u003cstring\u003e",
+      "type": "article",
+      "updated_at": 0,
+      "updated_by_id": 0,
+      "url": null,
+      "workspace_id": "\u003cstring\u003e"
+    }
+  ],
+  "pages": {
+    "page": 0,
+    "per_page": 0,
+    "total_pages": 0,
+    "type": "pages"
+  },
+  "total_count": 0,
+  "type": "list"
+}

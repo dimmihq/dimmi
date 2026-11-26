@@ -1,0 +1,217 @@
+{
+  "type": "list",
+  "pages": {
+    "type": "pages",
+    "page": 1700000231,
+    "next": "https://example.com/x",
+    "prev": "https://example.com/x",
+    "per_page": 1700000232,
+    "total_pages": 1700000233
+  },
+  "total_count": 1700000234,
+  "data": [
+    {
+      "type": "collection",
+      "id": "235",
+      "workspace_id": "236",
+      "name": "text name",
+      "description": "text description",
+      "created_at": 1700000237,
+      "updated_at": 1700000238,
+      "url": "text url",
+      "icon": "text icon",
+      "order": 1700000239,
+      "default_locale": "text default_locale",
+      "translated_content": {
+        "type": "group_translated_content",
+        "ar": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "bg": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "bs": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "ca": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "cs": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "da": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "de": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "el": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "en": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "es": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "et": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "fi": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "fr": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "he": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "hr": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "hu": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "id": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "it": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "ja": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "ko": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "lt": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "lv": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "mn": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "nb": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "nl": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "pl": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "pt": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "ro": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "ru": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "sl": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "sr": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "sv": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "tr": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "vi": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "pt-BR": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "zh-CN": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        },
+        "zh-TW": {
+          "type": "group_content",
+          "name": "text name",
+          "description": "text description"
+        }
+      },
+      "parent_id": "240",
+      "help_center_id": 1700000241
+    }
+  ]
+}

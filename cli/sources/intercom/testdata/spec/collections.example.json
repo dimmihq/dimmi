@@ -1,0 +1,40 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "id": "159",
+      "type": "collection",
+      "workspace_id": "this_is_an_id96_that_should_be_at_least_4",
+      "name": "English collection title",
+      "url": "http://help-center.test/myapp-96/en/collections/159-english-collection-title",
+      "order": 17,
+      "created_at": 1734537309,
+      "updated_at": 1734537309,
+      "description": "english collection description",
+      "icon": "bookmark",
+      "parent_id": null,
+      "help_center_id": 79
+    },
+    {
+      "id": "160",
+      "type": "collection",
+      "workspace_id": "this_is_an_id96_that_should_be_at_least_4",
+      "name": "English section title",
+      "url": "http://help-center.test/myapp-96/en/collections/160-english-section-title",
+      "order": 1,
+      "created_at": 1734537309,
+      "updated_at": 1734537309,
+      "description": null,
+      "icon": "bookmark",
+      "parent_id": "159",
+      "help_center_id": null
+    }
+  ],
+  "total_count": 2,
+  "pages": {
+    "type": "pages",
+    "page": 1,
+    "per_page": 20,
+    "total_pages": 1
+  }
+}

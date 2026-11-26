@@ -1,0 +1,54 @@
+{
+  "type": "text type",
+  "data": [
+    {
+      "type": "text type",
+      "id": "216",
+      "category": "Customer",
+      "name": "text name",
+      "description": "text description",
+      "icon": "text icon",
+      "workspace_id": "217",
+      "ticket_type_attributes": {
+        "type": "text type",
+        "data": [
+          {
+            "type": "text type",
+            "id": "218",
+            "workspace_id": "219",
+            "name": "text name",
+            "description": "text description",
+            "data_type": "text data_type",
+            "input_options": {},
+            "order": 1700000220,
+            "required_to_create": true,
+            "required_to_create_for_contacts": true,
+            "visible_on_create": true,
+            "visible_to_contacts": true,
+            "default": true,
+            "ticket_type_id": 1700000221,
+            "archived": true,
+            "created_at": 1700000222,
+            "updated_at": 1700000223
+          }
+        ]
+      },
+      "ticket_states": {
+        "type": "text type",
+        "data": [
+          {
+            "type": "text type",
+            "id": "224",
+            "category": "submitted",
+            "internal_label": "text internal_label",
+            "external_label": "text external_label"
+          }
+        ]
+      },
+      "archived": true,
+      "is_internal": true,
+      "created_at": 1700000225,
+      "updated_at": 1700000226
+    }
+  ]
+}

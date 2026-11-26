@@ -290,7 +290,7 @@ func (l *Library) strip(labelSlug string) (int, []changelog.Week) {
 
 	for month := time.January; month <= time.December; month++ {
 		first := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
-		weeks[min((first.YearDay()-1)/7, weeksInStrip-1)].Month = first.Format("Jan")
+		weeks[min((first.YearDay()-1)/7, weeksInStrip-1)].Month = month
 	}
 
 	for _, e := range l.filter(labelSlug) {

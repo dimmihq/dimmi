@@ -319,11 +319,6 @@ WHERE workspace_id = @workspace_id AND help_center_id = @help_center_id AND dele
 ORDER BY created_at
 LIMIT 1;
 
--- name: ListHelpCenterLocales :many
--- ListHelpCenterLocales lists the workspace's live help centers with
--- their language, for imports that place translations.
-SELECT id, locale FROM help_centers WHERE workspace_id = @workspace_id AND deleted_at IS NULL ORDER BY created_at;
-
 -- name: UpsertCollectionRedirect :exec
 -- UpsertCollectionRedirect points an old address at an imported
 -- collection.

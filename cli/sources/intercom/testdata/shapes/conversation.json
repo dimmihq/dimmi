@@ -1,0 +1,275 @@
+{
+  "admin_assignee_id": 0,
+  "ai_agent": null,
+  "ai_agent_participated": false,
+  "channel": {
+    "current": "\u003cstring\u003e",
+    "initial": "\u003cstring\u003e"
+  },
+  "company": {
+    "app_id": "\u003cstring\u003e",
+    "company_id": "\u003cstring\u003e",
+    "created_at": 0,
+    "custom_attributes": {},
+    "id": "\u003cstring\u003e",
+    "monthly_spend": 0,
+    "name": "\u003cstring\u003e",
+    "session_count": 0,
+    "tag_ids": [],
+    "type": "company",
+    "updated_at": 0,
+    "user_count": 0
+  },
+  "contacts": {
+    "contacts": [
+      {
+        "email": "\u003cstring\u003e",
+        "external_id": "\u003cstring\u003e",
+        "id": "\u003cstring\u003e",
+        "type": "contact"
+      }
+    ],
+    "type": "contact.list"
+  },
+  "conversation_parts": {
+    "conversation_parts": [
+      {
+        "admin_assignee_id": null,
+        "app_package_code": null,
+        "assigned_to": null,
+        "attachments": [],
+        "author": {
+          "email": "\u003cstring\u003e",
+          "from_ai_agent": false,
+          "id": "\u003cstring\u003e",
+          "is_ai_answer": false,
+          "name": "\u003cstring\u003e",
+          "type": "bot"
+        },
+        "body": null,
+        "created_at": 0,
+        "email_message_metadata": null,
+        "event_details": {},
+        "external_id": null,
+        "id": "\u003cstring\u003e",
+        "metadata": {},
+        "notified_at": 0,
+        "part_type": "company_updated",
+        "receipts": null,
+        "redacted": false,
+        "state": "open",
+        "tags": [],
+        "team_assignee_id": null,
+        "translations": null,
+        "type": "conversation_part",
+        "updated_at": 0,
+        "user_ip": null
+      },
+      {
+        "admin_assignee_id": null,
+        "app_package_code": null,
+        "assigned_to": {
+          "id": null,
+          "type": "nobody_admin"
+        },
+        "attachments": [],
+        "author": {
+          "email": "\u003cstring\u003e",
+          "from_ai_agent": false,
+          "id": "\u003cstring\u003e",
+          "is_ai_answer": false,
+          "name": "\u003cstring\u003e",
+          "type": "admin"
+        },
+        "body": null,
+        "created_at": 0,
+        "email_message_metadata": null,
+        "event_details": {},
+        "external_id": null,
+        "id": "\u003cstring\u003e",
+        "metadata": {},
+        "notified_at": 0,
+        "part_type": "assignment",
+        "receipts": null,
+        "redacted": false,
+        "state": "open",
+        "tags": [],
+        "team_assignee_id": null,
+        "translations": null,
+        "type": "conversation_part",
+        "updated_at": 0,
+        "user_ip": null
+      },
+      {
+        "admin_assignee_id": null,
+        "app_package_code": null,
+        "assigned_to": null,
+        "attachments": [],
+        "author": {
+          "email": "\u003cstring\u003e",
+          "from_ai_agent": false,
+          "id": "\u003cstring\u003e",
+          "is_ai_answer": false,
+          "name": "\u003cstring\u003e",
+          "type": "user"
+        },
+        "body": "\u003chtml\u003e",
+        "created_at": 0,
+        "email_message_metadata": null,
+        "event_details": {},
+        "external_id": null,
+        "id": "\u003cstring\u003e",
+        "metadata": {},
+        "notified_at": 0,
+        "part_type": "comment",
+        "receipts": null,
+        "redacted": false,
+        "state": "open",
+        "tags": [],
+        "team_assignee_id": null,
+        "translations": null,
+        "type": "conversation_part",
+        "updated_at": 0,
+        "user_ip": null
+      }
+    ],
+    "pages": {
+      "next": null,
+      "page": 0,
+      "per_page": 0,
+      "total_pages": 0,
+      "type": "pages"
+    },
+    "total_count": 0,
+    "type": "conversation_part.list"
+  },
+  "conversation_rating": null,
+  "created_at": 0,
+  "custom_attributes": {
+    "Auto-translated": false,
+    "Copilot used": false,
+    "Created by": 0,
+    "Fin AI Agent: Image used in reply": false,
+    "Fin AI Agent: Preview": false,
+    "Fin awaiting teammate input": false,
+    "Has attachments": false,
+    "Imported via standalone": false,
+    "Language": "\u003cstring\u003e",
+    "SDR Success Counted": false,
+    "Ticket category": "\u003cstring\u003e",
+    "_default_description_": "\u003cstring\u003e",
+    "_default_title_": "\u003cstring\u003e"
+  },
+  "external_references": [],
+  "first_contact_reply": {
+    "created_at": 0,
+    "type": "sms",
+    "url": null
+  },
+  "id": "\u003cstring\u003e",
+  "linked_objects": {
+    "data": [],
+    "has_more": false,
+    "total_count": 0,
+    "type": "list"
+  },
+  "open": true,
+  "priority": "none",
+  "read": false,
+  "sales_agent": null,
+  "sales_agent_participated": false,
+  "sla_applied": null,
+  "snoozed_until": null,
+  "source": {
+    "attachments": [],
+    "author": {
+      "email": "\u003cstring\u003e",
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "type": "admin"
+    },
+    "body": "\u003cstring\u003e",
+    "delivered_as": "admin_initiated",
+    "id": "\u003cstring\u003e",
+    "recipients": null,
+    "redacted": false,
+    "reply_to": null,
+    "subject": "\u003cstring\u003e",
+    "type": "admin_initiated",
+    "url": null,
+    "user_ip": null
+  },
+  "state": "open",
+  "statistics": {
+    "adjusted_handling_time": null,
+    "assigned_team_first_response_time": [],
+    "assigned_team_first_response_time_in_office_hours": [],
+    "count_assignments": 0,
+    "count_conversation_parts": 0,
+    "count_reopens": 0,
+    "first_admin_reply_at": null,
+    "first_assignment_at": null,
+    "first_close_at": null,
+    "first_contact_reply_at": 0,
+    "handling_time": null,
+    "last_admin_reply_at": null,
+    "last_assignment_admin_reply_at": null,
+    "last_assignment_at": null,
+    "last_close_at": null,
+    "last_closed_by_id": null,
+    "last_contact_reply_at": 0,
+    "median_time_to_reply": null,
+    "time_to_admin_reply": null,
+    "time_to_assignment": null,
+    "time_to_first_close": null,
+    "time_to_last_close": null,
+    "type": "conversation_statistics"
+  },
+  "tags": {
+    "tags": [],
+    "type": "tag.list"
+  },
+  "team_assignee_id": 0,
+  "teammates": {
+    "admins": [],
+    "type": "admin.list"
+  },
+  "ticket": {
+    "custom_attributes": {
+      "Platforms": {
+        "type": "string",
+        "value": null
+      },
+      "Root cause": {
+        "type": "string",
+        "value": null
+      },
+      "_default_description_": {
+        "type": "string",
+        "value": "\u003cstring\u003e"
+      },
+      "_default_title_": {
+        "type": "string",
+        "value": "\u003cstring\u003e"
+      }
+    },
+    "id": 0,
+    "state": "in_progress",
+    "ticket_custom_state_admin_label": "\u003cstring\u003e",
+    "ticket_custom_state_user_label": "\u003cstring\u003e",
+    "ticket_type": "\u003cstring\u003e",
+    "ticket_type_description": "\u003cstring\u003e",
+    "ticket_type_emoji": "\u003cstring\u003e",
+    "type": "ticket",
+    "url": "\u003cstring\u003e"
+  },
+  "title": null,
+  "topics": {
+    "topics": [],
+    "total_count": 0,
+    "type": "topic.list"
+  },
+  "type": "conversation",
+  "updated_at": 0,
+  "waiting_since": 0
+}

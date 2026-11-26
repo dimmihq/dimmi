@@ -15,6 +15,6 @@ func TestAgoReadsLikeAHelpCenter(t *testing.T) {
 		0: "today", 1: "yesterday", 3: "3 days ago", 9: "over a week ago", 16: "over 2 weeks ago",
 		45: "over a month ago", 70: "over 2 months ago", 400: "over a year ago", 800: "over 2 years ago",
 	} {
-		assert.Equal(t, want, Ago(back(days), now), days)
+		assert.Equal(t, want, Center{Lang: translator(t)}.Ago(back(days), now), days)
 	}
 }

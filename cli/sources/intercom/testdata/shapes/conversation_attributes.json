@@ -1,0 +1,65 @@
+{
+  "data": [
+    {
+      "admin_id": "\u003cstring\u003e",
+      "archived": false,
+      "created_at": 0,
+      "data_type": "list",
+      "description": "\u003cstring\u003e",
+      "id": 0,
+      "name": "\u003cstring\u003e",
+      "options": [
+        {
+          "archived": false,
+          "id": "\u003cstring\u003e",
+          "label": "\u003cstring\u003e"
+        },
+        {
+          "archived": false,
+          "id": "\u003cstring\u003e",
+          "label": "\u003cstring\u003e"
+        },
+        {
+          "archived": false,
+          "id": "\u003cstring\u003e",
+          "label": "\u003cstring\u003e"
+        }
+      ],
+      "required": true,
+      "type": "conversation_attribute",
+      "updated_at": 0,
+      "visible_to_team_ids": []
+    },
+    {
+      "admin_id": "\u003cstring\u003e",
+      "archived": false,
+      "created_at": 0,
+      "data_type": "list",
+      "description": "\u003cstring\u003e",
+      "id": 0,
+      "name": "\u003cstring\u003e",
+      "options": [
+        {
+          "archived": false,
+          "id": "\u003cstring\u003e",
+          "label": "\u003cstring\u003e"
+        },
+        {
+          "archived": false,
+          "id": "\u003cstring\u003e",
+          "label": "\u003cstring\u003e"
+        },
+        {
+          "archived": false,
+          "id": "\u003cstring\u003e",
+          "label": "\u003cstring\u003e"
+        }
+      ],
+      "required": false,
+      "type": "conversation_attribute",
+      "updated_at": 0,
+      "visible_to_team_ids": []
+    }
+  ],
+  "type": "list"
+}

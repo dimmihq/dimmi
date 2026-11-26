@@ -22,6 +22,7 @@ export const sidebar: Group[] = [
       { label: "Quickstart", link: "/quickstart/" },
       { label: "Concepts", link: "/concepts/" },
       { label: "Cloud vs self-hosting", link: "/cloud-vs-self-hosted/" },
+      { label: "Move from Intercom", link: "/migrate/intercom/" },
     ],
   },
   {
@@ -129,6 +130,7 @@ export const sidebar: Group[] = [
       { label: "Setup", link: "/help-center/set-up/" },
       { label: "Custom domain", link: "/help-center/custom-domain/" },
       { label: "Article blocks", link: "/help-center/article-blocks/" },
+      { label: "Languages", link: "/help-center/languages/" },
       { label: "Restricted articles", link: "/help-center/limit-articles/" },
       { label: "Feature requests", link: "/help-center/feature-requests/" },
       { label: "Changelog", link: "/help-center/changelog/" },

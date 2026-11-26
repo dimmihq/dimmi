@@ -1,0 +1,31 @@
+{
+  "data": [
+    {
+      "created_at": 0,
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "time_intervals": [
+        {
+          "day_of_week": 0,
+          "end_minute": 0,
+          "start_minute": 0
+        },
+        {
+          "day_of_week": 0,
+          "end_minute": 0,
+          "start_minute": 0
+        },
+        {
+          "day_of_week": 0,
+          "end_minute": 0,
+          "start_minute": 0
+        }
+      ],
+      "time_zone_name": "\u003cstring\u003e",
+      "twenty_four_seven": false,
+      "type": "office_hours_schedule",
+      "updated_at": 0
+    }
+  ],
+  "type": "office_hours_schedule.list"
+}

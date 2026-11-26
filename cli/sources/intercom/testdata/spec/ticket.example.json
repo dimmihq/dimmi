@@ -1,0 +1,121 @@
+{
+  "type": "ticket",
+  "id": "631",
+  "ticket_id": "38",
+  "ticket_attributes": {
+    "_default_title_": "attribute_value",
+    "_default_description_": null
+  },
+  "ticket_state": {
+    "type": "ticket_state",
+    "id": "8537",
+    "category": "submitted",
+    "internal_label": "Submitted",
+    "external_label": "Submitted"
+  },
+  "ticket_type": {
+    "type": "ticket_type",
+    "id": "95",
+    "name": "my-ticket-type-30",
+    "description": "my ticket type description is awesome.",
+    "icon": "🦁",
+    "workspace_id": "this_is_an_id702_that_should_be_at_least_",
+    "archived": false,
+    "created_at": 1734537973,
+    "updated_at": 1734537973,
+    "is_internal": false,
+    "ticket_type_attributes": {
+      "type": "list",
+      "data": [
+        {
+          "type": "ticket_type_attribute",
+          "id": "210",
+          "workspace_id": "this_is_an_id702_that_should_be_at_least_",
+          "name": "_default_title_",
+          "description": "ola",
+          "data_type": "string",
+          "input_options": null,
+          "order": 0,
+          "required_to_create": true,
+          "required_to_create_for_contacts": false,
+          "visible_on_create": true,
+          "visible_to_contacts": false,
+          "default": false,
+          "ticket_type_id": 95,
+          "archived": false,
+          "created_at": 1734537973,
+          "updated_at": 1734537973
+        },
+        {
+          "type": "ticket_type_attribute",
+          "id": "211",
+          "workspace_id": "this_is_an_id702_that_should_be_at_least_",
+          "name": "_default_description_",
+          "description": "ola",
+          "data_type": "string",
+          "input_options": null,
+          "order": 0,
+          "required_to_create": true,
+          "required_to_create_for_contacts": false,
+          "visible_on_create": true,
+          "visible_to_contacts": false,
+          "default": false,
+          "ticket_type_id": 95,
+          "archived": false,
+          "created_at": 1734537973,
+          "updated_at": 1734537973
+        }
+      ]
+    },
+    "category": "Back-office"
+  },
+  "contacts": {
+    "type": "contact.list",
+    "contacts": [
+      {
+        "type": "contact",
+        "id": "6762f2f61bb69f9f2193bc59",
+        "email": "joe@example.com",
+        "external_id": "b16afa36-2637-4880-adee-a46d145bc27f"
+      }
+    ]
+  },
+  "admin_assignee_id": 0,
+  "team_assignee_id": 0,
+  "created_at": 1734537974,
+  "updated_at": 1734537976,
+  "ticket_parts": {
+    "type": "ticket_part.list",
+    "ticket_parts": [
+      {
+        "type": "ticket_part",
+        "id": "185",
+        "part_type": "ticket_state_updated_by_admin",
+        "ticket_state": "submitted",
+        "previous_ticket_state": "submitted",
+        "created_at": 1734537975,
+        "updated_at": 1734537975,
+        "author": {
+          "id": "991268047",
+          "type": "admin",
+          "name": "Ciaran509 Lee",
+          "email": "admin509@email.com"
+        },
+        "attachments": [],
+        "redacted": false,
+        "app_package_code": "test-integration"
+      }
+    ],
+    "total_count": 1
+  },
+  "open": true,
+  "linked_objects": {
+    "type": "list",
+    "data": [],
+    "total_count": 0,
+    "has_more": false
+  },
+  "category": "Back-office",
+  "is_shared": false,
+  "channel": "messenger"
+}

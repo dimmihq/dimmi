@@ -185,7 +185,7 @@ func (v *Vectors) nearest(ctx context.Context, ws ids.UUID, qv queryVector, opts
 		}
 		rows, err = q.SearchKnowledgeChunksVector(ctx, models.SearchKnowledgeChunksVectorParams{
 			Embedding: embedding, ModelKey: qv.model, WorkspaceID: ws, Visibilities: visibilityNames(opts.Visibility),
-			Hashes: hashes, RowLimit: vectorCandidates,
+			Hashes: hashes, Locales: ReaderLocales(opts.Locale), RowLimit: vectorCandidates,
 		})
 		if err != nil {
 			return err

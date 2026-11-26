@@ -1,0 +1,314 @@
+{
+  "app_id": 0,
+  "export_version": "\u003cstring\u003e",
+  "exported_at": "\u003cstring\u003e",
+  "workflow": {
+    "attributes": [],
+    "created_at": "\u003cstring\u003e",
+    "description": null,
+    "embedded_rules": [
+      {
+        "actions": [
+          {
+            "action_type": "assign-conversation",
+            "command": "\u003cstring\u003e",
+            "data": {},
+            "id": "\u003cstring\u003e"
+          }
+        ],
+        "id": "\u003cstring\u003e",
+        "predicates": [],
+        "type": "SimpleActionRule"
+      },
+      {
+        "actions": [
+          {
+            "action_type": "assign-conversation",
+            "command": "\u003cstring\u003e",
+            "data": {},
+            "id": "\u003cstring\u003e"
+          }
+        ],
+        "id": "\u003cstring\u003e",
+        "predicates": [],
+        "type": "SimpleActionRule"
+      }
+    ],
+    "id": "\u003cstring\u003e",
+    "preferred_devices": [
+      0
+    ],
+    "snapshot": {
+      "created_at": "\u003cstring\u003e",
+      "created_by_admin_id": 0,
+      "id": "\u003cstring\u003e",
+      "paths": [
+        {
+          "id": "\u003cstring\u003e",
+          "steps": [
+            {
+              "blocks": [],
+              "controls": [
+                {
+                  "attribute_identifier": null,
+                  "button_label": null,
+                  "id": "\u003cstring\u003e",
+                  "localizations": [],
+                  "next_step_id": "\u003cstring\u003e",
+                  "predicates": [
+                    {
+                      "attribute": "\u003cstring\u003e",
+                      "comparison": "\u003cstring\u003e",
+                      "type": "string",
+                      "value": "\u003cstring\u003e"
+                    }
+                  ],
+                  "type": "conditional_branch"
+                },
+                {
+                  "attribute_identifier": null,
+                  "button_label": null,
+                  "id": "\u003cstring\u003e",
+                  "localizations": [],
+                  "next_step_id": "\u003cstring\u003e",
+                  "predicates": [],
+                  "type": null
+                }
+              ],
+              "data": {
+                "data": {
+                  "agentic_switch_enabled": false,
+                  "attribute_collection_disabled": false,
+                  "attribute_collection_overwritable": false,
+                  "available_tools": [],
+                  "background_execution": false,
+                  "content_tools": [],
+                  "fin_procedure_content": {},
+                  "guideline": [],
+                  "guideline_categories": [
+                    "\u003cstring\u003e",
+                    "\u003cstring\u003e"
+                  ],
+                  "handoff_to_salesforce_owner_id_by_integration": [],
+                  "handoff_to_salesforce_queue_id_by_connection": [],
+                  "handover_targets": [],
+                  "how_to_guideline": [],
+                  "inline_tool_definitions": [],
+                  "instructions": [],
+                  "local_attributes": [],
+                  "read_attributes": [],
+                  "uuid": "\u003cstring\u003e",
+                  "voice_clarification_guideline": [],
+                  "voice_routing_guideline": [],
+                  "voice_settings": {},
+                  "voice_tone_guideline": []
+                }
+              },
+              "id": "\u003cstring\u003e",
+              "triggerable_workflow_id": null,
+              "type": "conditional_branches"
+            }
+          ],
+          "title": "\u003cstring\u003e"
+        },
+        {
+          "id": "\u003cstring\u003e",
+          "steps": [
+            {
+              "blocks": [],
+              "controls": [
+                {
+                  "attribute_identifier": null,
+                  "button_label": null,
+                  "id": "\u003cstring\u003e",
+                  "localizations": [],
+                  "next_step_id": "\u003cstring\u003e",
+                  "predicates": [],
+                  "type": null
+                }
+              ],
+              "data": {
+                "data": {
+                  "agentic_switch_enabled": false,
+                  "attribute_collection_disabled": false,
+                  "attribute_collection_overwritable": false,
+                  "available_tools": [],
+                  "background_execution": false,
+                  "content_tools": [],
+                  "fin_procedure_content": {},
+                  "guideline": [],
+                  "guideline_categories": [
+                    "\u003cstring\u003e",
+                    "\u003cstring\u003e"
+                  ],
+                  "handoff_to_salesforce_owner_id_by_integration": [],
+                  "handoff_to_salesforce_queue_id_by_connection": [],
+                  "handover_targets": [],
+                  "how_to_guideline": [],
+                  "inline_tool_definitions": [],
+                  "instructions": [],
+                  "local_attributes": [],
+                  "read_attributes": [],
+                  "uuid": "\u003cstring\u003e",
+                  "voice_clarification_guideline": [],
+                  "voice_routing_guideline": [],
+                  "voice_settings": {},
+                  "voice_tone_guideline": []
+                }
+              },
+              "id": "\u003cstring\u003e",
+              "triggerable_workflow_id": null,
+              "type": "mid_path_actions"
+            },
+            {
+              "blocks": [],
+              "controls": [],
+              "data": {
+                "data": {
+                  "agentic_switch_enabled": false,
+                  "available_tools": [],
+                  "background_execution": false,
+                  "content_tools": [],
+                  "fin_procedure_content": {},
+                  "guideline": [],
+                  "guideline_categories": [
+                    "\u003cstring\u003e",
+                    "\u003cstring\u003e"
+                  ],
+                  "handoff_to_salesforce_owner_id_by_integration": [],
+                  "handoff_to_salesforce_queue_id_by_connection": [],
+                  "handover_targets": [],
+                  "how_to_guideline": [],
+                  "inline_tool_definitions": [],
+                  "instructions": [],
+                  "local_attributes": [],
+                  "read_attributes": [],
+                  "uuid": "\u003cstring\u003e",
+                  "voice_clarification_guideline": [],
+                  "voice_routing_guideline": [],
+                  "voice_settings": {},
+                  "voice_tone_guideline": []
+                }
+              },
+              "id": "\u003cstring\u003e",
+              "triggerable_workflow_id": null,
+              "type": "terminal"
+            }
+          ],
+          "title": "\u003cstring\u003e"
+        },
+        {
+          "id": "\u003cstring\u003e",
+          "steps": [
+            {
+              "blocks": [],
+              "controls": [
+                {
+                  "attribute_identifier": null,
+                  "button_label": null,
+                  "id": "\u003cstring\u003e",
+                  "localizations": [],
+                  "next_step_id": "\u003cstring\u003e",
+                  "predicates": [],
+                  "type": null
+                }
+              ],
+              "data": {
+                "data": {
+                  "agentic_switch_enabled": false,
+                  "attribute_collection_disabled": false,
+                  "attribute_collection_overwritable": false,
+                  "available_tools": [],
+                  "background_execution": false,
+                  "content_tools": [],
+                  "fin_procedure_content": {},
+                  "guideline": [],
+                  "guideline_categories": [
+                    "\u003cstring\u003e",
+                    "\u003cstring\u003e"
+                  ],
+                  "handoff_to_salesforce_owner_id_by_integration": [],
+                  "handoff_to_salesforce_queue_id_by_connection": [],
+                  "handover_targets": [],
+                  "how_to_guideline": [],
+                  "inline_tool_definitions": [],
+                  "instructions": [],
+                  "local_attributes": [],
+                  "read_attributes": [],
+                  "uuid": "\u003cstring\u003e",
+                  "voice_clarification_guideline": [],
+                  "voice_routing_guideline": [],
+                  "voice_settings": {},
+                  "voice_tone_guideline": []
+                }
+              },
+              "id": "\u003cstring\u003e",
+              "triggerable_workflow_id": null,
+              "type": "mid_path_actions"
+            },
+            {
+              "blocks": [],
+              "controls": [],
+              "data": {
+                "data": {
+                  "agentic_switch_enabled": false,
+                  "available_tools": [],
+                  "background_execution": false,
+                  "content_tools": [],
+                  "fin_procedure_content": {},
+                  "guideline": [],
+                  "guideline_categories": [
+                    "\u003cstring\u003e",
+                    "\u003cstring\u003e"
+                  ],
+                  "handoff_to_salesforce_owner_id_by_integration": [],
+                  "handoff_to_salesforce_queue_id_by_connection": [],
+                  "handover_targets": [],
+                  "how_to_guideline": [],
+                  "inline_tool_definitions": [],
+                  "instructions": [],
+                  "local_attributes": [],
+                  "read_attributes": [],
+                  "uuid": "\u003cstring\u003e",
+                  "voice_clarification_guideline": [],
+                  "voice_routing_guideline": [],
+                  "voice_settings": {},
+                  "voice_tone_guideline": []
+                }
+              },
+              "id": "\u003cstring\u003e",
+              "triggerable_workflow_id": null,
+              "type": "terminal"
+            }
+          ],
+          "title": null
+        }
+      ]
+    },
+    "state": 0,
+    "target_channels": [
+      "\u003cstring\u003e",
+      "\u003cstring\u003e",
+      "\u003cstring\u003e"
+    ],
+    "targeting": {
+      "client_predicates": [],
+      "predicates": [],
+      "role_predicates": [
+        {
+          "attribute": "\u003cstring\u003e",
+          "comparison": "\u003cstring\u003e",
+          "type": "role",
+          "value": [
+            "\u003cstring\u003e",
+            "\u003cstring\u003e"
+          ]
+        }
+      ],
+      "triggers": []
+    },
+    "title": "\u003cstring\u003e",
+    "trigger_type": "conversation_started",
+    "updated_at": "\u003cstring\u003e"
+  }
+}

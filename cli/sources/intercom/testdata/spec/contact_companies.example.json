@@ -1,0 +1,44 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "company",
+      "company_id": "1",
+      "id": "6762f0a61bb69f9f2193bb55",
+      "app_id": "this_is_an_id213_that_should_be_at_least_",
+      "name": "company12",
+      "remote_created_at": 1734537382,
+      "created_at": 1734537382,
+      "updated_at": 1734537382,
+      "last_request_at": 1734364582,
+      "monthly_spend": 0,
+      "session_count": 0,
+      "user_count": 1,
+      "tags": {
+        "type": "tag.list",
+        "tags": []
+      },
+      "segments": {
+        "type": "segment.list",
+        "segments": []
+      },
+      "plan": {},
+      "custom_attributes": {},
+      "notes": {
+        "type": "note.list",
+        "data": [],
+        "url": "/companies/6762f0a61bb69f9f2193bb55/notes",
+        "total_count": 0,
+        "has_more": false
+      }
+    }
+  ],
+  "pages": {
+    "type": "pages",
+    "next": null,
+    "page": 1,
+    "per_page": 50,
+    "total_pages": 1
+  },
+  "total_count": 1
+}

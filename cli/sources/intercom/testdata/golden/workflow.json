@@ -1,0 +1,44 @@
+[
+  {
+    "kind": "workflow",
+    "record": {
+      "source_id": "12345",
+      "name": "Route billing",
+      "description": "Sends billing to finance",
+      "trigger": "inbound_conversation",
+      "channels": [
+        "chat"
+      ],
+      "enabled": false,
+      "steps": [
+        {
+          "source_type": "assign_conversation",
+          "type": "assign",
+          "supported": true
+        },
+        {
+          "source_type": "chat_message",
+          "type": "send_message",
+          "supported": true
+        },
+        {
+          "source_type": "custom_action",
+          "supported": false
+        },
+        {
+          "source_type": "fin_answer",
+          "supported": false
+        },
+        {
+          "source_type": "reply_buttons",
+          "type": "choice",
+          "supported": true
+        }
+      ],
+      "unsupported": [
+        "custom_action",
+        "fin_answer"
+      ]
+    }
+  }
+]

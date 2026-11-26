@@ -9,6 +9,8 @@ package helpcenter
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
+import "strings"
+
 /*
 Href returns the address of a path under the help center's base.
 */
@@ -37,6 +39,18 @@ func BrandStyle(c Center) templ.SafeCSS {
 	}
 
 	return templ.SafeCSS("--brand: " + c.Brand)
+}
+
+/*
+Asset returns where a file the page loads lives: a full address as it
+is, such as the workspace's logo on the app, and a path under the help
+center's base otherwise.
+*/
+func Asset(c Center, path string) string {
+	if strings.HasPrefix(path, "https://") || strings.HasPrefix(path, "http://") {
+		return path
+	}
+	return Path(c, path)
 }
 
 var _ = templruntime.GeneratedTemplate

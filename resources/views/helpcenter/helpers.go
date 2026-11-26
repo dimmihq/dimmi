@@ -38,7 +38,7 @@ Sections returns the portal's sections in the order its navigation
 shows them: the help center first, then the sections the portal has.
 */
 func Sections(c Center) []Section {
-	return append([]Section{{Key: "help", Name: "Help center", Icon: "book", Path: "/"}}, c.Sections...)
+	return append([]Section{{Key: "help", Name: c.T("help_center"), Icon: "book", Path: "/"}}, c.Sections...)
 }
 
 /*
@@ -47,39 +47,6 @@ Day formats a date the way every page shows it, such as "October 28,
 */
 func Day(t time.Time) string {
 	return t.Format("January 2, 2006")
-}
-
-/*
-Ago says how long before now a time was, as help centers say when an
-article last changed: today, yesterday, a few days ago, then over so
-many weeks, months or years ago, rounded down.
-*/
-func Ago(t, now time.Time) string {
-	days := int(now.Sub(t).Hours() / 24)
-	switch {
-	case days < 1:
-		return "today"
-	case days == 1:
-		return "yesterday"
-	case days < 7:
-		return strconv.Itoa(days) + " days ago"
-	case days < 30:
-		return over(days/7, "week")
-	case days < 365:
-		return over(days/30, "month")
-	default:
-		return over(days/365, "year")
-	}
-}
-
-/*
-over writes "over a week ago" or "over 3 weeks ago".
-*/
-func over(n int, unit string) string {
-	if n == 1 {
-		return "over a " + unit + " ago"
-	}
-	return "over " + strconv.Itoa(n) + " " + unit + "s ago"
 }
 
 /*
@@ -156,11 +123,12 @@ func colorScheme(c Center) string {
 }
 
 /*
-age is how long ago an article changed, its date when that is unknown.
+age is how long ago an article changed, its date in the page's language
+when that is unknown.
 */
-func age(a Article) string {
+func age(c Center, a Article) string {
 	if a.Age == "" {
-		return Day(a.Updated)
+		return c.Date(a.Updated)
 	}
 	return a.Age
 }

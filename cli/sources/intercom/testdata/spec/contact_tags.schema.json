@@ -1,0 +1,15 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "text type",
+      "id": "190",
+      "name": "text name",
+      "applied_at": 1700000191,
+      "applied_by": {
+        "type": "text type",
+        "id": "192"
+      }
+    }
+  ]
+}

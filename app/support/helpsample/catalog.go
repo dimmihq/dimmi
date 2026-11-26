@@ -137,10 +137,10 @@ reaction bar shows them.
 */
 func reactions() []changelog.Reaction {
 	return []changelog.Reaction{
-		{Emoji: "👍", Name: "Thumbs up"},
-		{Emoji: "❤️", Name: "Love"},
-		{Emoji: "🎉", Name: "Celebrate"},
-		{Emoji: "🚀", Name: "Rocket"},
-		{Emoji: "👀", Name: "Eyes"},
+		{Emoji: "👍", Name: "thumbsup"},
+		{Emoji: "❤️", Name: "heart"},
+		{Emoji: "🎉", Name: "tada"},
+		{Emoji: "🚀", Name: "rocket"},
+		{Emoji: "👀", Name: "eyes"},
 	}
 }

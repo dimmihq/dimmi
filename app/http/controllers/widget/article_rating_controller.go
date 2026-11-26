@@ -50,8 +50,10 @@ func (c *HelpController) Rate(ctx context.Context, in *requests.StoreWidgetArtic
 		rater = "contact:" + contact.String()
 	}
 
+	_, locale, _ := snap.ArticleAt(in.Body.Article)
 	err = c.Ratings.Rate(ctx, helpcenters.Rating{
-		Center: snap.HelpCenter, Slug: in.Body.Article, Rater: rater, Contact: contact, Helpful: in.Body.Helpful,
+		Center: snap.HelpCenter, Locale: locale, Slug: in.Body.Article, Rater: rater, Contact: contact,
+		Helpful: in.Body.Helpful,
 	})
 	if err != nil {
 		return nil, err

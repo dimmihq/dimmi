@@ -3,8 +3,9 @@
 | Article Index
 |--------------------------------------------------------------------------
 |
-| An article's stored chunks follow its live published version inside
-| the transaction that changed it: a publish stores the new version's
+| An article's stored chunks follow its live published version, and the
+| live versions of its published translations, inside the transaction
+| that changed it: a publish stores the new version's
 | chunks and drops the old ones, and an unpublish, archive or trash
 | drops them all. The vectors follow in the background, queued in the
 | same transaction for every model the workspace embeds with, the
@@ -20,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -35,48 +37,97 @@ published version and queues the vectors they lack.
 */
 func (v *Vectors) IndexArticle(ctx context.Context, tx *database.Tx, ws, articleID ids.UUID) error {
 	q := models.New(tx)
-	live, err := q.FindLiveArticleForIndex(ctx, models.FindLiveArticleForIndexParams{WorkspaceID: ws, ID: articleID})
-	if errors.Is(err, database.ErrNotFound) {
-		return wrapIndex(q.DeleteStaleKnowledgeChunks(ctx, models.DeleteStaleKnowledgeChunksParams{
-			WorkspaceID: ws, ArticleID: articleID,
-		}))
-	}
-	if err != nil {
+	var keep []ids.UUID
+	var live []chunkable
+	source, err := q.FindLiveArticleForIndex(ctx, models.FindLiveArticleForIndexParams{WorkspaceID: ws, ID: articleID})
+	switch {
+	case err == nil:
+		keep = append(keep, source.VersionID)
+		live = append(live, chunkable{
+			article: articleID, center: source.HelpCenterID, version: source.VersionID, title: source.Title,
+			body: source.BodyMarkdown, visibility: source.Visibility,
+		})
+	case !errors.Is(err, database.ErrNotFound):
 		return fmt.Errorf("find article to index: %w", err)
 	}
+	translations, err := q.ListLiveTranslationsForIndex(ctx, models.ListLiveTranslationsForIndexParams{
+		WorkspaceID: ws, ArticleID: articleID,
+	})
+	if err != nil {
+		return fmt.Errorf("find translations to index: %w", err)
+	}
+	if len(translations) > 0 && len(live) == 0 {
+		a, err := q.FindArticle(ctx, models.FindArticleParams{WorkspaceID: ws, ID: articleID})
+		if err != nil {
+			return fmt.Errorf("find article to index: %w", err)
+		}
+		source.HelpCenterID = a.HelpCenterID
+	}
+	for _, t := range translations {
+		keep = append(keep, t.VersionID)
+		live = append(live, chunkable{
+			article: articleID, center: source.HelpCenterID, version: t.VersionID, title: t.Title,
+			body: t.BodyMarkdown, visibility: t.Visibility, locale: &t.Locale,
+		})
+	}
 	if err := q.DeleteStaleKnowledgeChunks(ctx, models.DeleteStaleKnowledgeChunksParams{
-		WorkspaceID: ws, ArticleID: articleID, KeepVersionID: &live.VersionID,
+		WorkspaceID: ws, ArticleID: articleID, KeepVersionIds: orNoVersions(keep),
 	}); err != nil {
 		return wrapIndex(err)
 	}
-	if err := v.storeChunks(ctx, q, live); err != nil {
-		return err
+	if len(live) == 0 {
+		return nil
+	}
+	for _, c := range live {
+		if err := v.storeChunks(ctx, q, ws, c); err != nil {
+			return err
+		}
 	}
 	return v.queueArticle(ctx, tx, ws, articleID)
 }
 
 /*
+chunkable is one live version of an article, the source's or a
+translation's, as the index chunks it.
+*/
+type chunkable struct {
+	article    ids.UUID
+	center     ids.UUID
+	version    ids.UUID
+	title      string
+	body       string
+	visibility string
+	locale     *string
+}
+
+func orNoVersions(list []ids.UUID) []ids.UUID {
+	if list == nil {
+		return []ids.UUID{}
+	}
+	return list
+}
+
+/*
 storeChunks stores the version's chunks unless they are stored.
 */
-func (v *Vectors) storeChunks(ctx context.Context, q *models.Queries, live models.FindLiveArticleForIndexRow) error {
-	ws := live.WorkspaceID
+func (v *Vectors) storeChunks(ctx context.Context, q *models.Queries, ws ids.UUID, live chunkable) error {
 	n, err := q.CountKnowledgeChunksForVersion(ctx, models.CountKnowledgeChunksForVersionParams{
-		WorkspaceID: ws, VersionID: live.VersionID,
+		WorkspaceID: ws, VersionID: live.version,
 	})
 	if err != nil || n > 0 {
 		return wrapIndex(err)
 	}
 	chunks := ChunkArticle(Article{
-		Title: live.Title, Body: live.BodyMarkdown, VersionID: live.VersionID,
-		Visibility: contracts.KnowledgeVisibility(live.Visibility),
+		Title: live.title, Body: live.body, VersionID: live.version,
+		Visibility: contracts.KnowledgeVisibility(live.visibility),
 	})
 	now := v.Clock.Now()
 	for i, c := range chunks {
 		err := q.InsertKnowledgeChunk(ctx, models.InsertKnowledgeChunkParams{
-			ID: c.ID, WorkspaceID: ws, ArticleID: live.ID, ArticleVersionID: live.VersionID,
-			HelpCenterID: live.HelpCenterID, Ordinal: int32(i), Title: c.Title, HeadingPath: c.HeadingPath,
+			ID: c.ID, WorkspaceID: ws, ArticleID: live.article, ArticleVersionID: live.version,
+			HelpCenterID: live.center, Ordinal: int32(i), Title: c.Title, HeadingPath: c.HeadingPath,
 			Body: c.Text, Visibility: string(c.Visibility),
-			EmbedHash: EmbedHash(EmbedInput(c.Title, c.HeadingPath, c.Text)), Now: now,
+			EmbedHash: EmbedHash(EmbedInput(c.Title, c.HeadingPath, c.Text)), Locale: live.locale, Now: now,
 		})
 		if err != nil {
 			return wrapIndex(err)
@@ -156,4 +207,25 @@ func wrapIndex(err error) error {
 		return nil
 	}
 	return fmt.Errorf("index article: %w", err)
+}
+
+/*
+ReaderLocales are the languages an article may answer a reader in, best
+first: the reader's own tag and its base language, so fr-CA finds a
+French translation too. None for a reader of no known language.
+*/
+func ReaderLocales(raw string) []string {
+	tag := strings.ReplaceAll(strings.TrimSpace(raw), "_", "-")
+	if tag == "" {
+		return []string{}
+	}
+	lang, region, hasRegion := strings.Cut(tag, "-")
+	lang = strings.ToLower(lang)
+	if !hasRegion {
+		return []string{lang}
+	}
+	if len(region) == 2 {
+		region = strings.ToUpper(region)
+	}
+	return []string{lang + "-" + region, lang}
 }
