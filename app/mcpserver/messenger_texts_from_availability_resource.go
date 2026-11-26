@@ -118,6 +118,8 @@ func messengerTextsFromEmailCodeSent() map[string]map[string]string {
 				"lasts 24 hours from then.",
 		},
 		"HelpArticle": {
+			"author": "The teammate who wrote the article, shown under its title. Null when no teammate " +
+				"wrote it.",
 			"body": "The article's content as blocks to draw in order, so the messenger can open it " +
 				"without another request.",
 			"slug": "The article's url-safe name, such as getting-started. Use it to report a view or " +
@@ -125,6 +127,11 @@ func messengerTextsFromEmailCodeSent() map[string]map[string]string {
 			"summary": "The article's short description. Empty when it has none.",
 			"title":   "The article's title.",
 			"updated": "When the published version of the article was made, as an RFC 3339 timestamp.",
+		},
+		"HelpAuthor": {
+			"avatar_url": "A short-lived address of the author's photo, valid for an hour. Null when " +
+				"they have none; show their initials instead.",
+			"name": "The author's name.",
 		},
 		"HelpCollection": {
 			"articles": "The slugs of the articles in this collection, matching entries of the " +

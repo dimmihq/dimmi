@@ -1033,12 +1033,14 @@
         "additionalProperties": false,
         "properties": {
           "avatar_url": {
+            "description": "A short-lived address of the author's photo, valid for an hour. Null when they have none; show their initials instead.",
             "type": [
               "string",
               "null"
             ]
           },
           "name": {
+            "description": "The author's name.",
             "type": "string"
           }
         },
