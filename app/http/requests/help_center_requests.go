@@ -54,6 +54,8 @@ type UpdateHelpCenterRequest struct {
 		Name            *string                 `json:"name,omitempty"             maxLength:"80"`
 		Subdomain       *string                 `json:"subdomain,omitempty"        maxLength:"40"`
 		Locale          *string                 `json:"locale,omitempty"           maxLength:"16"`
+		DefaultLocale   *string                 `json:"default_locale,omitempty"   maxLength:"16" doc:"The language articles are written in, served without a prefix. Same as locale."`
+		Locales         *[]string               `json:"locales,omitempty"          maxItems:"30" doc:"Every language readers may pick, such as [\"en\", \"fr\"]. The default is always included."`
 		Status          *string                 `json:"status,omitempty"           enum:"active,disabled"`
 		IndexingEnabled *bool                   `json:"indexing_enabled,omitempty"`
 		AskAIEnabled    *bool                   `json:"ask_ai_enabled,omitempty"`

@@ -145,6 +145,7 @@ type Actions struct {
 	HelpCenters                *helpcenters.HelpCenters
 	Collections                *helpcenters.Collections
 	Articles                   *helpcenters.Articles
+	Translations               *helpcenters.Translations
 	KnowledgeSettings          *knowledge.Settings
 	KnowledgeSources           *knowledgesources.Engine
 	Webhooks                   *webhooks.Webhooks

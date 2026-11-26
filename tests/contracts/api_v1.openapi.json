@@ -4179,6 +4179,87 @@
         ],
         "type": "object"
       },
+      "ArticleTranslation": {
+        "additionalProperties": false,
+        "properties": {
+          "article_id": {
+            "type": "string"
+          },
+          "body_markdown": {
+            "type": "string"
+          },
+          "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "has_unpublished_changes": {
+            "type": "boolean"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "lock_version": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "outdated": {
+            "type": "boolean"
+          },
+          "published_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "slug": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "When it last changed, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "word_count": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object",
+          "article_id",
+          "locale",
+          "title",
+          "slug",
+          "description",
+          "status",
+          "has_unpublished_changes",
+          "outdated",
+          "lock_version",
+          "word_count",
+          "published_at",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
       "ArticleVersion": {
         "additionalProperties": false,
         "properties": {
@@ -8087,6 +8168,71 @@
         ],
         "type": "object"
       },
+      "CollectionArticleTranslation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/ArticleTranslation"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionArticleTranslationMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionArticleTranslationMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
       "CollectionArticleVersion": {
         "additionalProperties": false,
         "properties": {
@@ -8951,6 +9097,71 @@
         "type": "object"
       },
       "CollectionCollectionMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionCollectionTranslation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/CollectionTranslation"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionCollectionTranslationMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionCollectionTranslationMetaStruct": {
         "additionalProperties": false,
         "properties": {
           "next_cursor": {
@@ -11226,6 +11437,71 @@
         "type": "object"
       },
       "CollectionKnowledgeSyncRunMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionLanguage": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/Language"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionLanguageMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionLanguageMetaStruct": {
         "additionalProperties": false,
         "properties": {
           "next_cursor": {
@@ -14021,6 +14297,123 @@
         "type": "object"
       },
       "CollectionTokenAbilityMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionTranslation": {
+        "additionalProperties": false,
+        "properties": {
+          "collection_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "locale": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "outdated": {
+            "type": "boolean"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "When it last changed, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "collection_id",
+          "locale",
+          "name",
+          "slug",
+          "description",
+          "outdated",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "CollectionTranslationState": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/TranslationState"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionTranslationStateMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionTranslationStateMetaStruct": {
         "additionalProperties": false,
         "properties": {
           "next_cursor": {
@@ -19844,6 +20237,9 @@
               "null"
             ]
           },
+          "default_locale": {
+            "type": "string"
+          },
           "id": {
             "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
@@ -19859,6 +20255,15 @@
           "locale": {
             "description": "The help center's main language as a language code, such as en or fr.",
             "type": "string"
+          },
+          "locales": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "name": {
             "description": "The help center's name.",
@@ -19897,6 +20302,8 @@
           "url",
           "custom_domain",
           "locale",
+          "default_locale",
+          "locales",
           "is_default",
           "status",
           "indexing_enabled",
@@ -23560,6 +23967,31 @@
           "estimated_tokens",
           "browser_ms",
           "requests"
+        ],
+        "type": "object"
+      },
+      "Language": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "native_name": {
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "code",
+          "name",
+          "native_name"
         ],
         "type": "object"
       },
@@ -30404,6 +30836,18 @@
         ],
         "type": "object"
       },
+      "ResourceArticleTranslation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ArticleTranslation"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceAssignmentStatus": {
         "additionalProperties": false,
         "properties": {
@@ -30601,6 +31045,18 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/Collection"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceCollectionTranslation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CollectionTranslation"
           }
         },
         "required": [
@@ -32770,6 +33226,20 @@
             "description": "Id of the version (artv_...) to put back. Find it with GET /articles/{article}/versions.",
             "maxLength": 64,
             "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id"
+        ],
+        "type": "object"
+      },
+      "RestoreArticleTranslationRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "version_id": {
+            "description": "Id of the saved version, starting with prcv or srsv_, such as prcv_01jx2m8k4t. Find it with the matching versions list.",
+            "maxLength": 64,
             "type": "string"
           }
         },
@@ -42137,6 +42607,50 @@
         ],
         "type": "object"
       },
+      "TranslationState": {
+        "additionalProperties": false,
+        "properties": {
+          "article_id": {
+            "type": "string"
+          },
+          "collection_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "locale": {
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "outdated": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "article_id",
+          "title",
+          "status",
+          "collection_id",
+          "locale",
+          "state",
+          "outdated"
+        ],
+        "type": "object"
+      },
       "TryRedactionRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -42309,6 +42823,37 @@
         },
         "type": "object"
       },
+      "UpdateArticleTranslationRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "body_markdown": {
+            "description": "Body markdown: text of at most 262144 characters.",
+            "maxLength": 262144,
+            "type": "string"
+          },
+          "description": {
+            "description": "The description of the translation, at most 300 characters.",
+            "maxLength": 300,
+            "type": "string"
+          },
+          "lock_version": {
+            "description": "The lock_version the record had when you read it, such as 3. It stops you overwriting a newer save.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "slug": {
+            "description": "The part of the address that names it, in lowercase words joined by hyphens, such as refund-policy.",
+            "maxLength": 120,
+            "type": "string"
+          },
+          "title": {
+            "description": "The title of the translation, at most 150 characters.",
+            "maxLength": 150,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "UpdateAttributeRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -42418,6 +42963,31 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "UpdateCollectionTranslationRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "description": "The description of the translation, at most 300 characters.",
+            "maxLength": 300,
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the translation, at most 80 characters.",
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "slug": {
+            "description": "The part of the address that names it, in lowercase words joined by hyphens, such as refund-policy.",
+            "maxLength": 80,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "UpdateCompanyRequestBody": {
@@ -43020,6 +43590,11 @@
             "description": "Whether readers of the help center may ask a question and get an answer from its articles (the Ask AI feature). Example: true.",
             "type": "boolean"
           },
+          "default_locale": {
+            "description": "The language articles are written in, served without a prefix. Same as locale.",
+            "maxLength": 16,
+            "type": "string"
+          },
           "indexing_enabled": {
             "description": "Whether search engines such as Google may index the help center's articles. false marks the site as not to be indexed. Example: true.",
             "type": "boolean"
@@ -43028,6 +43603,14 @@
             "description": "A language code, such as en or pt-BR.",
             "maxLength": 16,
             "type": "string"
+          },
+          "locales": {
+            "description": "Every language readers may pick, such as [\"en\", \"fr\"]. The default is always included.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "type": "array"
           },
           "name": {
             "description": "The name of the help center, at most 80 characters.",
@@ -50433,6 +51016,462 @@
         ]
       }
     },
+    "/articles/{article}/translations": {
+      "get": {
+        "operationId": "articles.translations.index",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionArticleTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "articles:read"
+        ]
+      }
+    },
+    "/articles/{article}/translations/{locale}": {
+      "delete": {
+        "operationId": "articles.translations.destroy",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language code, such as en or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "articles:write"
+        ]
+      },
+      "get": {
+        "operationId": "articles.translations.show",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language code, such as en or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceArticleTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "articles:read"
+        ]
+      },
+      "put": {
+        "operationId": "articles.translations.update",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language code, such as en or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateArticleTranslationRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceArticleTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "articles:write"
+        ]
+      }
+    },
+    "/articles/{article}/translations/{locale}/publications": {
+      "delete": {
+        "operationId": "articles.translations.publications.destroy",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language code, such as en or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceArticleTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "articles:write"
+        ]
+      },
+      "post": {
+        "operationId": "articles.translations.publications.store",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language code, such as en or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceArticleTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "articles:write"
+        ]
+      }
+    },
+    "/articles/{article}/translations/{locale}/restorations": {
+      "post": {
+        "operationId": "articles.translations.restorations.store",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language code, such as en or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreArticleTranslationRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceArticleTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "articles:write"
+        ]
+      }
+    },
+    "/articles/{article}/translations/{locale}/reviews": {
+      "post": {
+        "operationId": "articles.translations.reviews.store",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language code, such as en or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceArticleTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "articles:write"
+        ]
+      }
+    },
+    "/articles/{article}/translations/{locale}/versions": {
+      "get": {
+        "operationId": "articles.translations.versions.index",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language code, such as en or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionArticleVersion"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "articles:read"
+        ]
+      }
+    },
     "/articles/{article}/versions": {
       "get": {
         "description": "Lists the kept versions of an article, newest first: each publish, restore and snapshot. Returns the versions with their id, number, kind and title.",
@@ -54040,6 +55079,150 @@
           }
         },
         "summary": "Limit a collection to an audience",
+        "x-abilities": [
+          "articles:write"
+        ]
+      }
+    },
+    "/collections/{collection}/translations": {
+      "get": {
+        "operationId": "collections.translations.index",
+        "parameters": [
+          {
+            "description": "Id of the help center collection, starting with col_, such as col_01jx2m8k4t. Find it with GET /help-centers/{help_center}/collections.",
+            "in": "path",
+            "name": "collection",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionCollectionTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "articles:read"
+        ]
+      }
+    },
+    "/collections/{collection}/translations/{locale}": {
+      "delete": {
+        "operationId": "collections.translations.destroy",
+        "parameters": [
+          {
+            "description": "Id of the help center collection, starting with col_, such as col_01jx2m8k4t. Find it with GET /help-centers/{help_center}/collections.",
+            "in": "path",
+            "name": "collection",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language code, such as en or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "articles:write"
+        ]
+      },
+      "put": {
+        "operationId": "collections.translations.update",
+        "parameters": [
+          {
+            "description": "Id of the help center collection, starting with col_, such as col_01jx2m8k4t. Find it with GET /help-centers/{help_center}/collections.",
+            "in": "path",
+            "name": "collection",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language code, such as en or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCollectionTranslationRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceCollectionTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
         "x-abilities": [
           "articles:write"
         ]
@@ -61793,6 +62976,36 @@
         ]
       }
     },
+    "/help-center-languages": {
+      "get": {
+        "operationId": "help-center-languages.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionLanguage"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "articles:read"
+        ]
+      }
+    },
     "/help-centers": {
       "get": {
         "description": "Lists the workspace's help centers, the public docs sites that also hold the changelog and feature requests. Start here to find the help center id every article, collection, changelog and feature request tool needs. The first call makes the default help center when there is none. Returns every help center with its name, public url, status and settings, the default one marked.",
@@ -62549,6 +63762,47 @@
         ]
       }
     },
+    "/help-centers/{help_center}/collection-translations": {
+      "get": {
+        "operationId": "help-centers.collection-translations.index",
+        "parameters": [
+          {
+            "description": "Id of the help center, starting with hc_, such as hc_01jx2m8k4t. Find it with GET /help-centers.",
+            "in": "path",
+            "name": "help_center",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionCollectionTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "articles:read"
+        ]
+      }
+    },
     "/help-centers/{help_center}/collections": {
       "get": {
         "description": "Lists a help center's collections, the groups articles are filed under, up to three levels deep. Returns every collection with its parent, slug, position and audience.",
@@ -63117,6 +64371,73 @@
         "summary": "Post a feature request",
         "x-abilities": [
           "feedback:write"
+        ]
+      }
+    },
+    "/help-centers/{help_center}/translation-states": {
+      "get": {
+        "operationId": "help-centers.translation-states.index",
+        "parameters": [
+          {
+            "description": "Id of the help center, starting with hc_, such as hc_01jx2m8k4t. Find it with GET /help-centers.",
+            "in": "path",
+            "name": "help_center",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language code, such as en or pt-BR.",
+            "explode": false,
+            "in": "query",
+            "name": "locale",
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          },
+          {
+            "description": "State: one of missing, outdated, draft, published.",
+            "explode": false,
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "enum": [
+                "missing",
+                "outdated",
+                "draft",
+                "published",
+                ""
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionTranslationState"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "articles:read"
         ]
       }
     },

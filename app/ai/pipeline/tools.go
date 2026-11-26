@@ -288,6 +288,9 @@ func (r *Runner) searchKnowledge(ctx context.Context, st *run, args json.RawMess
 	if k := agents.KnowledgeOf(st.env.Agent); k.Mode == agents.ScopeSelected {
 		opts.Scoped, opts.HelpCenterIDs, opts.SourceIDs = true, k.HelpCenterIDs, k.SourceIDs
 	}
+	if st.env.Contact != nil {
+		opts.Locale = strv(st.env.Contact.Locale)
+	}
 	res, err := r.Knowledge.Search(ctx, st.env.Workspace.ID, in.Query, opts)
 	if err != nil {
 		return "", err

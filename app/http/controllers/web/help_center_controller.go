@@ -94,6 +94,18 @@ func (c *HelpCenterController) Home(w fhttp.ResponseWriter, r *fhttp.Request) {
 	if !ok {
 		return
 	}
+	if s, real := lib.(*site); real {
+		h := s.snap.HelpCenter
+		if readingLocale(r.Context()) == "" {
+			if wants := preferredLocale(r, h); wants != h.Locale {
+				w.Header().Set("Location", center.Base+"/"+wants)
+				w.Header().Set("Vary", "Accept-Language, Cookie")
+				w.WriteHeader(fhttp.StatusFound)
+				return
+			}
+		}
+		localize(&center, s.snap, s.at, samePage("/"), true)
+	}
 
 	c.respond(w, r, fhttp.StatusOK, helpcenter.Home(
 		center, lib.Collections(), lib.Popular(), lib.Updates(3), c.styles(),
@@ -114,6 +126,9 @@ func (c *HelpCenterController) Collection(w fhttp.ResponseWriter, r *fhttp.Reque
 		c.missing(w, r, center, lib)
 
 		return
+	}
+	if s, real := lib.(*site); real {
+		localize(&center, s.snap, s.at, s.collectionIn(r.PathValue("slug")), true)
 	}
 
 	c.respond(w, r, fhttp.StatusOK, helpcenter.CollectionPage(center, lib.Collections(), col, trail, c.styles()))
@@ -150,6 +165,9 @@ func (c *HelpCenterController) Article(w fhttp.ResponseWriter, r *fhttp.Request)
 		return
 	}
 
+	if s, real := lib.(*site); real && !markdown {
+		localize(&center, s.snap, s.at, s.articleIn(slug), true)
+	}
 	query := r.URL.Query()
 	helpful := helpcenter.Helpful{
 		Answer: query.Get("helpful"), Commented: query.Has("commented"), Limited: query.Has("limited"),
@@ -208,12 +226,16 @@ func (c *HelpCenterController) missing(w fhttp.ResponseWriter, r *fhttp.Request,
 	lib HelpLibrary,
 ) {
 	if s, ok := lib.(*site); ok {
-		rest := strings.TrimPrefix(r.URL.Path, "/hc/"+r.PathValue("center"))
-		if to, found := c.Public.Redirect(r.Context(), s.snap.HelpCenter, rest); found {
-			w.Header().Set("Location", redirectTarget(center.Base, to))
+		h := s.snap.HelpCenter
+		rest := prefixOf(h, s.snap.Locale) + strings.TrimPrefix(r.URL.Path, "/hc/"+r.PathValue("center"))
+		if to, found := c.Public.Redirect(r.Context(), h, rest); found {
+			w.Header().Set("Location", redirectTarget(s.at.base, to))
 			w.WriteHeader(fhttp.StatusMovedPermanently)
 			return
 		}
+	}
+	if s, ok := lib.(*site); ok {
+		localize(&center, s.snap, s.at, func(string) (string, bool) { return "/", false }, false)
 	}
 	page := helpcenter.NotFoundPage(center, lib.Collections(), lib.Popular(), c.styles())
 	c.respond(w, r, fhttp.StatusNotFound, page)
@@ -230,8 +252,12 @@ func (c *HelpCenterController) site(w fhttp.ResponseWriter, r *fhttp.Request,
 		base = ""
 	}
 	if c.Public != nil {
-		snap, err := c.Public.Load(r.Context(), slug)
+		snap, err := c.Public.LoadIn(r.Context(), slug, readingLocale(r.Context()))
 		if err == nil {
+			if c.localeAnswered(w, r, snap.HelpCenter, base) {
+				return helpcenter.Center{}, nil, false
+			}
+			keepLanguage(w, r, snap.HelpCenter, base)
 			return c.realSite(w, r, snap, base)
 		}
 		if !errors.Is(err, helpcenters.ErrNoHelpCenter) {

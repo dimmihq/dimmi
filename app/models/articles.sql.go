@@ -148,7 +148,7 @@ INSERT INTO article_versions (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
     $12, $13, $14, $15, $16, $17, $18
 )
-RETURNING id, workspace_id, article_id, number, kind, title, slug, description, body_markdown, body_html, toc, visibility, collection_id, content_hash, created_by_type, created_by_id, renderer_version, created_at, search_document
+RETURNING id, workspace_id, article_id, number, kind, title, slug, description, body_markdown, body_html, toc, visibility, collection_id, content_hash, created_by_type, created_by_id, renderer_version, created_at, search_document, locale
 `
 
 type CreateArticleVersionParams struct {
@@ -215,6 +215,7 @@ func (q *Queries) CreateArticleVersion(ctx context.Context, arg CreateArticleVer
 		&i.RendererVersion,
 		&i.CreatedAt,
 		&i.SearchDocument,
+		&i.Locale,
 	)
 	return i, err
 }
@@ -284,7 +285,7 @@ func (q *Queries) FindArticle(ctx context.Context, arg FindArticleParams) (Artic
 }
 
 const findArticleVersion = `-- name: FindArticleVersion :one
-SELECT id, workspace_id, article_id, number, kind, title, slug, description, body_markdown, body_html, toc, visibility, collection_id, content_hash, created_by_type, created_by_id, renderer_version, created_at, search_document FROM article_versions WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, article_id, number, kind, title, slug, description, body_markdown, body_html, toc, visibility, collection_id, content_hash, created_by_type, created_by_id, renderer_version, created_at, search_document, locale FROM article_versions WHERE workspace_id = $1 AND id = $2
 `
 
 type FindArticleVersionParams struct {
@@ -316,6 +317,7 @@ func (q *Queries) FindArticleVersion(ctx context.Context, arg FindArticleVersion
 		&i.RendererVersion,
 		&i.CreatedAt,
 		&i.SearchDocument,
+		&i.Locale,
 	)
 	return i, err
 }
@@ -370,7 +372,7 @@ func (q *Queries) FindPublishedArticleBySlug(ctx context.Context, arg FindPublis
 }
 
 const findRedirect = `-- name: FindRedirect :one
-SELECT r.id, r.workspace_id, r.help_center_id, r.from_path, r.target_type, r.target_article_id, r.target_collection_id, r.target_url, r.source, r.hits, r.last_hit_at, r.created_at, r.updated_at, a.slug AS article_slug, c.slug AS collection_slug
+SELECT r.id, r.workspace_id, r.help_center_id, r.from_path, r.target_type, r.target_article_id, r.target_collection_id, r.target_url, r.source, r.hits, r.last_hit_at, r.created_at, r.updated_at, r.target_locale, a.slug AS article_slug, c.slug AS collection_slug
 FROM help_center_redirects r
 LEFT JOIN articles a ON a.id = r.target_article_id AND a.deleted_at IS NULL
 LEFT JOIN collections c ON c.id = r.target_collection_id AND c.deleted_at IS NULL
@@ -397,6 +399,7 @@ type FindRedirectRow struct {
 	LastHitAt          *time.Time `json:"last_hit_at"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
+	TargetLocale       *string    `json:"target_locale"`
 	ArticleSlug        *string    `json:"article_slug"`
 	CollectionSlug     *string    `json:"collection_slug"`
 }
@@ -419,6 +422,7 @@ func (q *Queries) FindRedirect(ctx context.Context, arg FindRedirectParams) (Fin
 		&i.LastHitAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TargetLocale,
 		&i.ArticleSlug,
 		&i.CollectionSlug,
 	)
@@ -508,7 +512,7 @@ func (q *Queries) ListArticleTitles(ctx context.Context, arg ListArticleTitlesPa
 
 const listArticleVersions = `-- name: ListArticleVersions :many
 SELECT id, number, kind, title, created_by_type, created_by_id, created_at FROM article_versions
-WHERE workspace_id = $1 AND article_id = $2
+WHERE workspace_id = $1 AND article_id = $2 AND locale IS NULL
 ORDER BY number DESC
 `
 
@@ -527,7 +531,8 @@ type ListArticleVersionsRow struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
-// ListArticleVersions returns an article's versions, newest first.
+// ListArticleVersions returns the versions of an article's source,
+// newest first; translations keep their own.
 func (q *Queries) ListArticleVersions(ctx context.Context, arg ListArticleVersionsParams) ([]ListArticleVersionsRow, error) {
 	rows, err := q.db.Query(ctx, listArticleVersions, arg.WorkspaceID, arg.ArticleID)
 	if err != nil {
@@ -985,20 +990,28 @@ func (q *Queries) SearchPublishedArticles(ctx context.Context, arg SearchPublish
 }
 
 const searchWorkspaceArticles = `-- name: SearchWorkspaceArticles :many
-SELECT a.id, a.help_center_id, v.id AS version_id, h.subdomain, v.title, v.slug, v.body_markdown, v.visibility,
-    v.created_at, ts_rank_cd(v.search_document, to_tsquery('dimmi_search', $1::text))::real AS rank
+SELECT a.id, a.help_center_id, v.id AS version_id, h.subdomain, v.title, v.slug, v.body_markdown,
+    coalesce((SELECT s.visibility FROM article_versions s WHERE s.id = a.published_version_id), a.visibility)::text
+        AS visibility, v.created_at, v.locale,
+    ts_rank_cd(v.search_document, to_tsquery('dimmi_search', $1::text))::real AS rank
 FROM articles a
-JOIN article_versions v ON v.id = a.published_version_id
 JOIN help_centers h ON h.id = a.help_center_id
-WHERE a.workspace_id = $2 AND a.deleted_at IS NULL AND a.status = 'published' AND h.deleted_at IS NULL
+JOIN article_versions v ON v.id = coalesce(
+    (SELECT t.published_version_id FROM article_translations t
+     WHERE t.article_id = a.id AND t.status = 'published' AND t.locale = ANY ($2::text[])
+     ORDER BY array_position($2::text[], t.locale) LIMIT 1),
+    CASE WHEN a.status = 'published' THEN a.published_version_id END)
+WHERE a.workspace_id = $3 AND a.deleted_at IS NULL AND a.status <> 'archived' AND h.deleted_at IS NULL
   AND v.search_document @@ to_tsquery('dimmi_search', $1::text)
-  AND v.visibility = ANY ($3::text[])
+  AND coalesce((SELECT s.visibility FROM article_versions s WHERE s.id = a.published_version_id), a.visibility)
+      = ANY ($4::text[])
 ORDER BY rank DESC, a.id
-LIMIT $4
+LIMIT $5
 `
 
 type SearchWorkspaceArticlesParams struct {
 	Query        string   `json:"query"`
+	Locales      []string `json:"locales"`
 	WorkspaceID  ids.UUID `json:"workspace_id"`
 	Visibilities []string `json:"visibilities"`
 	RowLimit     int32    `json:"row_limit"`
@@ -1014,15 +1027,19 @@ type SearchWorkspaceArticlesRow struct {
 	BodyMarkdown string    `json:"body_markdown"`
 	Visibility   string    `json:"visibility"`
 	CreatedAt    time.Time `json:"created_at"`
+	Locale       *string   `json:"locale"`
 	Rank         float32   `json:"rank"`
 }
 
 // SearchWorkspaceArticles finds the workspace's published articles, in
 // every live help center, matching any of the query's words, best first,
-// with the visibilities asked for. The agent retrieves from it.
+// with the visibilities asked for. The agent retrieves from it. An
+// article translated into one of the reader's languages is searched in
+// the first of them; any other in its source.
 func (q *Queries) SearchWorkspaceArticles(ctx context.Context, arg SearchWorkspaceArticlesParams) ([]SearchWorkspaceArticlesRow, error) {
 	rows, err := q.db.Query(ctx, searchWorkspaceArticles,
 		arg.Query,
+		arg.Locales,
 		arg.WorkspaceID,
 		arg.Visibilities,
 		arg.RowLimit,
@@ -1044,6 +1061,7 @@ func (q *Queries) SearchWorkspaceArticles(ctx context.Context, arg SearchWorkspa
 			&i.BodyMarkdown,
 			&i.Visibility,
 			&i.CreatedAt,
+			&i.Locale,
 			&i.Rank,
 		); err != nil {
 			return nil, err

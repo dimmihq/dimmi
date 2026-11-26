@@ -101,19 +101,20 @@ func (q *Queries) CountKnowledgeChunksForVersion(ctx context.Context, arg CountK
 const deleteStaleKnowledgeChunks = `-- name: DeleteStaleKnowledgeChunks :exec
 DELETE FROM knowledge_chunks
 WHERE workspace_id = $1 AND article_id = $2
-  AND ($3::uuid IS NULL OR article_version_id <> $3::uuid)
+  AND NOT (article_version_id = ANY ($3::uuid[]))
 `
 
 type DeleteStaleKnowledgeChunksParams struct {
-	WorkspaceID   ids.UUID  `json:"workspace_id"`
-	ArticleID     ids.UUID  `json:"article_id"`
-	KeepVersionID *ids.UUID `json:"keep_version_id"`
+	WorkspaceID    ids.UUID   `json:"workspace_id"`
+	ArticleID      ids.UUID   `json:"article_id"`
+	KeepVersionIds []ids.UUID `json:"keep_version_ids"`
 }
 
 // DeleteStaleKnowledgeChunks removes the article's chunks of every
-// version but the one kept, all of them when none is.
+// version but those kept, the source's and its translations', all of
+// them when none is.
 func (q *Queries) DeleteStaleKnowledgeChunks(ctx context.Context, arg DeleteStaleKnowledgeChunksParams) error {
-	_, err := q.db.Exec(ctx, deleteStaleKnowledgeChunks, arg.WorkspaceID, arg.ArticleID, arg.KeepVersionID)
+	_, err := q.db.Exec(ctx, deleteStaleKnowledgeChunks, arg.WorkspaceID, arg.ArticleID, arg.KeepVersionIds)
 	return err
 }
 
@@ -258,9 +259,9 @@ func (q *Queries) FindLiveArticleForIndex(ctx context.Context, arg FindLiveArtic
 
 const insertKnowledgeChunk = `-- name: InsertKnowledgeChunk :exec
 INSERT INTO knowledge_chunks (id, workspace_id, article_id, article_version_id, help_center_id, ordinal, title,
-    heading_path, body, visibility, embed_hash, created_at)
+    heading_path, body, visibility, embed_hash, locale, created_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11, $12)
+    $8, $9, $10, $11, $12, $13)
 ON CONFLICT DO NOTHING
 `
 
@@ -276,6 +277,7 @@ type InsertKnowledgeChunkParams struct {
 	Body             string    `json:"body"`
 	Visibility       string    `json:"visibility"`
 	EmbedHash        string    `json:"embed_hash"`
+	Locale           *string   `json:"locale"`
 	Now              time.Time `json:"now"`
 }
 
@@ -293,6 +295,7 @@ func (q *Queries) InsertKnowledgeChunk(ctx context.Context, arg InsertKnowledgeC
 		arg.Body,
 		arg.Visibility,
 		arg.EmbedHash,
+		arg.Locale,
 		arg.Now,
 	)
 	return err
@@ -596,6 +599,59 @@ func (q *Queries) ListFailedEmbedHashes(ctx context.Context, arg ListFailedEmbed
 	return items, nil
 }
 
+const listLiveTranslationsForIndex = `-- name: ListLiveTranslationsForIndex :many
+SELECT t.locale, v.id AS version_id, v.title, v.body_markdown, a.visibility
+FROM article_translations t
+JOIN articles a ON a.id = t.article_id
+JOIN article_versions v ON v.id = t.published_version_id
+JOIN help_centers h ON h.id = a.help_center_id
+WHERE t.workspace_id = $1 AND t.article_id = $2 AND t.status = 'published'
+  AND a.deleted_at IS NULL AND a.status <> 'archived' AND h.deleted_at IS NULL
+ORDER BY t.locale
+`
+
+type ListLiveTranslationsForIndexParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ArticleID   ids.UUID `json:"article_id"`
+}
+
+type ListLiveTranslationsForIndexRow struct {
+	Locale       string   `json:"locale"`
+	VersionID    ids.UUID `json:"version_id"`
+	Title        string   `json:"title"`
+	BodyMarkdown string   `json:"body_markdown"`
+	Visibility   string   `json:"visibility"`
+}
+
+// ListLiveTranslationsForIndex returns the live versions of an article's
+// published translations, as the index chunks them, with the source's
+// visibility.
+func (q *Queries) ListLiveTranslationsForIndex(ctx context.Context, arg ListLiveTranslationsForIndexParams) ([]ListLiveTranslationsForIndexRow, error) {
+	rows, err := q.db.Query(ctx, listLiveTranslationsForIndex, arg.WorkspaceID, arg.ArticleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLiveTranslationsForIndexRow
+	for rows.Next() {
+		var i ListLiveTranslationsForIndexRow
+		if err := rows.Scan(
+			&i.Locale,
+			&i.VersionID,
+			&i.Title,
+			&i.BodyMarkdown,
+			&i.Visibility,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMissingEmbedHashes = `-- name: ListMissingEmbedHashes :many
 SELECT DISTINCT s.embed_hash::text AS embed_hash FROM (
     SELECT c.embed_hash FROM knowledge_chunks c WHERE c.workspace_id = $1
@@ -646,9 +702,15 @@ func (q *Queries) ListMissingEmbedHashes(ctx context.Context, arg ListMissingEmb
 const listUnindexedArticles = `-- name: ListUnindexedArticles :many
 SELECT a.id FROM articles a
 JOIN help_centers h ON h.id = a.help_center_id
-WHERE a.workspace_id = $1 AND a.deleted_at IS NULL AND a.status = 'published'
-  AND h.deleted_at IS NULL AND a.published_version_id IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM knowledge_chunks c WHERE c.article_version_id = a.published_version_id)
+WHERE a.workspace_id = $1 AND a.deleted_at IS NULL AND h.deleted_at IS NULL
+  AND (
+    (a.status = 'published' AND a.published_version_id IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM knowledge_chunks c WHERE c.article_version_id = a.published_version_id))
+    OR (a.status <> 'archived' AND EXISTS (
+      SELECT 1 FROM article_translations t
+      WHERE t.article_id = a.id AND t.status = 'published' AND t.published_version_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM knowledge_chunks c WHERE c.article_version_id = t.published_version_id)))
+  )
 ORDER BY a.id
 LIMIT $2
 `
@@ -658,8 +720,9 @@ type ListUnindexedArticlesParams struct {
 	RowLimit    int32    `json:"row_limit"`
 }
 
-// ListUnindexedArticles lists live published articles whose version has
-// no chunks yet.
+// ListUnindexedArticles lists live articles whose published version, or
+// the published version of one of their translations, has no chunks
+// yet.
 func (q *Queries) ListUnindexedArticles(ctx context.Context, arg ListUnindexedArticlesParams) ([]ids.UUID, error) {
 	rows, err := q.db.Query(ctx, listUnindexedArticles, arg.WorkspaceID, arg.RowLimit)
 	if err != nil {
@@ -750,24 +813,34 @@ func (q *Queries) RecordEmbeddingFailure(ctx context.Context, arg RecordEmbeddin
 
 const searchKnowledgeChunksVector = `-- name: SearchKnowledgeChunksVector :many
 SELECT c.id, c.article_id, c.help_center_id, c.title, c.heading_path, c.body, c.visibility, h.subdomain, v.slug,
-    v.created_at, (e.embedding <=> $1::halfvec)::float8 AS distance
+    v.created_at, c.locale, (e.embedding <=> $1::halfvec)::float8 AS distance
 FROM knowledge_chunks c
-JOIN articles a ON a.id = c.article_id AND a.published_version_id = c.article_version_id
+JOIN articles a ON a.id = c.article_id
 JOIN article_versions v ON v.id = c.article_version_id
 JOIN help_centers h ON h.id = c.help_center_id
 JOIN knowledge_embeddings e
     ON e.workspace_id = c.workspace_id AND e.model_key = $2 AND e.embed_hash = c.embed_hash
-WHERE c.workspace_id = $3 AND a.status = 'published' AND a.deleted_at IS NULL AND h.deleted_at IS NULL
-  AND c.visibility = ANY ($4::text[])
-  AND (cardinality($5::text[]) = 0 OR c.embed_hash = ANY ($5::text[]))
+WHERE c.workspace_id = $3 AND a.deleted_at IS NULL AND h.deleted_at IS NULL
+  AND (
+    (c.locale IS NULL AND a.status = 'published' AND a.published_version_id = c.article_version_id
+      AND NOT EXISTS (
+        SELECT 1 FROM article_translations rt
+        WHERE rt.article_id = a.id AND rt.status = 'published' AND rt.locale = ANY ($4::text[])))
+    OR (c.locale = ANY ($4::text[]) AND a.status <> 'archived' AND EXISTS (
+        SELECT 1 FROM article_translations t
+        WHERE t.article_id = a.id AND t.status = 'published' AND t.published_version_id = c.article_version_id))
+  )
+  AND c.visibility = ANY ($5::text[])
+  AND (cardinality($6::text[]) = 0 OR c.embed_hash = ANY ($6::text[]))
 ORDER BY distance, c.id
-LIMIT $6
+LIMIT $7
 `
 
 type SearchKnowledgeChunksVectorParams struct {
 	Embedding    database.HalfVector `json:"embedding"`
 	ModelKey     string              `json:"model_key"`
 	WorkspaceID  ids.UUID            `json:"workspace_id"`
+	Locales      []string            `json:"locales"`
 	Visibilities []string            `json:"visibilities"`
 	Hashes       []string            `json:"hashes"`
 	RowLimit     int32               `json:"row_limit"`
@@ -784,17 +857,21 @@ type SearchKnowledgeChunksVectorRow struct {
 	Subdomain    string    `json:"subdomain"`
 	Slug         string    `json:"slug"`
 	CreatedAt    time.Time `json:"created_at"`
+	Locale       *string   `json:"locale"`
 	Distance     float64   `json:"distance"`
 }
 
 // SearchKnowledgeChunksVector ranks the live chunks by cosine distance
 // of their vector of the model to the query vector, nearest first,
-// optionally only those with the given hashes.
+// optionally only those with the given hashes. An article translated
+// into one of the reader's languages answers in it; any other answers
+// in its source.
 func (q *Queries) SearchKnowledgeChunksVector(ctx context.Context, arg SearchKnowledgeChunksVectorParams) ([]SearchKnowledgeChunksVectorRow, error) {
 	rows, err := q.db.Query(ctx, searchKnowledgeChunksVector,
 		arg.Embedding,
 		arg.ModelKey,
 		arg.WorkspaceID,
+		arg.Locales,
 		arg.Visibilities,
 		arg.Hashes,
 		arg.RowLimit,
@@ -817,6 +894,7 @@ func (q *Queries) SearchKnowledgeChunksVector(ctx context.Context, arg SearchKno
 			&i.Subdomain,
 			&i.Slug,
 			&i.CreatedAt,
+			&i.Locale,
 			&i.Distance,
 		); err != nil {
 			return nil, err

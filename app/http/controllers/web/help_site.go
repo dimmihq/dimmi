@@ -99,6 +99,7 @@ type site struct {
 	snap    helpcenters.Snapshot
 	search  func(query string) []models.SearchPublishedArticlesRow
 	updates []helpcenter.Update
+	at      pageAt
 }
 
 /*
@@ -107,7 +108,7 @@ anyone.
 */
 func newSite(ctx context.Context, public *helpcenters.Public, snap helpcenters.Snapshot, reader *ids.UUID) *site {
 	return &site{snap: snap, search: func(query string) []models.SearchPublishedArticlesRow {
-		find := helpcenters.Find{Center: snap.HelpCenter, Query: query, Limit: 20, Reader: reader}
+		find := helpcenters.Find{Center: snap.HelpCenter, Locale: snap.Locale, Query: query, Limit: 20, Reader: reader}
 		rows, err := public.Search(ctx, find)
 		if err != nil {
 			return nil
@@ -294,6 +295,39 @@ func (s *site) find(slug string) int {
 		}
 	}
 	return -1
+}
+
+/*
+articleIn gives the path of the article with the slug in each language
+it is published in.
+*/
+func (s *site) articleIn(slug string) pageIn {
+	at := s.find(slug)
+	if at < 0 {
+		return func(string) (string, bool) { return "", false }
+	}
+	slugs := s.snap.Alternates.Article(s.snap.Articles[at].ID)
+	return func(locale string) (string, bool) {
+		other, ok := slugs[locale]
+		return "/articles/" + other, ok
+	}
+}
+
+/*
+collectionIn gives the path of the collection with the slug in each
+language it shows in.
+*/
+func (s *site) collectionIn(slug string) pageIn {
+	for _, c := range s.snap.Collections {
+		if c.Slug == slug {
+			slugs := s.snap.Alternates.Collection(c.ID)
+			return func(locale string) (string, bool) {
+				other, ok := slugs[locale]
+				return "/collections/" + other, ok
+			}
+		}
+	}
+	return func(string) (string, bool) { return "", false }
 }
 
 func indexOf(rows []models.ListPublishedArticlesRow, id ids.UUID) int {

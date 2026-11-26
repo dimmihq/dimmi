@@ -32,15 +32,21 @@ import (
 )
 
 /*
-Snapshot is a help center as readers see it at one cache version.
-Restricted says audiences keep some of it from this reader, so signing
-in could show more. Messenger is the messenger its pages load, the zero
-value when they show none.
+Snapshot is a help center as readers of one language see it at one
+cache version. Locale is that language. Collections and Articles carry
+that language's names, slugs and text: in the default language the
+source, in another only what is translated into it. Alternates gives,
+for each article and collection, its slug in every language readers
+may read it in. Restricted says audiences keep some of it from this
+reader, so signing in could show more. Messenger is the messenger its
+pages load, the zero value when they show none.
 */
 type Snapshot struct {
 	HelpCenter  models.HelpCenter
+	Locale      string
 	Collections []models.Collection
 	Articles    []models.ListPublishedArticlesRow
+	Alternates  Alternates
 	Restricted  bool
 	Messenger   Messenger
 }
@@ -51,6 +57,7 @@ snapshotKey names a help center at one cache version.
 type snapshotKey struct {
 	id      ids.UUID
 	version int64
+	locale  string
 }
 
 /*
@@ -80,9 +87,19 @@ ErrNoHelpCenter says no active help center answers the subdomain.
 var ErrNoHelpCenter = errors.New("help center not found")
 
 /*
-Load returns the help center answering the subdomain as readers see it.
+Load returns the help center answering the subdomain as readers of its
+default language see it.
 */
 func (p *Public) Load(ctx context.Context, subdomain string) (Snapshot, error) {
+	return p.LoadIn(ctx, subdomain, "")
+}
+
+/*
+LoadIn returns the help center answering the subdomain as readers of
+the language see it, its default for an empty one or one it does not
+offer.
+*/
+func (p *Public) LoadIn(ctx context.Context, subdomain, locale string) (Snapshot, error) {
 	row, err := models.New(p.DB).ResolveHelpCenter(ctx, subdomain)
 	if errors.Is(err, database.ErrNotFound) {
 		return Snapshot{}, ErrNoHelpCenter
@@ -98,12 +115,12 @@ func (p *Public) Load(ctx context.Context, subdomain string) (Snapshot, error) {
 		if err != nil {
 			return fmt.Errorf("find help center: %w", err)
 		}
-		key := snapshotKey{id: h.ID, version: h.CacheVersion}
+		key := snapshotKey{id: h.ID, version: h.CacheVersion, locale: readLocale(h, locale)}
 		if cached, ok := p.snapshots.Get(key); ok {
 			out = cached
 			return nil
 		}
-		out, err = load(ctx, q, h, p.Clock.Now)
+		out, err = load(ctx, q, h, key.locale, p.Clock.Now)
 		if err == nil {
 			p.snapshots.Set(key, out)
 		}
@@ -113,11 +130,29 @@ func (p *Public) Load(ctx context.Context, subdomain string) (Snapshot, error) {
 }
 
 /*
+readLocale is the language a snapshot is read in: the one asked for
+when the help center offers it, else its default.
+*/
+func readLocale(h models.HelpCenter, locale string) string {
+	if locale != "" && OffersLocale(h, locale) {
+		return locale
+	}
+	return h.Locale
+}
+
+/*
 LoadFor returns the help center answering the subdomain as one signed-in
 reader sees it, with what their audiences open. It is never cached, so
 nothing one reader sees reaches another.
 */
 func (p *Public) LoadFor(ctx context.Context, subdomain string, contact ids.UUID) (Snapshot, error) {
+	return p.LoadForIn(ctx, subdomain, "", contact)
+}
+
+/*
+LoadForIn is LoadFor in one language.
+*/
+func (p *Public) LoadForIn(ctx context.Context, subdomain, locale string, contact ids.UUID) (Snapshot, error) {
 	row, err := models.New(p.DB).ResolveHelpCenter(ctx, subdomain)
 	if errors.Is(err, database.ErrNotFound) {
 		return Snapshot{}, ErrNoHelpCenter
@@ -126,7 +161,7 @@ func (p *Public) LoadFor(ctx context.Context, subdomain string, contact ids.UUID
 		return Snapshot{}, fmt.Errorf("resolve help center: %w", err)
 	}
 
-	return p.readFor(ctx, models.FindHelpCenterParams(row), contact)
+	return p.readFor(ctx, models.FindHelpCenterParams(row), locale, contact)
 }
 
 /*
@@ -135,14 +170,23 @@ messenger knows sees it, for the messenger's Help tab. It is never
 cached either.
 */
 func (p *Public) LoadByIDFor(ctx context.Context, workspaceID, id, contact ids.UUID) (Snapshot, error) {
-	return p.readFor(ctx, models.FindHelpCenterParams{WorkspaceID: workspaceID, ID: id}, contact)
+	return p.LoadByIDForIn(ctx, workspaceID, id, "", contact)
+}
+
+/*
+LoadByIDForIn is LoadByIDFor in one language.
+*/
+func (p *Public) LoadByIDForIn(ctx context.Context, workspaceID, id ids.UUID, locale string, contact ids.UUID,
+) (Snapshot, error) {
+	return p.readFor(ctx, models.FindHelpCenterParams{WorkspaceID: workspaceID, ID: id}, locale, contact)
 }
 
 /*
 readFor reads the help center as the reader sees it, inside its
 workspace.
 */
-func (p *Public) readFor(ctx context.Context, find models.FindHelpCenterParams, contact ids.UUID) (Snapshot, error) {
+func (p *Public) readFor(ctx context.Context, find models.FindHelpCenterParams, locale string, contact ids.UUID,
+) (Snapshot, error) {
 	var out Snapshot
 	scoped := tenancy.With(ctx, find.WorkspaceID.String())
 	err := p.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
@@ -158,7 +202,7 @@ func (p *Public) readFor(ctx context.Context, find models.FindHelpCenterParams, 
 		if err != nil {
 			return err
 		}
-		full, err := loadAll(ctx, q, h)
+		full, err := loadAll(ctx, q, h, readLocale(h, locale))
 		if err != nil {
 			return err
 		}
@@ -193,8 +237,9 @@ func (p *Public) reader(ctx context.Context, q *models.Queries, ws ids.UUID, con
 load reads a help center's collections and published articles, those an
 anonymous reader may see.
 */
-func load(ctx context.Context, q *models.Queries, h models.HelpCenter, now nowFunc) (Snapshot, error) {
-	out, err := loadAll(ctx, q, h)
+func load(ctx context.Context, q *models.Queries, h models.HelpCenter, locale string, now nowFunc,
+) (Snapshot, error) {
+	out, err := loadAll(ctx, q, h, locale)
 	if err != nil {
 		return out, err
 	}
@@ -202,25 +247,17 @@ func load(ctx context.Context, q *models.Queries, h models.HelpCenter, now nowFu
 }
 
 /*
-loadAll reads every collection and published article of a help center,
-before any audience is applied.
+loadAll reads every collection and published article of a help center
+in the language, before any audience is applied.
 */
-func loadAll(ctx context.Context, q *models.Queries, h models.HelpCenter) (Snapshot, error) {
-	out := Snapshot{HelpCenter: h}
-	var err error
-	out.Collections, err = q.ListCollections(ctx, models.ListCollectionsParams{
-		WorkspaceID: h.WorkspaceID, HelpCenterID: h.ID,
-	})
+func loadAll(ctx context.Context, q *models.Queries, h models.HelpCenter, locale string) (Snapshot, error) {
+	out := Snapshot{HelpCenter: h, Locale: locale}
+	read, err := readShelves(ctx, q, h)
 	if err != nil {
-		return out, fmt.Errorf("list collections: %w", err)
+		return out, err
 	}
-	out.Articles, err = q.ListPublishedArticles(ctx, models.ListPublishedArticlesParams{
-		WorkspaceID: h.WorkspaceID, HelpCenterID: h.ID,
-	})
-	if err != nil {
-		return out, fmt.Errorf("list published articles: %w", err)
-	}
-	out.Articles = refreshed(out.Articles)
+	out.Collections, out.Articles = read.in(locale)
+	out.Alternates = read.alternates()
 	out.Messenger, err = messengerOf(ctx, q, h)
 	return out, err
 }
@@ -236,6 +273,7 @@ many results at most, and the signed-in reader, nil for anyone else.
 */
 type Find struct {
 	Center models.HelpCenter
+	Locale string
 	Query  string
 	Limit  int32
 	Reader *ids.UUID
@@ -251,9 +289,7 @@ func (p *Public) Search(ctx context.Context, f Find) ([]models.SearchPublishedAr
 	scoped := tenancy.With(ctx, h.WorkspaceID.String())
 	err := p.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
-		rows, err := q.SearchPublishedArticles(ctx, models.SearchPublishedArticlesParams{
-			Query: f.Query, WorkspaceID: h.WorkspaceID, HelpCenterID: h.ID, IncludeAgentOnly: false, RowLimit: f.Limit,
-		})
+		rows, err := searchIn(ctx, q, f)
 		if err != nil {
 			return err
 		}
@@ -273,23 +309,28 @@ func (p *Public) Search(ctx context.Context, f Find) ([]models.SearchPublishedAr
 
 /*
 Redirect returns the path an old address of the help center now leads
-to, relative to the help center's root.
+to, relative to the help center's root. A redirect of another language
+leads to its target in that language.
 */
 func (p *Public) Redirect(ctx context.Context, h models.HelpCenter, from string) (string, bool) {
 	var to string
 	scoped := tenancy.With(ctx, h.WorkspaceID.String())
 	_ = p.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
-		row, err := models.New(tx).FindRedirect(ctx, models.FindRedirectParams{
+		row, err := models.New(tx).FindLocalizedRedirect(ctx, models.FindLocalizedRedirectParams{
 			WorkspaceID: h.WorkspaceID, HelpCenterID: h.ID, FromPath: from,
 		})
 		if err != nil {
 			return err
 		}
+		prefix := ""
+		if row.TargetLocale != nil && *row.TargetLocale != h.Locale {
+			prefix = "/" + *row.TargetLocale
+		}
 		switch {
-		case row.ArticleSlug != nil:
-			to = "/articles/" + *row.ArticleSlug
-		case row.CollectionSlug != nil:
-			to = "/collections/" + *row.CollectionSlug
+		case row.ArticleSlug != "":
+			to = prefix + "/articles/" + row.ArticleSlug
+		case row.CollectionSlug != "":
+			to = prefix + "/collections/" + row.CollectionSlug
 		case row.TargetUrl != nil:
 			to = *row.TargetUrl
 		}
@@ -303,6 +344,13 @@ LoadByID returns a workspace's help center as readers see it, for the
 messenger, which knows its help center by id.
 */
 func (p *Public) LoadByID(ctx context.Context, workspaceID, id ids.UUID) (Snapshot, error) {
+	return p.LoadByIDIn(ctx, workspaceID, id, "")
+}
+
+/*
+LoadByIDIn is LoadByID in one language.
+*/
+func (p *Public) LoadByIDIn(ctx context.Context, workspaceID, id ids.UUID, locale string) (Snapshot, error) {
 	var out Snapshot
 	scoped := tenancy.With(ctx, workspaceID.String())
 	err := p.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
@@ -314,12 +362,12 @@ func (p *Public) LoadByID(ctx context.Context, workspaceID, id ids.UUID) (Snapsh
 		if err != nil {
 			return fmt.Errorf("find help center: %w", err)
 		}
-		key := snapshotKey{id: h.ID, version: h.CacheVersion}
+		key := snapshotKey{id: h.ID, version: h.CacheVersion, locale: readLocale(h, locale)}
 		if cached, ok := p.snapshots.Get(key); ok {
 			out = cached
 			return nil
 		}
-		out, err = load(ctx, q, h, p.Clock.Now)
+		out, err = load(ctx, q, h, key.locale, p.Clock.Now)
 		if err == nil {
 			p.snapshots.Set(key, out)
 		}

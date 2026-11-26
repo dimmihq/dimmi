@@ -31,7 +31,10 @@ it first, and the messenger asks MessengerIdentity who is signed in.
 HomeTitle is the question the home page asks, empty for the default,
 and FooterText closes every page. Canonical is the page's address on the
 help center's own domain, which search engines should keep, and NoIndex
-keeps every page out of them.
+keeps every page out of them. Locale is the language the page is in,
+empty for English; Languages are the languages a reader may switch to,
+none when the help center speaks one, and Alternates are this page's
+addresses in the other languages it exists in, for search engines.
 */
 type Center struct {
 	Name       string
@@ -61,6 +64,30 @@ type Center struct {
 
 	Canonical string
 	NoIndex   bool
+
+	Locale     string
+	Languages  []LanguageLink
+	Alternates []Alternate
+}
+
+/*
+LanguageLink is a language in the language menu: its tag, its name in
+itself, where the page is in it and whether it is the page's language.
+*/
+type LanguageLink struct {
+	Code    string
+	Name    string
+	URL     string
+	Current bool
+}
+
+/*
+Alternate is a page's address in one language, or x-default for the
+one a reader of none of them gets.
+*/
+type Alternate struct {
+	Lang string
+	URL  string
 }
 
 /*

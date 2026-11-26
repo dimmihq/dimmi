@@ -1,6 +1,9 @@
 package helpcenter
 
-import "strconv"
+import (
+	"strconv"
+	"strings"
+)
 
 /*
 Layout is the frame of every portal page: a top bar with the logo, the
@@ -19,7 +22,7 @@ so browsers do not ask the server for one.
 
 templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) {
 	<!DOCTYPE html>
-	<html lang="en" style={ BrandStyle(c) } data-appearance={ fixedTheme(c) }>
+	<html lang={ pageLang(c) } dir={ pageDir(c) } style={ BrandStyle(c) } data-appearance={ fixedTheme(c) }>
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -45,6 +48,11 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 			}
 			if c.Canonical != "" && !m.NoIndex {
 				<link rel="canonical" href={ templ.SafeURL(c.Canonical) }/>
+			}
+			if !m.NoIndex {
+				for _, a := range c.Alternates {
+					<link rel="alternate" hreflang={ a.Lang } href={ templ.SafeURL(a.URL) }/>
+				}
 			}
 			if m.Markdown != "" {
 				<link rel="alternate" type="text/markdown" href={ Href(c, m.Markdown) }/>
@@ -161,6 +169,44 @@ templ themeSwitch(c Center) {
 	}
 }
 
+/*
+languageSwitch lets a reader read the page in another language the help
+center speaks, from a small menu naming each in itself. Each choice
+leads to the same page in that language, or to that language's home
+when the page is not translated. It shows only where the help center
+speaks more than one language.
+*/
+
+templ languageSwitch(c Center) {
+	if len(c.Languages) > 1 {
+		<details data-menu data-language-switch class="relative">
+			<summary aria-label="Language" title="Language" class="flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-lg px-2 text-body-2-medium text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+				@Icon("globe", "size-4 text-foreground-icon-secondary")
+				<span class="max-sm:sr-only">{ currentLanguage(c) }</span>
+			</summary>
+			<div class="absolute end-0 top-10 z-40 max-h-80 w-56 overflow-y-auto rounded-xl border border-border-button-default bg-background-primary-default p-1 shadow-lg">
+				for _, l := range c.Languages {
+					<a
+						href={ templ.SafeURL(l.URL) }
+						hreflang={ l.Code }
+						lang={ l.Code }
+						data-turbo="false"
+						if l.Current {
+							aria-current="true"
+						}
+						class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-2-medium text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:bg-background-secondary-hover aria-[current=true]:text-text-primary"
+					>
+						<span class="flex-1 text-start">{ l.Name }</span>
+						if l.Current {
+							@Icon("check", "size-4 text-link")
+						}
+					</a>
+				}
+			</div>
+		</details>
+	}
+}
+
 templ themeChoice(value, label, icon string) {
 	<button type="button" data-theme-choice={ value } aria-pressed="false" class="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-2-medium text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:bg-background-secondary-hover">
 		@Icon(icon, "size-4 text-foreground-icon-tertiary")
@@ -211,6 +257,7 @@ templ topBar(c Center, m Meta) {
 			}
 		</nav>
 		<div class="flex shrink-0 items-center gap-2 max-lg:ms-auto">
+			@languageSwitch(c)
 			@themeSwitch(c)
 			@HelpButton(c, "inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-body-medium text-text-secondary transition-colors hover:text-text-primary max-sm:hidden [&>span]:max-xl:sr-only", "", "size-4")
 			@account(c)
@@ -271,6 +318,40 @@ templ drawerPanel(c Center, m Meta, sidebar templ.Component) {
 			@sidebar
 		</div>
 	</aside>
+}
+
+/*
+pageLang is the language the page is in.
+*/
+func pageLang(c Center) string {
+	if c.Locale == "" {
+		return "en"
+	}
+	return c.Locale
+}
+
+/*
+pageDir is the direction the page's language is written in.
+*/
+func pageDir(c Center) string {
+	lang, _, _ := strings.Cut(pageLang(c), "-")
+	switch lang {
+	case "ar", "he", "fa", "ur":
+		return "rtl"
+	}
+	return "ltr"
+}
+
+/*
+currentLanguage names the page's language in the language menu.
+*/
+func currentLanguage(c Center) string {
+	for _, l := range c.Languages {
+		if l.Current {
+			return l.Name
+		}
+	}
+	return pageLang(c)
 }
 
 /*

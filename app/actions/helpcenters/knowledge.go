@@ -207,6 +207,7 @@ func (k *Knowledge) byKeyword(ctx context.Context, ws ids.UUID, query string, op
 			BodyMarkdown: r.BodyMarkdown, Visibility: r.Visibility, CreatedAt: r.CreatedAt,
 		})
 		doc.VersionID = r.VersionID
+		k.inLocale(&doc, r.Subdomain, r.Slug, r.Locale)
 		docs = append(docs, doc)
 	}
 	for _, r := range found.documents {
@@ -278,7 +279,8 @@ func articleCandidates(ctx context.Context, q *models.Queries, a asked, out *fou
 	ws, terms, opts := a.ws, a.terms, a.opts
 
 	rows, err := q.SearchWorkspaceArticles(ctx, models.SearchWorkspaceArticlesParams{
-		Query: terms, WorkspaceID: ws, Visibilities: visibilities(opts.Visibility), RowLimit: candidates,
+		Query: terms, WorkspaceID: ws, Visibilities: visibilities(opts.Visibility),
+		Locales: knowledge.ReaderLocales(opts.Locale), RowLimit: candidates,
 	})
 	if err != nil || !opts.AudienceFiltered {
 		out.articles = rows
@@ -478,6 +480,18 @@ func (k *Knowledge) articleOf(r models.FindWorkspaceArticleDocumentRow) knowledg
 		URL:        k.Addresses.Root(models.HelpCenter{Subdomain: r.Subdomain}) + "/articles/" + r.Slug,
 		Visibility: contracts.KnowledgeVisibility(r.Visibility), UpdatedAt: r.CreatedAt,
 	}
+}
+
+/*
+inLocale points a translated article at its address in its language
+and says which language it is in.
+*/
+func (k *Knowledge) inLocale(doc *knowledge.Article, subdomain, slug string, locale *string) {
+	if locale == nil || *locale == "" {
+		return
+	}
+	doc.Locale = *locale
+	doc.URL = k.Addresses.Root(models.HelpCenter{Subdomain: subdomain}) + "/" + *locale + "/articles/" + slug
 }
 
 func (k *Knowledge) inWorkspace(ctx context.Context, ws ids.UUID, fn func(context.Context, *models.Queries) error,

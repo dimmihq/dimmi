@@ -14,8 +14,11 @@ SELECT * FROM help_centers WHERE workspace_id = @workspace_id AND is_default AND
 
 -- name: CreateHelpCenter :one
 -- CreateHelpCenter stores a new help center.
-INSERT INTO help_centers (id, workspace_id, name, subdomain, locale, is_default, settings, created_at, updated_at)
-VALUES (@id, @workspace_id, @name, @subdomain, @locale, @is_default, @settings, @now, @now)
+INSERT INTO help_centers (
+    id, workspace_id, name, subdomain, locale, locales, is_default, settings, created_at, updated_at
+) VALUES (
+    @id, @workspace_id, @name, @subdomain, @locale, ARRAY[@locale::text], @is_default, @settings, @now, @now
+)
 RETURNING *;
 
 -- name: UpdateHelpCenter :one

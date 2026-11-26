@@ -1068,6 +1068,9 @@
               "null"
             ]
           },
+          "locale": {
+            "type": "string"
+          },
           "popular": {
             "description": "The slugs of up to five articles to feature first, taken from the start of the articles list.",
             "items": {
@@ -3622,6 +3625,28 @@
       "get": {
         "description": "Returns the collections and published articles anyone may read in the help center this messenger links to, so help shows before the visitor says anything. Needs no session, only the app id in the path. Everything is empty when the messenger links to no help center. Returns the help center's address, its collections, up to 200 articles with body blocks, and up to 5 popular article slugs.",
         "operationId": "widget.apps.help.show",
+        "parameters": [
+          {
+            "description": "The language to read the help center in, such as fr. Defaults to the first of the visitor's browser languages the help center offers.",
+            "explode": false,
+            "in": "query",
+            "name": "locale",
+            "schema": {
+              "description": "The language to read the help center in, such as fr. Defaults to the first of the visitor's browser languages the help center offers.",
+              "maxLength": 16,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Accept-Language: text of at most 512 characters.",
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "maxLength": 512,
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -4527,6 +4552,28 @@
       "get": {
         "description": "Returns the help center's collections and articles as this visitor may read them: what their audiences open when the messenger knows them (signed in, or with a proven email), and what anyone may read otherwise. Needs a messenger session. Everything is empty when the messenger links to no help center. Returns the help center's address, its collections, up to 200 articles with body blocks, and up to 5 popular article slugs.",
         "operationId": "widget.help.show",
+        "parameters": [
+          {
+            "description": "The language to read the help center in, such as fr. Defaults to the first of the visitor's browser languages the help center offers.",
+            "explode": false,
+            "in": "query",
+            "name": "locale",
+            "schema": {
+              "description": "The language to read the help center in, such as fr. Defaults to the first of the visitor's browser languages the help center offers.",
+              "maxLength": 16,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Accept-Language: text of at most 512 characters.",
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "maxLength": 512,
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {

@@ -431,6 +431,32 @@ type ArticleRating struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+type ArticleTranslation struct {
+	ID                    ids.UUID   `json:"id"`
+	WorkspaceID           ids.UUID   `json:"workspace_id"`
+	HelpCenterID          ids.UUID   `json:"help_center_id"`
+	ArticleID             ids.UUID   `json:"article_id"`
+	Locale                string     `json:"locale"`
+	Title                 string     `json:"title"`
+	Slug                  string     `json:"slug"`
+	Description           *string    `json:"description"`
+	BodyMarkdown          string     `json:"body_markdown"`
+	Status                string     `json:"status"`
+	PublishedVersionID    *ids.UUID  `json:"published_version_id"`
+	HasUnpublishedChanges bool       `json:"has_unpublished_changes"`
+	ContentHash           string     `json:"content_hash"`
+	SourceHash            *string    `json:"source_hash"`
+	AuthorMemberID        *ids.UUID  `json:"author_member_id"`
+	LastEditedByType      *string    `json:"last_edited_by_type"`
+	LastEditedByID        *ids.UUID  `json:"last_edited_by_id"`
+	LockVersion           int32      `json:"lock_version"`
+	WordCount             int32      `json:"word_count"`
+	PublishedAt           *time.Time `json:"published_at"`
+	FirstPublishedAt      *time.Time `json:"first_published_at"`
+	CreatedAt             time.Time  `json:"created_at"`
+	UpdatedAt             time.Time  `json:"updated_at"`
+}
+
 type ArticleVersion struct {
 	ID              ids.UUID                `json:"id"`
 	WorkspaceID     ids.UUID                `json:"workspace_id"`
@@ -451,6 +477,7 @@ type ArticleVersion struct {
 	RendererVersion int16                   `json:"renderer_version"`
 	CreatedAt       time.Time               `json:"created_at"`
 	SearchDocument  database.SearchDocument `json:"search_document"`
+	Locale          *string                 `json:"locale"`
 }
 
 type ArticleView struct {
@@ -894,6 +921,20 @@ type Collection struct {
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 	AudienceID   *ids.UUID  `json:"audience_id"`
+}
+
+type CollectionTranslation struct {
+	ID           ids.UUID  `json:"id"`
+	WorkspaceID  ids.UUID  `json:"workspace_id"`
+	HelpCenterID ids.UUID  `json:"help_center_id"`
+	CollectionID ids.UUID  `json:"collection_id"`
+	Locale       string    `json:"locale"`
+	Name         string    `json:"name"`
+	Slug         string    `json:"slug"`
+	Description  *string   `json:"description"`
+	SourceHash   *string   `json:"source_hash"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type Company struct {
@@ -1586,6 +1627,7 @@ type HelpCenter struct {
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
 	CustomDomain    *string         `json:"custom_domain"`
+	Locales         []string        `json:"locales"`
 }
 
 type HelpCenterDomain struct {
@@ -1626,6 +1668,7 @@ type HelpCenterRedirect struct {
 	LastHitAt          *time.Time `json:"last_hit_at"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
+	TargetLocale       *string    `json:"target_locale"`
 }
 
 type HelpSearchTerm struct {
@@ -1864,6 +1907,7 @@ type KnowledgeChunk struct {
 	Visibility       string    `json:"visibility"`
 	EmbedHash        string    `json:"embed_hash"`
 	CreatedAt        time.Time `json:"created_at"`
+	Locale           *string   `json:"locale"`
 }
 
 type KnowledgeConversation struct {

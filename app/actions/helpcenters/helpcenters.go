@@ -243,6 +243,7 @@ type HelpCenterChange struct {
 	Name       *string
 	Subdomain  *string
 	Locale     *string
+	Locales    *[]string
 	Status     *string
 	Indexing   *bool
 	AskAI      *bool
@@ -271,7 +272,11 @@ func (h *HelpCenters) Update(ctx context.Context, in HelpCenterChange) (models.H
 		if err != nil {
 			return fmt.Errorf("update help center: %w", err)
 		}
-		return nil
+		if in.Locale == nil && in.Locales == nil {
+			return nil
+		}
+		out, err = setLanguages(ctx, q, out, LanguagesChange{Default: in.Locale, Locales: in.Locales}, h.Clock.Now)
+		return err
 	})
 	return out, err
 }
@@ -318,12 +323,10 @@ func (h *HelpCenters) apply(ctx context.Context, q *models.Queries, c models.Hel
 }
 
 /*
-applyFlags writes the change's language, status and switches.
+applyFlags writes the change's status and switches; languages are
+written apart, by setLanguages.
 */
 func applyFlags(p *models.UpdateHelpCenterParams, in HelpCenterChange) error {
-	if in.Locale != nil {
-		p.Locale = *in.Locale
-	}
 	if in.Status != nil {
 		if *in.Status != "active" && *in.Status != "disabled" {
 			return fault.New(fault.Invalid, "status_invalid", "The status is active or disabled.").OnField("status")

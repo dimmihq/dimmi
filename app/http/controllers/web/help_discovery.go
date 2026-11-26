@@ -10,7 +10,9 @@
 | off; and an llms.txt index in the llmstxt.org format linking every
 | article's Markdown, with llms-full.txt carrying the Markdown itself.
 | Every address is the help center's canonical one, its custom domain
-| once verified. These belong to each help center's own host or path,
+| once verified. Each language has its own sitemap and llms.txt under
+| its prefix, listing what is translated into it; robots.txt names
+| every sitemap. These belong to each help center's own host or path,
 | apart from the app's own /llms.txt.
 |
 */
@@ -60,12 +62,19 @@ func (c *HelpCenterController) discoverable(w fhttp.ResponseWriter, r *fhttp.Req
 		w.WriteHeader(fhttp.StatusNotFound)
 		return helpcenters.Snapshot{}, "", false
 	}
-	snap, err := c.Public.Load(r.Context(), r.PathValue("center"))
+	snap, err := c.Public.LoadIn(r.Context(), r.PathValue("center"), readingLocale(r.Context()))
 	if err != nil {
 		w.WriteHeader(fhttp.StatusNotFound)
 		return snap, "", false
 	}
-	return snap, c.Addresses.Root(snap.HelpCenter), true
+	base := "/hc/" + r.PathValue("center")
+	if hostedHere(r.Context()) {
+		base = ""
+	}
+	if c.localeAnswered(w, r, snap.HelpCenter, base) {
+		return snap, "", false
+	}
+	return snap, c.Addresses.Root(snap.HelpCenter) + prefixOf(snap.HelpCenter, snap.Locale), true
 }
 
 /*
@@ -88,9 +97,11 @@ func (c *HelpCenterController) Sitemap(w fhttp.ResponseWriter, r *fhttp.Request)
 	for _, a := range snap.Articles {
 		set.URLs = append(set.URLs, sitemapURL{Loc: root + "/articles/" + a.Slug, LastMod: day(a.VersionCreatedAt)})
 	}
-	set.URLs = append(set.URLs, c.changelogURLs(r, snap.HelpCenter, root)...)
-	if helpcenters.SettingsOf(snap.HelpCenter).FeedbackBoard {
-		set.URLs = append(set.URLs, sitemapURL{Loc: root + "/feedback"})
+	if snap.Locale == snap.HelpCenter.Locale {
+		set.URLs = append(set.URLs, c.changelogURLs(r, snap.HelpCenter, root)...)
+		if helpcenters.SettingsOf(snap.HelpCenter).FeedbackBoard {
+			set.URLs = append(set.URLs, sitemapURL{Loc: root + "/feedback"})
+		}
 	}
 	body, err := xml.MarshalIndent(set, "", "  ")
 	if err != nil {
@@ -138,8 +149,19 @@ func (c *HelpCenterController) Robots(w fhttp.ResponseWriter, r *fhttp.Request) 
 		writeText(w, "text/plain; charset=utf-8", "User-agent: *\nDisallow: /\n")
 		return
 	}
-	writeText(w, "text/plain; charset=utf-8", "User-agent: *\nAllow: /\nDisallow: /search\n"+
-		"Disallow: /sso\nDisallow: /sign-in\nDisallow: /conversations\n\nSitemap: "+root+"/sitemap.xml\n")
+	root = c.Addresses.Root(snap.HelpCenter)
+	var b strings.Builder
+	b.WriteString("User-agent: *\nAllow: /\nDisallow: /search\n" +
+		"Disallow: /sso\nDisallow: /sign-in\nDisallow: /conversations\n")
+	h := snap.HelpCenter
+	for _, l := range helpcenters.LocalesOf(h)[1:] {
+		b.WriteString("Disallow: /" + l + "/search\n")
+	}
+	b.WriteString("\nSitemap: " + root + "/sitemap.xml\n")
+	for _, l := range helpcenters.LocalesOf(h)[1:] {
+		b.WriteString("Sitemap: " + root + "/" + l + "/sitemap.xml\n")
+	}
+	writeText(w, "text/plain; charset=utf-8", b.String())
 }
 
 /*
@@ -269,5 +291,5 @@ its custom domain once verified, whichever address it was read at.
 */
 func (c *HelpCenterController) canonical(r *fhttp.Request, h models.HelpCenter) string {
 	rest := strings.TrimPrefix(r.URL.Path, "/hc/"+r.PathValue("center"))
-	return c.Addresses.Root(h) + rest
+	return c.Addresses.Root(h) + prefixOf(h, readingLocale(r.Context())) + rest
 }

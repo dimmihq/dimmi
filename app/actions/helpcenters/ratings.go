@@ -77,6 +77,7 @@ is the signed-in reader, when there is one.
 */
 type Rating struct {
 	Center  models.HelpCenter
+	Locale  string
 	Slug    string
 	Rater   string
 	Contact *ids.UUID
@@ -146,7 +147,8 @@ func (r *Ratings) allow(ctx context.Context, what string, in Rating, limit int) 
 }
 
 /*
-onArticle runs fn on the published article at the slug, with the
+onArticle runs fn on the published article at the slug, in the
+rating's language, with the
 rater's hash for it. An article that is not published is quietly left
 alone, since readers only ever rate what they read.
 */
@@ -156,16 +158,32 @@ func (r *Ratings) onArticle(ctx context.Context, in Rating,
 	scoped := tenancy.With(ctx, in.Center.WorkspaceID.String())
 	return r.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
-		row, err := q.FindPublishedArticleBySlug(ctx, models.FindPublishedArticleBySlugParams{
-			WorkspaceID: in.Center.WorkspaceID, HelpCenterID: in.Center.ID, Slug: in.Slug,
-		})
+		id, err := ratedArticle(ctx, q, in)
 		if errors.Is(err, database.ErrNotFound) {
 			return nil
 		}
 		if err != nil {
 			return fmt.Errorf("find rated article: %w", err)
 		}
-		return fn(ctx, q, row.ID, r.hash(row.ID.String()+"|"+in.Rater))
+		return fn(ctx, q, id, r.hash(id.String()+"|"+in.Rater))
+	})
+}
+
+/*
+ratedArticle finds the published article readers reach at the slug, in
+the rating's language: the source's slug in the default, a
+translation's in any other. A rating counts for the article, whatever
+language it was read in.
+*/
+func ratedArticle(ctx context.Context, q *models.Queries, in Rating) (ids.UUID, error) {
+	if in.Locale == "" || in.Locale == in.Center.Locale {
+		row, err := q.FindPublishedArticleBySlug(ctx, models.FindPublishedArticleBySlugParams{
+			WorkspaceID: in.Center.WorkspaceID, HelpCenterID: in.Center.ID, Slug: in.Slug,
+		})
+		return row.ID, err
+	}
+	return q.FindTranslatedArticleBySlug(ctx, models.FindTranslatedArticleBySlugParams{
+		WorkspaceID: in.Center.WorkspaceID, HelpCenterID: in.Center.ID, Locale: in.Locale, Slug: in.Slug,
 	})
 }
 

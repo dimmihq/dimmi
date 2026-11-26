@@ -871,37 +871,6 @@ func (q *Queries) ListDueKnowledgeSources(ctx context.Context, arg ListDueKnowle
 	return items, nil
 }
 
-const listHelpCenterLocales = `-- name: ListHelpCenterLocales :many
-SELECT id, locale FROM help_centers WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY created_at
-`
-
-type ListHelpCenterLocalesRow struct {
-	ID     ids.UUID `json:"id"`
-	Locale string   `json:"locale"`
-}
-
-// ListHelpCenterLocales lists the workspace's live help centers with
-// their language, for imports that place translations.
-func (q *Queries) ListHelpCenterLocales(ctx context.Context, workspaceID ids.UUID) ([]ListHelpCenterLocalesRow, error) {
-	rows, err := q.db.Query(ctx, listHelpCenterLocales, workspaceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListHelpCenterLocalesRow
-	for rows.Next() {
-		var i ListHelpCenterLocalesRow
-		if err := rows.Scan(&i.ID, &i.Locale); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listKnowledgeAlertRecipients = `-- name: ListKnowledgeAlertRecipients :many
 SELECT u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences, u.managed_by_organization_id, u.terms_version, u.terms_accepted_at, u.terms_accepted_ip, u.terms_accepted_user_agent FROM workspace_members m
 JOIN users u ON u.id = m.user_id

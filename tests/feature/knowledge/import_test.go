@@ -171,6 +171,14 @@ func TestIntercomImport(t *testing.T) {
 		assert.Equal(t, 1, x.count(t, "SELECT count(*) FROM help_center_redirects WHERE from_path = $1",
 			"/en/collections/11-payments"))
 
+		french := x.owner.GetJSON("/api/v1/articles/" + refunds["id"] + "/translations/fr").AssertOK()
+		french.AssertJSONPath("data.title", "Politique de remboursement").AssertJSONPath("data.status", "published")
+		assert.Contains(t, french.String("data.body_markdown"), "quatorze jours")
+		x.owner.GetJSON("/api/v1/help-centers/"+x.center).AssertOK().AssertJSONPath("data.locales", []any{"en", "fr"})
+		assert.Equal(t, 1, x.count(t,
+			"SELECT count(*) FROM help_center_redirects WHERE from_path = $1 AND target_locale = 'fr'",
+			"/fr/articles/101-remboursement"))
+
 		docs := x.owner.GetJSON("/api/v1/knowledge/sources/" + source + "/documents").AssertOK()
 		assert.Len(t, stringsOf(t, docs, "data.#.id"), 3, "each language is a document")
 		assert.Zero(t, x.count(t, "SELECT count(*) FROM knowledge_document_chunks"),
@@ -192,6 +200,9 @@ func TestIntercomImport(t *testing.T) {
 
 		articles := x.owner.GetJSON("/api/v1/help-centers/" + x.center + "/articles").AssertOK()
 		assert.Len(t, stringsOf(t, articles, "data.#.id"), 2)
+		refunds := articleNamed(t, articles, "Refund policy")
+		x.owner.GetJSON("/api/v1/articles/"+refunds["id"]+"/translations").AssertOK().
+			AssertJSONPath("data.#", float64(1))
 	})
 }
 
