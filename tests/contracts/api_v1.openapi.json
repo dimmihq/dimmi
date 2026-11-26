@@ -5386,6 +5386,7 @@
             "type": "string"
           },
           "name": {
+            "description": "The name of the workspace the caller waits to be enabled in.",
             "type": "string"
           },
           "object": {
@@ -23913,6 +23914,7 @@
             "$ref": "#/components/schemas/Auth"
           },
           "awaiting_access": {
+            "description": "The workspaces the caller was brought into from another tool and waits for an admin to enable them in. Null for personal access tokens.",
             "items": {
               "$ref": "#/components/schemas/AwaitingAccess"
             },
@@ -47554,6 +47556,7 @@
             "type": "string"
           },
           "awaiting_enable": {
+            "description": "True when the member was brought over from another tool and waits for an admin to enable them. Set status to active to enable them.",
             "type": "boolean"
           },
           "away_reassign": {
@@ -47609,6 +47612,7 @@
             ]
           },
           "enable_invited_at": {
+            "description": "When enabling mailed the member an invitation, because they had not signed up yet. Null before that.",
             "format": "date-time",
             "type": [
               "string",
@@ -47616,6 +47620,7 @@
             ]
           },
           "enable_team_ids": {
+            "description": "Ids of the teams enabling puts the member in, each starting with team_. Empty for anyone not waiting to be enabled.",
             "items": {
               "type": "string"
             },
@@ -47629,6 +47634,7 @@
             "type": "string"
           },
           "imported_from": {
+            "description": "The tool the member was brought over from, such as intercom. Null for anyone else.",
             "type": [
               "string",
               "null"

@@ -102,6 +102,7 @@ func schemaTextPartsFromConversationRating() []map[string]map[string]string {
 		schemaTextsFromIdentityValidation(),
 		schemaTextsFromImport(),
 		schemaTextsFromImportSummary(),
+		schemaTextsFromImportedTeammate(),
 		schemaTextsFromInboundEmail(),
 		schemaTextsFromInboxAssignment(),
 		schemaTextsFromIntegration(),
