@@ -1,0 +1,215 @@
+---
+title: "Help center themes"
+description: "Change every page of your help center with a Liquid theme, previewed on your computer with live content and published from the dimmi CLI."
+---
+
+import { Callout, FileTree, Steps } from "~docs/components/mdx";
+
+Your help center starts in dimmi's default theme. A **theme** lets you change every page of it: the home page, collections, articles, search, the changelog, feature requests, sign-in and the reader's requests.
+
+A theme is a folder of [Liquid](https://shopify.github.io/liquid/) templates, CSS, JavaScript and images. dimmi renders it on the server, so every page stays full HTML for search engines and readers without scripts.
+
+You build a theme with the `dimmi` CLI: start from the default theme, preview it with your help center's real content, then publish it. You can also hand the job to an AI coding agent such as Claude Code, Cursor or Codex with the [theme skill](https://raw.githubusercontent.com/dimmihq/dimmi/main/sdk/skills/dimmi-help-center-theme/SKILL.md).
+
+Download `dimmi-cli_<os>_<arch>` for your system from the [latest release](https://github.com/dimmihq/dimmi/releases/latest), check it against `checksums.txt` and rename it to `dimmi`.
+
+## Build your first theme
+
+<Steps>
+
+1. Sign in to your workspace, once:
+
+   ```bash
+   dimmi login
+   ```
+
+2. Start a theme in a new folder. It is a copy of the default theme, so it looks exactly like your help center today:
+
+   ```bash
+   dimmi theme init acme-theme
+   ```
+
+3. Preview it. This opens your help center on your computer, in the theme, with your real articles:
+
+   ```bash
+   dimmi theme preview acme-theme
+   ```
+
+   Edit any file and save. Open pages reload by themselves. A mistake shows on the page with its file and line.
+
+4. Publish it. dimmi checks the whole theme again, keeps it as a new version and makes it live:
+
+   ```bash
+   dimmi theme publish acme-theme
+   ```
+
+</Steps>
+
+Every command works on the workspace's default help center. Add `--help-center hc_...` for another one.
+
+## What a theme holds
+
+<FileTree>
+- acme-theme/
+  - theme.json
+  - layouts/
+    - theme.liquid
+  - templates/
+    - home.liquid
+    - article.liquid
+    - …
+  - partials/
+    - top_bar.liquid
+    - …
+  - assets/
+    - theme.css
+    - logo.svg
+</FileTree>
+
+- **`theme.json`** names the theme and lists the settings a team can change without code.
+- **`layouts/theme.liquid`** is the frame every page sits in. It prints the page with `{{ content_for_layout }}`.
+- **`templates/`** has one template per page, such as `article.liquid`.
+- **`partials/`** are pieces templates draw with `{% render 'name' %}`.
+- **`assets/`** are files the browser loads: CSS, JavaScript, JSON, images and fonts.
+
+A theme only needs the files it changes. A template, partial or asset it leaves out comes from the default theme. A theme with only `theme.json` and `assets/theme.css` keeps every page and changes the colors.
+
+## Change one page
+
+Here is a home page that greets readers with your own banner and keeps the search box and collections:
+
+```liquid title="templates/home.liquid"
+<section class="hero">
+  <h1>{{ 'hi_there' | t }} {{ help_center.home_title }}</h1>
+  {% render 'ask_box', query: "", suggestions: popular %}
+</section>
+
+{% for col in collections %}
+  {% render 'collection_group', collection: col, current: "", article: "" %}
+{% endfor %}
+```
+
+`help_center`, `popular` and `collections` are variables dimmi hands the home page. [Theme variables](/help-center/theme-variables/) lists every variable of every page.
+
+## Load your own CSS and JavaScript
+
+Link assets with the `asset_url` filter. dimmi serves them from your help center's own address, with the file's hash in the URL, so browsers keep them until the file changes:
+
+```liquid title="layouts/theme.liquid"
+{{ platform_assets }}
+{{ 'theme.css' | asset_url | stylesheet_tag }}
+{{ 'theme.js' | asset_url | script_tag }}
+```
+
+`platform_assets` is dimmi's own stylesheet and script. Keep it to build on the default look; leave it out to start from a blank page.
+
+<Callout type="caution">
+Your JavaScript runs only on your help center's own address: its `dimmi.help` subdomain or your [custom domain](/help-center/custom-domain/). Where the same pages are served under the app's `/hc/` path, `script_tag` writes nothing and theme scripts are not served.
+</Callout>
+
+## Interface words in every language
+
+Write interface text through the `t` filter. It reads the help center's own words in the page's language, so a theme works in every [language](/help-center/languages/) without extra files:
+
+```liquid
+<button>{{ 'search' | t }}</button>
+<p>{{ 'article_count' | t: count: collection.count }}</p>
+```
+
+The keys are the same as the default theme's. `translations` holds all of them for scripts that need them.
+
+## Settings a team can change
+
+Declare settings in `theme.json`, and read them as `settings.<id>`:
+
+```json title="theme.json"
+{
+  "api_version": 1,
+  "name": "Acme",
+  "version": "1.2.0",
+  "settings": [
+    { "id": "hero_text", "type": "text", "label": "Hero text", "default": "How can we help?" },
+    { "id": "accent", "type": "color", "label": "Accent", "default": "#5b5bd6" }
+  ]
+}
+```
+
+```liquid
+<h1 style="color: {{ settings.accent }}">{{ settings.hero_text }}</h1>
+```
+
+Change the values with [`PATCH /help-centers/{help_center}/themes/{theme}`](/api-reference/). A value that does not fit its setting is refused.
+
+## Load fonts, images and scripts from other sites
+
+On your help center's own address, pages may load from the https origins `theme.json` names:
+
+```json title="theme.json"
+{
+  "api_version": 1,
+  "name": "Acme",
+  "content_security_policy": {
+    "font_src": ["https://fonts.gstatic.com"],
+    "style_src": ["https://fonts.googleapis.com"],
+    "script_src": ["https://plausible.io"]
+  }
+}
+```
+
+The keys are `script_src`, `style_src`, `img_src`, `font_src`, `connect_src`, `frame_src` and `media_src`. Under the app's `/hc/` path these are ignored.
+
+## Forms that post
+
+Every form that posts to the help center must carry the page's anti-forgery token. Print `form_token_field` inside the form:
+
+```liquid
+<form method="post" action="{{ article.feedback.url }}">
+  {{ form_token_field }}
+  <button name="helpful" value="yes">{{ 'yes' | t }}</button>
+</form>
+```
+
+A post without it is refused with `403`. A script that posts can send the token in the `X-Form-Token` header instead.
+
+## Versions and going back
+
+Each publish keeps a new version and never changes old ones. To go back, make an earlier version live, or the default theme:
+
+```bash
+curl -X PUT https://trydimmi.com/api/v1/help-centers/hc_1042/live-theme \
+  -H "Authorization: Bearer $DIMMI_TOKEN" -H "Content-Type: application/json" \
+  -d '{"theme_id": null}'
+```
+
+`null` brings back the default theme. Pass a version's id, such as `thm_01m8d414m3fnpssd96gw6amby9`, to make that version live. `GET /help-centers/{help_center}/themes` lists every version with `live` set on the one readers see.
+
+## When a theme is refused
+
+dimmi checks every file and parses every template before it keeps a theme. If anything is wrong, nothing is stored and every problem comes back with its file and line:
+
+```text
+templates/article.liquid:12: missing {% endif %}
+templates/blog.liquid: no page is called blog; pages are home, collection, article, ...
+```
+
+`dimmi theme preview` shows the same problems on the page while you edit.
+
+## Rules and limits
+
+| Rule | Limit |
+| --- | --- |
+| Files in a theme | 1,000 |
+| Size of one file | 5 MB |
+| Size of a theme | 25 MB |
+| Assets | CSS, JS, JSON, images (PNG, JPEG, GIF, WebP, AVIF, SVG, ICO), fonts (WOFF, WOFF2, TTF, OTF) |
+| Steps in one page render | 2,000,000 |
+| Time for one page render | 2 seconds |
+| Output of one page | 8 MB |
+| Partials inside partials | 16 deep |
+| Longest range, such as `(1..n)` | 100,000 |
+
+- **Templates cannot reach anything else:** no database, files, network or secrets. They read the variables dimmi passes and write text.
+- **Text is escaped:** `{{ value }}` escapes HTML. Values dimmi marks as HTML, such as `article.body`, print as markup. `| raw` prints a value as it is.
+- **On an install with a help domain,** pages under the app's `/hc/` path keep the default theme. Your theme shows on your help center's own address.
+
+[Theme reference](/help-center/theme-reference/) lists every page, filter and tag.

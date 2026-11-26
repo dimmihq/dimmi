@@ -1,0 +1,707 @@
+---
+title: "Theme variables"
+description: "Every variable a help center theme's templates read, page by page, written from dimmi's code."
+---
+
+{/* Written by tests/contracts/theme_variables_test.go. Run make api-snapshot after changing a view model. */}
+
+Every template gets the variables under **Every page**, and its own under **Each page**. Partials see the same
+globals, plus the arguments passed to `{% render %}`. Links are full paths under the help center's base, and
+words are already in the page's language.
+
+Print a variable with `{{ article.title }}`. Text is escaped for HTML; values marked HTML print as markup.
+
+## Every page
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `help_center` | [Center](#center) | The help center the page belongs to. |
+| `reader` | [Person](#person) | The signed-in reader of the sample help center, nil otherwise. |
+| `locale` | [Locale](#locale) | The page's language and the others it is in. |
+| `page` | [Page](#page) | What the page says about itself. |
+| `settings` | map | The theme's settings by id: the team's values, else the defaults in theme.json. |
+| `translations` | map | Every word of the help center in the page's language, by key. |
+| `platform_assets` | HTML | dimmi's stylesheet and script and the theme switch. Keep it to keep the default look. |
+| `seo_tags` | HTML | Description, preview, robots, canonical, hreflang, Markdown and feed tags. |
+| `messenger_snippet` | HTML | The script that loads the help center's messenger, empty when it shows none. |
+| `form_token` | text | The anti-forgery token every form that posts must send as _token. |
+| `form_token_field` | HTML | The hidden field holding form_token. |
+| `script_nonce` | text | The nonce an inline script needs on the help center's own domain, empty elsewhere. |
+| `content_for_layout` | HTML | In layouts only: the page's own output. |
+
+## Each page
+
+### `home`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `collections` | list of [Collection](#collection) | Every top-level collection, for the drawer. |
+| `popular` | list of [Summary](#summary) | The articles the home page suggests. |
+| `updates` | list of [Update](#update) | The newest changelog entries. |
+
+### `collection`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `collections` | list of [Collection](#collection) | Every top-level collection, for the drawer. |
+| `breadcrumb` | list of [Crumb](#crumb) | The way back from the page, home first. |
+| `collection` | [Collection](#collection) | The collection. |
+| `in_collection` | [Collection](#collection) | Its sub-collections and articles as one group to list. |
+
+### `article`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `collections` | list of [Collection](#collection) | Every top-level collection, for the drawer. |
+| `breadcrumb` | list of [Crumb](#crumb) | The way back from the page, home first. |
+| `article` | [Article](#article) | The article. |
+
+### `search`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `collections` | list of [Collection](#collection) | Every top-level collection, for the drawer. |
+| `search` | [Search](#search) | The question and what it found. |
+
+### `404`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `collections` | list of [Collection](#collection) | Every top-level collection, for the drawer. |
+| `popular` | list of [Summary](#summary) | Articles to suggest. |
+
+### `changelog`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `changelog` | [Log](#log) | The changelog's page of entries. |
+
+### `changelog_entry`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `entry` | [Entry](#entry) | The entry. |
+| `previous` | [Entry](#entry) | The older entry, nil for none. |
+| `next` | [Entry](#entry) | The newer entry, nil for none. |
+| `changelog` | [Log](#log) | Its title and whether it takes subscriptions. |
+
+### `changelog_subscription`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `subscription` | [Subscription](#subscription) | The link's purpose and state. |
+
+### `feature_requests`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `board` | [Board](#board) | The board. |
+
+### `feature_request`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `request` | [RequestView](#requestview) | The request and its comments. |
+
+### `feature_request_new`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `form` | [IdeaForm](#ideaform) | The form, filled in again when needed. |
+
+### `sign_in`, `sign_in_code`, `sign_in_return`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `sign_in` | [ReaderForm](#readerform) | The sign-in forms. |
+
+### `tickets`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `tickets` | [Tickets](#tickets) | The reader's requests. |
+
+### `ticket`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `ticket` | [Ticket](#ticket) | The request with its thread. |
+
+### `ticket_new`
+
+| Variable | Type | What it holds |
+| --- | --- | --- |
+| `ticket_form` | [TicketForm](#ticketform) | The form for the type picked. |
+
+## Objects
+
+### Alternate
+
+Alternate is a page's address in one language.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `lang` | text | The language tag, or x-default. |
+| `url` | text | The full address. |
+
+### Article
+
+Article is article, on the article page.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `slug` | text | Its slug. |
+| `title` | text | Its title. |
+| `description` | text | Its summary. |
+| `collection` | text | The title of its collection. |
+| `url` | text | Its address. |
+| `markdown_url` | text | Its Markdown twin. |
+| `markdown_path` | text | The same, as a path, for scripts that fetch it. |
+| `chatgpt_url` | text | Opens ChatGPT asking about the article. |
+| `claude_url` | text | Opens Claude asking about the article. |
+| `body` | HTML | Its body, sanitized HTML. |
+| `contents` | list of [Heading](#heading) | Its table of contents. |
+| `author` | [Person](#person) | Who wrote it; name is empty for nobody. |
+| `updated` | time | When it last changed. |
+| `age` | text | How long ago that is, such as 3 days ago, or the date when unknown. |
+| `age_known` | true or false | Age says how long ago rather than a date. |
+| `minutes` | number | Its reading time in minutes. |
+| `previous` | [Summary](#summary) | The article before it in its collection, nil for none. |
+| `next` | [Summary](#summary) | The article after it, nil for none. |
+| `related` | list of [Summary](#summary) | Articles related to it. |
+| `untranslated` | text | The page's language when the article is not translated into it, else empty. |
+| `original_lang` | text | The language it is written in when shown untranslated, else empty. |
+| `collection_slug` | text | The slug of the collection it sits in. |
+| `collection` | [Collection](#collection) | That collection, nil for none. |
+| `feedback` | [Feedback](#feedback) | Where the reader stands with Was this helpful. |
+
+### BoardTab
+
+BoardTab is one board of feature requests the visitor may open, such as feature requests or bugs, by the slug its tab and form name it with.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `name` | text |  |
+| `slug` | text |  |
+| `description` | text |  |
+
+### Board
+
+Board is board, on the feature requests page.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `boards` | list of [BoardTab](#boardtab) | The boards the reader may open. |
+| `tabs` | list of [Link](#link) | All boards, then each board, as tabs. |
+| `active` | text | The slug of the board shown, empty for all. |
+| `sorts` | list of [Link](#link) | Roadmap, Trending, Top and New. |
+| `sort` | text | The order picked, empty for the roadmap. |
+| `query` | text | What the reader searched for. |
+| `listed` | true or false | The page shows one sorted list rather than the roadmap. |
+| `list` | list of [Idea](#idea) | The list, when listed. |
+| `statuses` | list of [Status](#status) | The roadmap's columns, when not listed. |
+| `submitted` | true or false | The reader just posted a request. |
+| `pending` | true or false | It waits for the team's approval. |
+| `new_url` | text | The form to post a request, on the board shown. |
+
+### Center
+
+Center is help_center, on every page.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `name` | text | The help center's name. |
+| `product` | text | The product it supports, shown beside the logo. |
+| `tagline` | text | The line under the home page's greeting, empty for none. |
+| `home_title` | text | The question the home page asks, the team's own or the default. |
+| `footer_text` | text | The team's text at the foot of every page. |
+| `brand` | text | The brand color as a hex code, such as #10b981. |
+| `brand_style` | text | A style declaring --brand, for the html element. |
+| `logo_light` | text | The logo's address for light pages, empty for none. |
+| `logo_dark` | text | The logo's address for dark pages. |
+| `mark` | text | The company's square logo's address, empty for none. |
+| `tab_icon` | text | The picture the browser tab shows, empty for none. |
+| `appearance` | text | Light or dark when the team fixed the theme, empty when readers pick. |
+| `color_scheme` | text | The color-scheme meta tag's content. |
+| `messenger` | true or false | The help center shows its messenger. |
+| `ask_ai` | true or false | The AI agent answers the messenger first. |
+| `help_label` | text | Ask AI or Contact us, the label of the button that opens the messenger. |
+| `help_icon` | text | The icon of that button. |
+| `signed_in` | true or false | A reader is signed in through the team's product. |
+| `sign_in_url` | text | Where a reader signs in, empty when the help center takes no sign-in. |
+| `sign_out_url` | text | Where a reader signed in through the team's product signs out. |
+| `contact_url` | text | The team's contact address, empty for none. |
+| `home_url` | text | The help center's home page. |
+| `search_url` | text | The search page; search forms send q to it. |
+| `changelog_url` | text | The changelog. |
+| `feedback_url` | text | The feature requests page. |
+| `subscribe_url` | text | Where the changelog's subscribe form posts. |
+| `tickets_url` | text | The signed-in reader's requests. |
+| `sections` | list of [Section](#section) | The portal's sections in navigation order, the help center first. |
+| `origin` | text | The scheme and host the page is served on. |
+| `base` | text | The path every link starts with, empty on the help center's own domain. |
+| `conversations_url` | text | Sample help center only: the reader's conversations. |
+| `new_conversation_url` | text | Sample help center only: a new conversation. |
+| `demo_sign_in_url` | text | Sample help center only: where its sign-in form posts. |
+| `demo_sign_out_url` | text | Sample help center only: where its sign-out form posts. |
+
+### Collection
+
+Collection is a collection with its articles and sub-collections.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `slug` | text | Its slug. |
+| `title` | text | Its name. |
+| `description` | text | Its description. |
+| `icon` | text | Its icon's name. |
+| `count` | number | How many articles it and its sub-collections hold. |
+| `url` | text | Its address. |
+| `markdown_url` | text | Its Markdown twin. |
+| `authors` | list of [Person](#person) | Who writes its articles. |
+| `byline` | text | Who writes it, in words, such as By Ada and 2 others. |
+| `articles` | list of [Summary](#summary) | Its own articles. |
+| `children` | list of [Collection](#collection) | Its sub-collections. |
+| `slugs` | list of text | Its slug and every sub-collection's, to test whether it holds a collection. |
+
+### Comment
+
+Comment is a reply under a request.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `author` | text | Who wrote it. |
+| `from_team` | true or false | The team wrote it. |
+| `body` | text | A reader's comment, plain text. |
+| `html` | HTML | The team's comment, sanitized HTML. |
+| `at` | text | When, such as 2d. |
+| `replies` | list of [Comment](#comment) | The replies to it. |
+
+### Conversation
+
+Conversation is one of the sample reader's conversations.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `id` | text | Its id. |
+| `subject` | text | Its subject. |
+| `preview` | text | Its last message, shortened. |
+| `status` | text | Where it stands. |
+| `updated` | text | When it last changed. |
+| `unread` | true or false | It has a reply the reader has not read. |
+| `url` | text | Its page. |
+| `reply_url` | text | Where the reply form posts. |
+| `messages` | list of [Message](#message) | Its thread. |
+
+### Crumb
+
+Crumb is a step of a trail.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `title` | text | The step's title. |
+| `url` | text | Its address. |
+
+### Entry
+
+Entry is a changelog entry.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `slug` | text | Its slug. |
+| `title` | text | Its title. |
+| `summary` | text | Its summary. |
+| `body` | HTML | Its body, sanitized HTML. |
+| `labels` | list of [Label](#label) | Its labels. |
+| `version` | text | Its version, empty for none. |
+| `cover` | text | Its cover image's address, empty for none. |
+| `published` | time | When it was published. |
+| `authors` | list of [Person](#person) | Who wrote it. |
+| `author_names` | text | Their names joined with &. |
+| `reactions` | list of [Reaction](#reaction) | The emoji readers may react with, none when reactions are off. |
+| `reactions_url` | text | Where the reaction form posts, with emoji. |
+| `related` | list of [Summary](#summary) | Articles that explain it. |
+| `full` | true or false | A list shows its whole body rather than its summary. |
+| `url` | text | Its page. |
+
+### Feedback
+
+Feedback is where a reader stands with "Was this article helpful?".
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `answer` | text | Yes or no once answered, else empty. |
+| `commented` | true or false | They said what was missing after a no. |
+| `limited` | true or false | They sent too much feedback in the last hour. |
+| `url` | text | Where the yes and no form posts, with helpful=yes or no. |
+| `comment_url` | text | Where the note posts, with comment. |
+
+### Heading
+
+Heading is an entry of an article's table of contents.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `title` | text | The heading's text. |
+| `id` | text | Its anchor. |
+| `children` | list of [Heading](#heading) | The headings under it. |
+
+### IdeaForm
+
+IdeaForm is form, on the page to post a request.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `boards` | list of [BoardTab](#boardtab) | The boards the reader may post on. |
+| `board` | text | The slug of the board picked. |
+| `title` | text | The title typed. |
+| `details` | text | The details typed. |
+| `similar` | list of [Idea](#idea) | Similar requests found, shown before posting. |
+| `error` | text | What was wrong, empty for nothing. |
+
+### Idea
+
+Idea is a feature request.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `slug` | text | Its slug. |
+| `title` | text | What is asked for. |
+| `details` | text | Its details as plain text. |
+| `icon` | text | Its icon's name, lightbulb by default. |
+| `votes` | number | How many voted for it. |
+| `voted` | true or false | The reader voted for it. |
+| `comments` | number | How many comments it has. |
+| `url` | text | Its own page, empty where it has none. |
+| `vote_url` | text | Where its vote form posts; posting again takes the vote back. |
+
+### Label
+
+Label is a kind of change an entry is filed under.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `name` | text | Its name, such as New or Fixed. |
+| `slug` | text | Its slug. |
+| `color` | text | The hex color of its dot. |
+| `url` | text | Its own filtered page. |
+| `count` | number | How many entries carry it. |
+
+### Language
+
+Language is a language in the language menu.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `code` | text | Its tag. |
+| `name` | text | Its name in itself. |
+| `url` | text | This page in it, or its home when the page is not translated. |
+| `current` | true or false | It is the page's language. |
+
+### Link
+
+Link is a tab or chip that narrows a page.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `name` | text | Its label. |
+| `url` | text | Where it leads. |
+| `current` | true or false | It is the one shown. |
+| `color` | text | Its color, where it has one. |
+| `count` | number | Its count, where it has one. |
+
+### Locale
+
+Locale is locale, the page's language and the others it is in.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `code` | text | The page's language tag, such as en or pt-BR. |
+| `dir` | text | Ltr or rtl. |
+| `name` | text | The page's language named in itself. |
+| `languages` | list of [Language](#language) | The languages a reader may switch to, none when the help center speaks one. |
+| `alternates` | list of [Alternate](#alternate) | This page's addresses in other languages, for search engines. |
+
+### Log
+
+Log is changelog, on the changelog's pages.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `title` | text | The changelog's name. |
+| `no_subscribe` | true or false | The changelog takes no subscriptions. |
+| `subscribed` | true or false | The reader just asked to subscribe. |
+| `feed_url` | text | Its RSS feed, narrowed to the label shown. |
+| `entries` | list of [Entry](#entry) | This page's entries, newest first. |
+| `labels` | list of [Label](#label) | Every label to filter by. |
+| `chips` | list of [Link](#link) | All updates, then each label, as chips. |
+| `active` | text | The slug of the label shown, empty for all. |
+| `newer_url` | text | The page of newer entries, empty for none. |
+| `older_url` | text | The page of older entries, empty for none. |
+| `year_text` | text | The year the release strip shows. |
+| `weeks` | list of [Week](#week) | The year's weeks. |
+
+### Message
+
+Message is a message in a thread.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `author` | [Person](#person) | Who sent it. |
+| `mine` | true or false | The reader sent it. |
+| `body` | text | Its text. |
+| `at` | text | When. |
+
+### Page
+
+Page is page: what the page says about itself.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `template` | text | The template being rendered, such as article. |
+| `title` | text | The page's title, for the title tag. |
+| `description` | text | The line search engines show, empty for none. |
+| `section` | text | The key of the section the page belongs to. |
+| `trail` | list of [Crumb](#crumb) | The trail from the section's start to the page. |
+| `markdown_url` | text | The page's Markdown twin, empty for none. |
+| `no_index` | true or false | Search engines should skip the page. |
+| `has_drawer` | true or false | The page lists something to browse in a drawer. |
+| `drawer_title` | text | The drawer's title. |
+
+### Person
+
+Person is a person: a reader, an author or a teammate.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `name` | text | Their name. |
+| `initials` | text | Their initials, drawn when there is no photo. |
+| `role` | text | Their role, empty for none. |
+| `photo` | text | Their photo's address, empty for none. |
+| `conversations_url` | text | For reader only: their conversations. |
+
+### Reaction
+
+Reaction is an emoji readers react with.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `emoji` | text | The emoji. |
+| `name` | text | The name it is stored under, such as thumbsup. |
+| `count` | number | How many reacted with it. |
+
+### ReaderForm
+
+ReaderForm is what a reader's sign-in pages carry: where each form goes, the page to return to, the team's login address when the help center takes it, the address typed, how it is shown once a code went to it, and what went wrong, if anything.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `action` | text | Where the email form posts. |
+| `check_url` | text | Where the code form posts. |
+| `resend_url` | text | Where the form that sends another code posts. |
+| `restart_url` | text | Back to typing another address. |
+| `next` | text | The page to return to after signing in. |
+| `product_url` | text | The team's own login, empty when the help center takes only email. |
+| `email` | text | The address typed. |
+| `masked` | text | The address as the code page shows it, such as a**@example.com. |
+| `error` | text | What went wrong, empty for nothing. |
+
+### RequestField
+
+RequestField is a field of a request's form or page. ShowField and ShowEquals say the field shows only once another has a value, one of ShowEquals when it lists any.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `key` | text |  |
+| `label` | text |  |
+| `description` | text |  |
+| `data_type` | text |  |
+| `options` | list of text |  |
+| `required` | true or false |  |
+| `show_field` | text |  |
+| `show_equals` | text |  |
+| `value` | text |  |
+
+### RequestStep
+
+RequestStep is a stop on a request's progress strip: Done once the request passed it, Current while it is there.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `label` | text |  |
+| `done` | true or false |  |
+| `current` | true or false |  |
+
+### RequestView
+
+RequestView is request, on a feature request's page.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `idea` | [Idea](#idea) | The request. |
+| `status` | [Status](#status) | Where it stands. |
+| `details` | HTML | Its details as HTML. |
+| `author` | text | Who posted it. |
+| `posted` | text | When. |
+| `comments` | list of [Comment](#comment) | Its comments. |
+| `update_url` | text | The changelog entry that shipped it, empty for none. |
+| `pending` | true or false | It waits for approval; only its author sees it. |
+| `can_act` | true or false | The reader may comment. |
+| `sign_in_url` | text | Where to sign in to comment, empty when they need not. |
+| `commented` | true or false | The reader just commented. |
+| `comment_url` | text | Where the comment form posts, with body. |
+
+### Result
+
+Result is a search hit.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `kind` | text | Article or changelog. |
+| `title` | text | Its title. |
+| `url` | text | Its address. |
+| `excerpt` | text | The text that matched. |
+| `trail` | text | Where it lives, such as its collection. |
+
+### Search
+
+Search is search, on the search page.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `query` | text | What the reader searched for. |
+| `results` | list of [Result](#result) | What it found, best first. |
+
+### Section
+
+Section is a part of the portal, such as the changelog.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `key` | text | Help, changelog, feedback or requests; page.section names the current one. |
+| `name` | text | Its name in the page's language. |
+| `icon` | text | Its icon's name, for the icon filter. |
+| `url` | text | Its address. |
+
+### Status
+
+Status is a stage feature requests move through.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `name` | text | Its name. |
+| `slug` | text | Its slug: planned, in-progress, shipped, closed or another. |
+| `color` | text | Its color as a hex code. |
+| `count` | number | How many requests are in it. |
+| `ideas` | list of [Idea](#idea) | Its requests, most voted first. |
+
+### Subscription
+
+Subscription is subscription, on the page a subscriber's link opens.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `purpose` | text | Confirm or unsubscribe. |
+| `email` | text | The address the link is for. |
+| `title` | text | The page's heading. |
+| `ask` | text | What pressing the button does. |
+| `button` | text | The button's label. |
+| `done_text` | text | What the page says once it is done. |
+| `action` | text | Where the button's form posts. |
+| `done` | true or false | It is done. |
+| `invalid` | true or false | The link no longer works. |
+
+### Summary
+
+Summary is an article as a list shows it.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `slug` | text | Its slug. |
+| `title` | text | Its title. |
+| `description` | text | Its summary. |
+| `collection` | text | The title of its collection. |
+| `url` | text | Its address. |
+
+### TicketForm
+
+TicketForm is ticket_form, on the page to open a request.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `type` | [TicketType](#tickettype) | The type picked; id is empty before one is. |
+| `types` | list of [TicketType](#tickettype) | Every type the reader may open. |
+| `fields` | list of [RequestField](#requestfield) | The type's fields: key, label, description, data_type, options, required, show_field, show_equals, value. |
+| `title` | text | The subject typed. |
+| `description` | text | The details typed. |
+| `error` | text | Why it was refused. |
+| `key` | text | A key that stops a double post. |
+| `action` | text | Where the form posts. |
+
+### TicketType
+
+TicketType is a kind of request a reader may open.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `id` | text | Its public id. |
+| `name` | text | Its name. |
+| `icon` | text | Its icon. |
+| `description` | text | What it is for. |
+| `url` | text | Its form. |
+
+### Ticket
+
+Ticket is a reader's request, in a list or on its page.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `ref` | text | Its reference, such as T-12. |
+| `title` | text | Its subject. |
+| `type` | text | Its type's name. |
+| `type_icon` | text | Its type's icon. |
+| `label` | text | Where it stands, as customers read it. |
+| `group` | text | Submitted, in_progress, waiting_customer or resolved. |
+| `updated` | text | When it last changed, such as 2h. |
+| `mine` | true or false | The reader opened it, rather than someone at their company. |
+| `url` | text | Its page. |
+| `description` | text | On its page: its details. |
+| `steps` | list of [RequestStep](#requeststep) | On its page: Submitted, We're on it and Resolved, with done and current. |
+| `fields` | list of [RequestField](#requestfield) | On its page: the fields the reader sees, with label and value. |
+| `messages` | list of [Message](#message) | On its page: the thread. |
+| `error` | text | On its page: why a reply was refused. |
+| `reply_url` | text | On its page: where the reply form posts, with body. |
+
+### Tickets
+
+Tickets is tickets, on the reader's list of requests.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `scope` | text | Company when the company's are shown, else empty. |
+| `company` | true or false | The company tab shows. |
+| `tabs` | list of [Link](#link) | My requests and Company requests. |
+| `items` | list of [Ticket](#ticket) | The requests. |
+| `types` | list of [TicketType](#tickettype) | The types the reader may open. |
+| `new_url` | text | The form to open one. |
+
+### Update
+
+Update is a changelog entry the home page lists.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `title` | text | Its title. |
+| `url` | text | Its address. |
+| `label` | text | Its first label, empty for none. |
+| `published` | time | When it was published. |
+
+### Week
+
+Week is a week of the release strip.
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `month_name` | text | The month it opens, when it is the first week of one, else empty. |
+| `title` | text | The entry published in it, empty for none. |
+| `url` | text | That entry's page, empty for none. |
