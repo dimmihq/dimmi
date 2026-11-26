@@ -10,7 +10,7 @@ import { useState } from "react";
 
 import { Popover, PopoverTrigger } from "@/components/base/popover/popover";
 import { aiFilterSummary, aiValueOptions } from "@/lib/ai-values";
-import type { AIAttribute } from "@/lib/api/ai-attributes";
+import type { ConversationAttribute } from "@/lib/api/conversation-attributes";
 import { cx } from "@/utils/cx";
 
 import type { ReportSearch } from "./search";
@@ -53,7 +53,7 @@ export function AIAttributePanel({
   onDone,
   onBack,
 }: {
-  attributes: AIAttribute[];
+  attributes: ConversationAttribute[];
   search: ReportSearch;
   onChange: Change;
   onDone: () => void;
@@ -125,7 +125,7 @@ export function AIAttributeChip({
   search,
   onChange,
 }: {
-  attributes: AIAttribute[];
+  attributes: ConversationAttribute[];
   search: ReportSearch;
   onChange: Change;
 }) {

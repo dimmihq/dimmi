@@ -200,7 +200,7 @@ export class Bridge {
       );
     }
 
-    if (event === "conversation.ai_attribute_changed") {
+    if (event === "conversation.attribute_changed" || event === "conversation.ai_attribute_changed") {
       this.refetch(realtimeKeys.aiAttributes(workspace, record.id));
     }
 

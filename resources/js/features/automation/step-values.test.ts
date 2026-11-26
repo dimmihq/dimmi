@@ -52,19 +52,22 @@ describe("step values", () => {
     addAIFields([
       {
         id: "aica_1",
-        object: "ai_conversation_attribute",
+        object: "conversation_attribute",
         key: "intent",
         label: "Intent",
         description: "",
         data_type: "choice",
         options: ["refund", "question"],
+        filled_by: "both",
+        required_to_close: false,
+        team_ids: [],
         status: "active",
         created_at: "",
         updated_at: "",
       },
     ]);
 
-    expect(conditionFields["conversation.ai.intent"]).toMatchObject({ name: "AI: Intent", type: "choice" });
+    expect(conditionFields["conversation.ai.intent"]).toMatchObject({ name: "Intent", type: "choice" });
     expect(fieldsFor("conversation.ai_attribute_changed")).toHaveProperty("ai_attribute.key");
     expect(fieldsFor("message.customer")).not.toHaveProperty("ai_attribute.key");
   });

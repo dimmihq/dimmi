@@ -12,6 +12,7 @@ import { Row, Section } from "@/features/settings/layout";
 import type { Condition } from "@/lib/api/workflows";
 import { useAIConditionFields } from "./ai-condition-fields";
 import { ArticleFields } from "./article-fields";
+import { SetAttributesFields } from "./attribute-step";
 import { CallFields } from "./call-fields";
 import { type Choices, choicesOf } from "./choices";
 import { ClassifyFields } from "./classify-fields";
@@ -647,6 +648,7 @@ const editors: Record<string, (props: Props) => ReactNode> = {
   http_request: CallFields,
   extract: ExtractFields,
   run_action: RunActionFields,
+  set_conversation_attributes: SetAttributesFields,
   ...Object.fromEntries(ticketStepKinds.map((kind) => [kind, TicketStepFields])),
 };
 
