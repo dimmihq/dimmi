@@ -19,8 +19,6 @@ ALTER TABLE conversation_ai_values
     ADD COLUMN sources jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(sources) = 'object'),
     ADD COLUMN attachment_ids uuid[] NOT NULL DEFAULT '{}';
 
-CREATE INDEX conversation_ai_values_attachment_ids_index ON conversation_ai_values USING gin (attachment_ids);
-
 -- +goose Down
 ALTER TABLE conversation_ai_values DROP COLUMN attachment_ids, DROP COLUMN sources;
 ALTER TABLE ai_conversation_attributes

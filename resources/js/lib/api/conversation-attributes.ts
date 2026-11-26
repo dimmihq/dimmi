@@ -131,7 +131,7 @@ export function updateConversationAttribute(
 }
 
 export function reorderConversationAttributes(workspace: string, ids: string[]): Promise<ConversationAttribute[]> {
-  return request<ConversationAttribute[]>("PUT", "/conversation-attributes/order", { ids }, { workspace });
+  return request<ConversationAttribute[]>("PATCH", "/conversation-attributes/order", { ids }, { workspace });
 }
 
 export function setConversationAttributeValues(

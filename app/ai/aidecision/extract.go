@@ -261,32 +261,38 @@ func (d *Decider) extractByModel(
 
 		readReasons(answer[reasonsKey], reasons)
 
-		var wrong []Field
-
-		for _, f := range asking {
-			v, state := valueOf(f, answer[f.Key])
-			switch state {
-			case valueOK:
-				out[f.Key] = v
-			case valueWrong:
-				wrong = append(wrong, f)
-			}
-		}
-
-		if len(wrong) == 0 {
+		asking = readValues(asking, answer, out)
+		if len(asking) == 0 {
 			break
 		}
-
-		asking = wrong
 	}
 
-	for key := range reasons {
-		if _, ok := out[key]; !ok {
-			delete(reasons, key)
+	maps.DeleteFunc(reasons, func(key, _ string) bool {
+		_, ok := out[key]
+		return !ok
+	})
+
+	return out, reasons, nil
+}
+
+/*
+readValues keeps the values that fit their fields and returns the
+fields whose value came back in the wrong shape, to ask again.
+*/
+func readValues(asking []Field, answer map[string]json.RawMessage, out map[string]any) []Field {
+	var wrong []Field
+
+	for _, f := range asking {
+		v, state := valueOf(f, answer[f.Key])
+		switch state {
+		case valueOK:
+			out[f.Key] = v
+		case valueWrong:
+			wrong = append(wrong, f)
 		}
 	}
 
-	return out, reasons, nil
+	return wrong
 }
 
 /*
@@ -354,7 +360,7 @@ func (d *Decider) askFields(ctx context.Context, e Extraction, fields []Field, o
 		Subject: withContext(e.Subject), SchemaName: "ai_values", Schema: schema,
 		System: prompts.Task("decisions/extract", prompts.Vars{
 			"instructions": instructionsOf(e.Instructions), "fields": strings.TrimSpace(lines.String()),
-			"explain":      explain,
+			"explain": explain,
 		}),
 	}, out)
 }

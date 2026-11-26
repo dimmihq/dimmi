@@ -56624,7 +56624,7 @@
       }
     },
     "/conversation-attributes/order": {
-      "put": {
+      "patch": {
         "description": "Sets the order attributes show in, in the inbox's details and in settings. Returns the attributes in their new order.",
         "operationId": "conversation-attributes.order.update",
         "requestBody": {

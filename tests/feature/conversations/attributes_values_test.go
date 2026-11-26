@@ -327,7 +327,7 @@ func TestConversationAttributeSettings(t *testing.T) {
 		d.owner.PatchJSON("/api/v1/conversation-attributes/"+first, testkit.JSON{"options": []string{"Bug"}}).
 			AssertOK().AssertJSONPath("data.option_descriptions", map[string]any{})
 
-		d.owner.PutJSON("/api/v1/conversation-attributes/order", testkit.JSON{"ids": []string{second, first}}).
+		d.owner.PatchJSON("/api/v1/conversation-attributes/order", testkit.JSON{"ids": []string{second, first}}).
 			AssertOK().AssertJSONPath("data.0.key", "plan").AssertJSONPath("data.1.key", "issue")
 	})
 
