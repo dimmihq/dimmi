@@ -1,62 +1,31 @@
-/*
-Command dimmi-migrate moves a workspace's history into dimmi from
-another support tool. It runs on the customer's own machine: it reads
-the other tool with the customer's own token and writes to dimmi's
-migrations API, so the data goes straight from one to the other.
-
-	dimmi-migrate connect      sign in to dimmi and paste the source token, in the browser
-	dimmi-migrate plan         count what will come across, and what won't
-	dimmi-migrate run          import everything, resuming where it stopped
-	dimmi-migrate sync         bring over what changed since; --watch 15m repeats it
-	dimmi-migrate verify       compare counts and sample records against dimmi
-	dimmi-migrate status       show progress
-	dimmi-migrate rollback     undo everything the migration created in dimmi
-	dimmi-migrate import FILE  import a JSON Lines file already in dimmi's format
-
-Output is short lines for people, or one JSON object a line with --json,
-for AI agents. Customer content and keys are never printed.
-*/
 package main
 
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/connect"
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/dimmi"
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/engine"
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/format"
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/secrets"
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/sources/file"
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/sources/intercom"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/engine"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/format"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/secrets"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/sources/file"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/sources/intercom"
 )
 
-/*
-version is set at build time with -ldflags "-X main.version=...".
-*/
-var version = "dev"
-
-const usage = `dimmi-migrate moves your history into dimmi from another support tool.
+const migrateUsage = `dimmi migrate moves your history into dimmi from another support tool.
 
 Usage:
-  dimmi-migrate <command> [flags]
+  dimmi migrate <command> [flags]
 
 Commands:
-  connect      Sign in to dimmi and connect Intercom, in your browser
+  connect      Connect Intercom (and sign in to dimmi if you haven't), in your browser
   plan         Count what will come across, and what won't
   run          Import everything, resuming where it stopped
   sync         Bring over what changed since the last run (--watch 15m repeats)
@@ -64,216 +33,134 @@ Commands:
   status       Show progress
   rollback     Undo everything this migration created in dimmi
   import FILE  Import a JSON Lines file already in dimmi's import format
-  disconnect   Forget the saved keys
-  version      Print the version
+  disconnect   Forget the saved Intercom token
 
-Flags for every command:
-  --json            one JSON object a line, for AI agents
-  --profile NAME    keep separate keys and progress per profile (default "default")
-
-Run "dimmi-migrate <command> -h" for a command's own flags.
+Every command takes --json and --profile.
 `
 
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprint(os.Stderr, usage)
-		os.Exit(2)
-	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	cmd, args := os.Args[1], os.Args[2:]
-
-	err := dispatch(ctx, cmd, args)
-	if err != nil && !errors.Is(err, flag.ErrHelp) {
-		os.Exit(1)
-	}
-}
-
 /*
-app holds what every command shares.
+migrateCommand returns the migrate subcommand by name.
 */
-type app struct {
-	json    bool
-	profile string
-	dir     string
-	report  engine.Reporter
-	keys    secrets.Store
-	cfg     config
-	out     io.Writer
-}
+func (a *app) migrateCommand(ctx context.Context, name string) (command, bool) {
+	fs := newCommand("migrate "+name, a)
 
-/*
-config is the profile's settings, none of them secret.
-*/
-type config struct {
-	DimmiURL  string   `json:"dimmi_url"`
-	Source    string   `json:"source"`
-	Region    string   `json:"region,omitempty"`
-	Account   string   `json:"account,omitempty"`
-	Workflows []string `json:"workflows,omitempty"`
-	Skip      []string `json:"skip,omitempty"`
-}
-
-func dispatch(ctx context.Context, cmd string, args []string) error {
-	switch cmd {
-	case "-h", "--help", "help":
-		fmt.Print(usage)
-
-		return nil
-	case "version", "--version":
-		fmt.Println("dimmi-migrate", version)
-
-		return nil
-	}
-
-	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
-	a := &app{out: os.Stdout}
-	fs.BoolVar(&a.json, "json", false, "one JSON object a line, for AI agents")
-	fs.StringVar(&a.profile, "profile", "default", "keep separate keys and progress per profile")
-
-	var run func() error
-
-	switch cmd {
+	switch name {
 	case "connect":
 		dimmiURL := fs.String("dimmi-url", "", "the dimmi to move into, https://trydimmi.com unless self-hosted")
 		source := fs.String("source", "intercom", "the tool to move from")
 		noBrowser := fs.Bool("no-browser", false, "print the address instead of opening the browser")
-		run = func() error { return a.connect(ctx, *dimmiURL, *source, *noBrowser) }
+
+		return command{fs, func() error { return a.connect(ctx, *dimmiURL, *source, *noBrowser) }}, true
 	case "plan":
 		workflows := multi(fs, "workflow", "an Intercom workflow URL to bring, repeatable")
-		run = func() error { return a.plan(ctx, *workflows) }
+
+		return command{fs, func() error { return a.plan(ctx, *workflows) }}, true
 	case "run":
 		skip := fs.String("skip", "", "kinds to leave out, comma-separated, such as contact_note,ticket")
 		only := fs.String("only", "", "import only these kinds, comma-separated")
 		workflows := multi(fs, "workflow", "an Intercom workflow URL to bring, repeatable")
-		run = func() error { return a.run(ctx, *skip, *only, *workflows, false, 0) }
+
+		return command{fs, func() error { return a.run(ctx, *skip, *only, *workflows, false, 0) }}, true
 	case "sync":
 		watch := fs.Duration("watch", 0, "repeat the sync this often, such as 15m, until stopped")
-		run = func() error { return a.run(ctx, "", "", nil, true, *watch) }
+
+		return command{fs, func() error { return a.run(ctx, "", "", nil, true, *watch) }}, true
 	case "verify":
 		sample := fs.Int("sample", 50, "records to look up in dimmi per kind")
-		run = func() error { return a.verify(ctx, *sample) }
+
+		return command{fs, func() error { return a.verify(ctx, *sample) }}, true
 	case "status":
-		run = func() error { return a.status(ctx) }
+		return command{fs, func() error { return a.status(ctx) }}, true
 	case "rollback":
 		yes := fs.Bool("yes", false, "don't ask for confirmation")
-		run = func() error { return a.rollback(ctx, *yes) }
+
+		return command{fs, func() error { return a.rollback(ctx, *yes) }}, true
 	case "import":
 		tool := fs.String("source-name", "", "the tool the file came from, such as zendesk")
 		account := fs.String("account", "", "the account in that tool, so reruns resume")
-		run = func() error {
+
+		return command{fs, func() error {
 			if fs.NArg() != 1 {
-				return errors.New("name the file: dimmi-migrate import records.jsonl")
+				return errors.New("name the file: dimmi migrate import records.jsonl")
 			}
 
 			return a.importFile(ctx, fs.Arg(0), *tool, *account)
-		}
+		}}, true
 	case "disconnect":
-		run = func() error { return a.disconnect() }
-	default:
-		fmt.Fprintf(os.Stderr, "unknown command %q\n\n%s", cmd, usage)
-
-		return errors.New("unknown command")
+		return command{fs, a.disconnect}, true
 	}
 
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
-
-	if err := a.setup(); err != nil {
-		return a.fail(err)
-	}
-
-	return a.fail(run())
+	return command{}, false
 }
 
 /*
-multi is a repeatable string flag.
+sourceKey names the saved source token.
 */
-func multi(fs *flag.FlagSet, name, help string) *[]string {
-	var v []string
+func (a *app) sourceKey() string { return a.cfg.Source }
 
-	fs.Func(name, help, func(s string) error {
-		v = append(v, s)
-
-		return nil
-	})
-
-	return &v
-}
-
-func (a *app) setup() error {
-	base, err := os.UserConfigDir()
-	if err != nil {
-		base = filepath.Join(os.Getenv("HOME"), ".config")
+/*
+connect saves the source's token, signing in to dimmi first on the same
+page when the profile isn't signed in yet.
+*/
+func (a *app) connect(ctx context.Context, dimmiURL, source string, noBrowser bool) error {
+	if source != "intercom" {
+		return fmt.Errorf("dimmi migrate connects to intercom; for other tools, use `dimmi migrate import`")
 	}
 
-	if !regexp.MustCompile(`^[A-Za-z0-9_-]{1,40}$`).MatchString(a.profile) {
-		return errors.New("a profile name is letters, digits, - and _")
-	}
-
-	a.dir = filepath.Join(base, "dimmi-migrate", a.profile)
-	if err := os.MkdirAll(a.dir, 0o700); err != nil {
+	if err := a.useURL(dimmiURL); err != nil {
 		return err
 	}
 
-	if a.json {
-		a.report = &engine.JSONReporter{W: os.Stdout}
-	} else {
-		a.report = &engine.TextReporter{W: os.Stdout}
+	a.cfg.Source = source
+	if err := a.saveConfig(); err != nil {
+		return err
 	}
 
-	a.keys = secrets.Open(a.dir)
+	setup := intercom.Setup(
+		func(region, token string) error {
+			c, err := intercom.NewClient(nil, region, token)
+			if err != nil {
+				return err
+			}
 
-	raw, err := os.ReadFile(filepath.Join(a.dir, "config.json"))
-	if err == nil {
-		_ = json.Unmarshal(raw, &a.cfg)
+			acct, err := intercom.New(c, region, nil).Account(ctx)
+			if err != nil {
+				return err
+			}
+
+			a.cfg.Region, a.cfg.Account = region, acct.ID
+			if err := a.saveConfig(); err != nil {
+				return err
+			}
+
+			return secrets.SetJSON(a.keys, a.sourceKey(), sourceToken{Region: region, Token: token, Account: acct.Name})
+		},
+		func() (string, bool) {
+			var t sourceToken
+			if secrets.GetJSON(a.keys, a.sourceKey(), &t) != nil || t.Token == "" {
+				return "", false
+			}
+
+			return t.Account, true
+		},
+	)
+
+	return a.page(ctx, &setup, noBrowser)
+}
+
+/*
+disconnect forgets the source token. `dimmi logout` forgets the dimmi
+sign-in.
+*/
+func (a *app) disconnect() error {
+	if err := a.keys.Delete(a.sourceKey()); err != nil {
+		return err
 	}
 
-	if a.cfg.DimmiURL == "" {
-		a.cfg.DimmiURL = dimmi.DefaultURL
-	}
-
-	if a.cfg.Source == "" {
-		a.cfg.Source = "intercom"
-	}
+	a.say("Forgot the saved Intercom token.", nil)
 
 	return nil
 }
-
-func (a *app) saveConfig() error {
-	raw, err := json.MarshalIndent(a.cfg, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(filepath.Join(a.dir, "config.json"), raw, 0o600)
-}
-
-/*
-fail reports an error and returns it.
-*/
-func (a *app) fail(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	a.report.Report(engine.Event{Event: "error", Message: err.Error()})
-
-	return err
-}
-
-func (a *app) say(msg string, data any) {
-	a.report.Report(engine.Event{Event: "info", Message: msg, Data: data})
-}
-
-/*
-The names the keys are saved under.
-*/
-func (a *app) dimmiKey() string  { return "dimmi" }
-func (a *app) sourceKey() string { return a.cfg.Source }
 
 /*
 sourceToken is what's saved for a source.
@@ -284,111 +171,6 @@ type sourceToken struct {
 	Account string `json:"account"`
 }
 
-func (a *app) connect(ctx context.Context, dimmiURL, source string, noBrowser bool) error {
-	if source != "intercom" {
-		return fmt.Errorf("dimmi-migrate connects to intercom; for other tools, use `dimmi-migrate import`")
-	}
-
-	if dimmiURL != "" {
-		if !connect.Valid(dimmiURL) {
-			return errors.New("--dimmi-url must be an http or https address")
-		}
-
-		a.cfg.DimmiURL = strings.TrimRight(dimmiURL, "/")
-	}
-
-	a.cfg.Source = source
-	if err := a.saveConfig(); err != nil {
-		return err
-	}
-
-	srv := &connect.Server{
-		DimmiURL: a.cfg.DimmiURL,
-		SaveToken: func(t dimmi.Token) error {
-			return secrets.SetJSON(a.keys, a.dimmiKey(), t)
-		},
-		DimmiDone: func() bool {
-			var t dimmi.Token
-
-			return secrets.GetJSON(a.keys, a.dimmiKey(), &t) == nil && t.AccessToken != "" && t.BaseURL == a.cfg.DimmiURL
-		},
-		Source: intercom.Setup(
-			func(region, token string) error {
-				c, err := intercom.NewClient(nil, region, token)
-				if err != nil {
-					return err
-				}
-
-				acct, err := intercom.New(c, region, nil).Account(ctx)
-				if err != nil {
-					return err
-				}
-
-				a.cfg.Region, a.cfg.Account = region, acct.ID
-				if err := a.saveConfig(); err != nil {
-					return err
-				}
-
-				return secrets.SetJSON(a.keys, a.sourceKey(), sourceToken{Region: region, Token: token, Account: acct.Name})
-			},
-			func() (string, bool) {
-				var t sourceToken
-				if secrets.GetJSON(a.keys, a.sourceKey(), &t) != nil || t.Token == "" {
-					return "", false
-				}
-
-				return t.Account, true
-			},
-		),
-	}
-
-	addr, shutdown, err := srv.Start(ctx)
-	if err != nil {
-		return err
-	}
-	defer shutdown()
-
-	a.report.Report(engine.Event{Event: "connect_page", Message: "Open this page to connect dimmi and Intercom: " + addr,
-		Data: map[string]string{"url": addr, "keys_saved_in": a.keys.Where()}})
-
-	if !noBrowser {
-		_ = connect.OpenBrowser(addr)
-	}
-
-	select {
-	case <-srv.Done():
-	case <-ctx.Done():
-		return errors.New("connect stopped before both keys were saved")
-	}
-
-	a.report.Report(engine.Event{Event: "connected", Message: "Connected. Keys are saved in " + a.keys.Where() + ".",
-		Data: map[string]any{"dimmi": a.cfg.DimmiURL, "source": a.cfg.Source}})
-
-	return nil
-}
-
-func (a *app) disconnect() error {
-	if err := a.keys.Delete(a.dimmiKey()); err != nil {
-		return err
-	}
-
-	if err := a.keys.Delete(a.sourceKey()); err != nil {
-		return err
-	}
-
-	a.say("Forgot the saved keys.", nil)
-
-	return nil
-}
-
-/*
-transport is the rate-limited transport for one API: share is the part
-of its limit a migration may use.
-*/
-func transport(share, rate float64) *http.Client {
-	return &http.Client{Transport: engine.NewLimiter(http.DefaultTransport, share, rate), Timeout: 5 * time.Minute}
-}
-
 /*
 source builds the Intercom source from the saved token. It stays under
 30% of Intercom's shared limit, so the workspace's other apps keep
@@ -397,7 +179,7 @@ working.
 func (a *app) source(workflows []string) (*intercom.Source, error) {
 	var t sourceToken
 	if err := secrets.GetJSON(a.keys, a.sourceKey(), &t); err != nil {
-		return nil, errors.New("Intercom isn't connected: run `dimmi-migrate connect` first")
+		return nil, errors.New("Intercom isn't connected: run `dimmi migrate connect` first")
 	}
 
 	c, err := intercom.NewClient(transport(0.3, 0), t.Region, t.Token)
@@ -434,23 +216,6 @@ func contains(list []string, s string) bool {
 	}
 
 	return false
-}
-
-/*
-destination builds the dimmi client from the saved sign-in.
-*/
-func (a *app) destination() (*dimmi.Client, error) {
-	var t dimmi.Token
-	if err := secrets.GetJSON(a.keys, a.dimmiKey(), &t); err != nil || t.AccessToken == "" {
-		return nil, errors.New("dimmi isn't connected: run `dimmi-migrate connect` first")
-	}
-
-	tokens := &dimmi.SavedTokens{
-		Load: func() (dimmi.Token, error) { return t, nil },
-		Save: func(next dimmi.Token) error { t = next; return secrets.SetJSON(a.keys, a.dimmiKey(), next) },
-	}
-
-	return dimmi.NewClient(t.BaseURL, tokens, engine.NewLimiter(http.DefaultTransport, 0.8, 0), version), nil
 }
 
 /*
@@ -548,7 +313,7 @@ func (a *app) plan(ctx context.Context, workflows []string) error {
 	}
 
 	fmt.Fprintln(w, "\nNothing imported sends an email or notification, or starts a workflow.")
-	fmt.Fprintln(w, "Leave out a kind with `dimmi-migrate run --skip contact_note,ticket`.")
+	fmt.Fprintln(w, "Leave out a kind with `dimmi migrate run --skip contact_note,ticket`.")
 
 	return nil
 }
@@ -685,7 +450,7 @@ func verdict(ok bool) string {
 		return "Everything checked is in dimmi."
 	}
 
-	return "Some records are missing in dimmi: run `dimmi-migrate sync` and verify again."
+	return "Some records are missing in dimmi: run `dimmi migrate sync` and verify again."
 }
 
 func (a *app) status(ctx context.Context) error {
@@ -706,7 +471,7 @@ func (a *app) status(ctx context.Context) error {
 	}
 
 	if st.State == nil {
-		a.say("No migration has run from this machine yet. Start with `dimmi-migrate plan`.", nil)
+		a.say("No migration has run from this machine yet. Start with `dimmi migrate plan`.", nil)
 
 		return nil
 	}

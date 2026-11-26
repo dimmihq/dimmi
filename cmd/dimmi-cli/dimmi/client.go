@@ -23,8 +23,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/engine"
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/format"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/engine"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/format"
 )
 
 /*
@@ -68,7 +68,7 @@ func NewClient(base string, tokens Tokens, transport http.RoundTripper, version 
 		BaseURL: strings.TrimRight(base, "/"),
 		Tokens:  tokens,
 		HTTP:    &http.Client{Transport: transport},
-		Agent:   "dimmi-migrate/" + version,
+		Agent:   "dimmi-cli/" + version,
 	}
 }
 
@@ -170,7 +170,7 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, co
 		return decode(res, out)
 	}
 
-	return errors.New("dimmi refused the refreshed token: run `dimmi-migrate connect` again")
+	return errors.New("dimmi refused the refreshed token: run `dimmi login` again")
 }
 
 /*

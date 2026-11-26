@@ -1,8 +1,8 @@
 /*
 Package file reads records already in dimmi's import format from a JSON
 Lines file: one record a line, as format.Line describes. It's how a
-tool dimmi-migrate has no translator for comes across: export it, write
-the lines, and run `dimmi-migrate import file.jsonl`.
+tool the dimmi CLI has no translator for comes across: export it, write
+the lines, and run `dimmi migrate import file.jsonl`.
 */
 package file
 
@@ -19,8 +19,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/engine"
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/format"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/engine"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/format"
 )
 
 /*

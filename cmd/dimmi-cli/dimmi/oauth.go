@@ -22,10 +22,10 @@ to connect.
 const DefaultURL = "https://trydimmi.com"
 
 /*
-ClientID is dimmi-migrate's first-party OAuth client: a public native
+ClientID is the dimmi CLI's first-party OAuth client: a public native
 client that signs in with PKCE through a loopback redirect on any port.
 */
-const ClientID = "dimmi-migrate"
+const ClientID = "dimmi-cli"
 
 /*
 Scopes are what the CLI asks for: settings:write, which the migrations
@@ -272,7 +272,7 @@ func (s *SavedTokens) Refresh(ctx context.Context) (string, error) {
 	}
 
 	if t.RefreshToken == "" {
-		return "", errors.New("the dimmi sign-in expired: run `dimmi-migrate connect` again")
+		return "", errors.New("the dimmi sign-in expired: run `dimmi login` again")
 	}
 
 	hc := s.HTTP
@@ -291,7 +291,7 @@ func (s *SavedTokens) Refresh(ctx context.Context) (string, error) {
 		"client_id":     {t.ClientID},
 	})
 	if err != nil {
-		return "", fmt.Errorf("%w: run `dimmi-migrate connect` again", err)
+		return "", fmt.Errorf("%w: run `dimmi login` again", err)
 	}
 
 	if next.RefreshToken == "" {

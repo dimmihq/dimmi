@@ -14,7 +14,7 @@
 #   ghcr.io/dimmihq/dimmi:<version>-cloud         cloud edition
 #   a GitHub Release with the linux binaries, checksums, install.sh and
 #   dimmi-selfhost.tar.gz, the Compose bundle install.sh downloads, and
-#   dimmi-migrate for macOS, Linux and Windows on amd64 and arm64
+#   the dimmi CLI (dimmi-cli_<os>_<arch>) for macOS, Linux and Windows on amd64 and arm64
 #
 # A version with a suffix, such as v0.2.0-rc.1, is a prerelease: it never
 # moves :latest and install.sh only takes it when asked by name.
@@ -95,14 +95,14 @@ jobs:
                 -o "../dist/${edition}_linux_${arch}/dimmi" ./cmd/dimmi
             done
           done
-      - name: Build dimmi-migrate
+      - name: Build the dimmi CLI
         working-directory: src
         run: |
           mkdir -p ../assets
           for target in darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64; do
             os=${target%/*}; arch=${target#*/}; ext=""; [ "$os" = windows ] && ext=.exe
             CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath -ldflags="-s -w -X main.version=$NUMBER" \
-              -o "../assets/dimmi-migrate_${os}_${arch}${ext}" ./cmd/dimmi-migrate
+              -o "../assets/dimmi-cli_${os}_${arch}${ext}" ./cmd/dimmi-cli
           done
       - name: Pack the release files
         run: |
@@ -162,7 +162,7 @@ jobs:
 
           Images: \`ghcr.io/dimmihq/dimmi:$NUMBER\` (self-hosted), \`ghcr.io/dimmihq/dimmi:$NUMBER-cloud\`.
 
-          Moving from another tool: download \`dimmi-migrate_<os>_<arch>\` and check it against \`checksums.txt\`.
+          The dimmi CLI: download \`dimmi-cli_<os>_<arch>\`, check it against \`checksums.txt\` and rename it to \`dimmi\`.
           Commit: $SHA.
           NOTES
           flags=(--title "$VERSION" --notes-file notes.md --verify-tag -R "$GITHUB_REPOSITORY")

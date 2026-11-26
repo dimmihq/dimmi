@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/dimmi"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/dimmi"
 )
 
 //go:embed page.html
@@ -31,7 +31,7 @@ var pages embed.FS
 var page = template.Must(template.ParseFS(pages, "page.html"))
 
 /*
-CallbackPath is where dimmi's sign-in returns. dimmi-migrate's OAuth
+CallbackPath is where dimmi's sign-in returns. The dimmi CLI's OAuth
 client registers http://127.0.0.1/oauth/callback, which matches on any
 port.
 */
@@ -166,14 +166,18 @@ func (s *Server) render(w http.ResponseWriter, finished bool) {
 	s.errMsg = ""
 	s.mu.Unlock()
 
-	account, sourceDone := s.Source.Saved()
+	account, sourceDone := "", false
+	if s.Source.Saved != nil {
+		account, sourceDone = s.Source.Saved()
+	}
+
 	dimmiDone := s.DimmiDone()
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = page.Execute(w, view{
 		Base: "/" + s.secret, DimmiURL: s.DimmiURL, DimmiDone: dimmiDone, Tool: s.Source.Tool, Help: s.Source.Help,
 		Regions: s.Source.Regions, SourceDone: sourceDone, Account: account, Error: msg,
-		AllDone: dimmiDone && sourceDone, Finished: finished,
+		AllDone: dimmiDone && (s.Source.Tool == "" || sourceDone), Finished: finished,
 	})
 }
 
@@ -247,7 +251,7 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) saveSource(w http.ResponseWriter, r *http.Request) {
-	if !s.sameOrigin(r) {
+	if !s.sameOrigin(r) || s.Source.Check == nil {
 		http.Error(w, "forbidden", http.StatusForbidden)
 
 		return

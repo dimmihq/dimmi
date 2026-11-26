@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/format"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/format"
 	"github.com/dimmihq/dimmi/framework/dom"
 )
 

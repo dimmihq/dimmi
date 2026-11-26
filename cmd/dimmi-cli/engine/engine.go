@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/format"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/format"
 )
 
 /*
@@ -600,7 +600,7 @@ func (e *Engine) Verify(ctx context.Context, sample int) (Verification, error) {
 	}
 
 	if st == nil {
-		return Verification{}, errors.New("nothing to verify: run `dimmi-migrate run` first")
+		return Verification{}, errors.New("nothing to verify: run `dimmi migrate run` first")
 	}
 
 	inv, err := e.Source.Discover(ctx)

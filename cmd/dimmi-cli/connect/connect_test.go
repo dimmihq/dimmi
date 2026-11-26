@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/dimmi"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/dimmi"
 )
 
 func TestPageIsSecretAndRefusesOtherOrigins(t *testing.T) {

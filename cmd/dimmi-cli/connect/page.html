@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Connect dimmi-migrate</title>
+<title>Connect dimmi</title>
 <style>
   :root { --bg:#f4f4f2; --card:#fff; --text:#161616; --muted:#5d5d5a; --line:#e3e3df; --accent:#161616; --ok:#1f7a3d; --bad:#b42318; }
   @media (prefers-color-scheme: dark) { :root { --bg:#141414; --card:#1d1d1c; --text:#f2f2f0; --muted:#a3a39f; --line:#2f2f2d; --accent:#f2f2f0; --ok:#4ec27a; --bad:#ff7a6e; } }
@@ -33,10 +33,10 @@
 <main>
   {{if .Finished}}
   <h1>You're connected</h1>
-  <p class="lead">You can close this tab. dimmi-migrate is ready: go back to your terminal or your AI agent.</p>
+  <p class="lead">You can close this tab and go back to your terminal or your AI agent.</p>
   {{else}}
-  <h1>Connect dimmi-migrate</h1>
-  <p class="lead">Two keys, saved in this computer's keychain. They never appear in your terminal or your AI agent's chat.</p>
+  <h1>{{if .Tool}}Connect dimmi and {{.Tool}}{{else}}Sign in to dimmi{{end}}</h1>
+  <p class="lead">Your keys are saved in this computer's keychain. They never appear in your terminal or your AI agent's chat.</p>
 
   {{if .Error}}<section class="error" role="alert">{{.Error}}</section>{{end}}
 
@@ -45,11 +45,12 @@
     {{if .DimmiDone}}
       <p class="status">Signed in to {{.DimmiURL}}.</p>
     {{else}}
-      <p>Sign in at <b>{{.DimmiURL}}</b> and pick the workspace to move into. dimmi-migrate asks only to manage imports.</p>
+      <p>Sign in at <b>{{.DimmiURL}}</b> and pick the workspace to work in.</p>
       <a class="btn" href="{{.Base}}/dimmi">Sign in to dimmi</a>
     {{end}}
   </section>
 
+  {{if .Tool}}
   <section class="{{if .SourceDone}}done{{end}}">
     <h2><span class="n">{{if .SourceDone}}✓{{else}}2{{end}}</span> Connect {{.Tool}}</h2>
     {{if .SourceDone}}
@@ -70,11 +71,12 @@
       <button class="btn" type="submit">Check and save</button>
     </form>
   </section>
+  {{end}}
 
   {{if .AllDone}}
   <section>
-    <h2><span class="n">3</span> Done</h2>
-    <p>Both keys are saved. Finish here, then go back to your terminal.</p>
+    <h2><span class="n">{{if .Tool}}3{{else}}2{{end}}</span> Done</h2>
+    <p>Everything is saved. Finish here, then go back to your terminal.</p>
     <form method="post" action="{{.Base}}/finish"><button class="btn" type="submit">Finish</button></form>
   </section>
   {{end}}

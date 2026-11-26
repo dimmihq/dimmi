@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/connect"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/connect"
 )
 
 /*
@@ -14,7 +14,7 @@ Help walks the person through making a private app with read
 permissions in their own Intercom Developer Hub.
 */
 const Help template.HTML = `
-<p>dimmi-migrate reads Intercom with a token from a private app in your own workspace. It only reads.</p>
+<p>dimmi reads Intercom with a token from a private app in your own workspace. It only reads.</p>
 <ol>
   <li>In Intercom, open <b>Settings → Integrations → Developer Hub</b>, or go to <code>app.intercom.com/a/apps/_/developer-hub</code>.</li>
   <li>Click <b>New app</b>. Name it <b>dimmi migration</b>, pick your workspace, and create it.</li>

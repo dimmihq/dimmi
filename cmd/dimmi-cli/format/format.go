@@ -1,5 +1,5 @@
 /*
-Package format is dimmi's import format, version 1, as dimmi-migrate
+Package format is dimmi's import format, version 1, as the dimmi CLI
 writes it: source-neutral records, one kind at a time, in dependency
 order. Every record carries the id it had in the source tool, its
 source_id, and names the records it points at by their source ids, so
@@ -107,7 +107,7 @@ func NewRecord(kind Kind, sourceID string, data any, files ...*File) Record {
 
 /*
 Line is how a record is written in a JSON Lines file, the format
-`dimmi-migrate import` reads: the kind, the record, and the local
+`dimmi migrate import` reads: the kind, the record, and the local
 paths or URLs of the files it names.
 */
 type Line struct {

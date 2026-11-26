@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/format"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/format"
 )
 
 /*

@@ -1,5 +1,5 @@
 /*
-Package secrets keeps dimmi-migrate's keys: the dimmi sign-in and the
+Package secrets keeps the dimmi CLI's keys: the dimmi sign-in and the
 source tool's token. They go in the operating system's keychain (macOS
 Keychain, Windows Credential Manager, the Secret Service on Linux), and
 in a file only the user can read when there is no keychain, such as on
@@ -27,7 +27,7 @@ var ErrNotFound = errors.New("not connected")
 /*
 Service is the keychain service name.
 */
-const Service = "dimmi-migrate"
+const Service = "dimmi-cli"
 
 /*
 Store keeps named secrets.
@@ -41,12 +41,12 @@ type Store interface {
 
 /*
 Open returns the keychain when it works, and the private file in dir
-otherwise. DIMMI_MIGRATE_SECRETS=file forces the file.
+otherwise. DIMMI_SECRETS=file forces the file.
 */
 func Open(dir string) Store {
 	file := &File{Path: filepath.Join(dir, "secrets.json")}
 
-	if os.Getenv("DIMMI_MIGRATE_SECRETS") == "file" {
+	if os.Getenv("DIMMI_SECRETS") == "file" {
 		return file
 	}
 

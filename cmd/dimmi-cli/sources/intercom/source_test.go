@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/engine"
-	"github.com/dimmihq/dimmi/cmd/dimmi-migrate/format"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/engine"
+	"github.com/dimmihq/dimmi/cmd/dimmi-cli/format"
 )
 
 /*
