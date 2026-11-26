@@ -45,6 +45,7 @@ const (
 	KindSnippet             = "snippet"
 	KindSavedReply          = "saved_reply"
 	KindSchedule            = "schedule"
+	KindWorkflow            = "workflow"
 	KindConversation        = "conversation"
 	KindTicket              = "ticket"
 )
@@ -65,7 +66,7 @@ func Kinds() []string {
 	return []string{
 		KindTeammate, KindTeam, KindTag, KindAttributeDefinition, KindCompany, KindContact, KindContactNote,
 		KindTicketType, KindHelpCenter, KindCollection, KindArticle, KindSnippet, KindSavedReply, KindSchedule,
-		KindConversation, KindTicket,
+		KindWorkflow, KindConversation, KindTicket,
 	}
 }
 

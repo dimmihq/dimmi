@@ -40,11 +40,25 @@ Schedule is office hours in a time zone with the days off.
 */
 type Schedule struct {
 	Base
-	Name     string    `json:"name"`
-	Timezone string    `json:"timezone"`
-	Weekly   []Hours   `json:"weekly"`
-	Holidays []Holiday `json:"holidays,omitempty"`
-	Default  bool      `json:"default,omitempty"`
+	Name       string      `json:"name"`
+	Timezone   string      `json:"timezone"`
+	Weekly     []Hours     `json:"weekly"`
+	Holidays   []Holiday   `json:"holidays,omitempty"`
+	Exceptions []Exception `json:"exceptions,omitempty"`
+	Default    bool        `json:"default,omitempty"`
+}
+
+/*
+Exception is one day with other hours than the week's: closed all day,
+or open only between start and end, as HH:MM.
+*/
+type Exception struct {
+	Date   string `json:"date"`
+	Name   string `json:"name,omitempty"`
+	Closed bool   `json:"closed,omitempty"`
+	Start  string `json:"start,omitempty"`
+	End    string `json:"end,omitempty"`
+	Yearly bool   `json:"yearly,omitempty"`
 }
 
 /*

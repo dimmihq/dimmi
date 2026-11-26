@@ -53,6 +53,7 @@ func specs() map[string]kindSpec {
 		KindSavedReply:          decoder[SavedReply](),
 		KindSchedule:            decoder[Schedule](),
 		KindConversation:        decoder[Conversation](),
+		KindWorkflow:            decoder[Workflow](),
 	}
 }
 

@@ -41,7 +41,19 @@ up to 100 records of one kind.
 type MigrationRecordsRequest struct {
 	Migration string `path:"migration"`
 	Body      struct {
-		Kind    string            `json:"kind"    validate:"required" enum:"teammate,team,tag,attribute_definition,company,contact,contact_note,ticket_type,help_center,collection,article,snippet,saved_reply,schedule,conversation,ticket"` //nolint:lll // a struct tag cannot wrap
-		Records []json.RawMessage `json:"records" validate:"required,min=1,max=100" maxItems:"100" minItems:"1" doc:"Records of the kind in the import format, version 1."`                                                                   //nolint:lll // a struct tag cannot wrap
+		Kind    string            `json:"kind"    validate:"required" enum:"teammate,team,tag,attribute_definition,company,contact,contact_note,ticket_type,help_center,collection,article,snippet,saved_reply,schedule,workflow,conversation,ticket"` //nolint:lll // a struct tag cannot wrap
+		Records []json.RawMessage `json:"records" validate:"required,min=1,max=100" maxItems:"100" minItems:"1" doc:"Records of the kind in the import format, version 1."`                                                                            //nolint:lll // a struct tag cannot wrap
+	}
+}
+
+/*
+MigrationLookupRequest is the input of POST /migrations/{migration}/lookups:
+up to 100 source ids of one kind.
+*/
+type MigrationLookupRequest struct {
+	Migration string `path:"migration"`
+	Body      struct {
+		Kind      string   `json:"kind"       validate:"required" enum:"teammate,team,tag,attribute_definition,company,contact,contact_note,ticket_type,help_center,collection,article,snippet,saved_reply,schedule,workflow,conversation,ticket"` //nolint:lll // a struct tag cannot wrap
+		SourceIDs []string `json:"source_ids" validate:"required,min=1,max=100,dive,max=255" maxItems:"100" minItems:"1"`                                                                                                                          //nolint:lll // a struct tag cannot wrap
 	}
 }

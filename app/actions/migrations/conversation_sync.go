@@ -289,9 +289,14 @@ func (r *replay) rating(ctx context.Context) error {
 		channel = "email"
 	}
 
+	member := r.conv.AssigneeMemberID
+	if id, ok := r.s.refs.id(KindTeammate, rt.TeammateRef); ok {
+		member = &id
+	}
+
 	err := r.s.q.MigrateRating(ctx, models.MigrateRatingParams{
 		WorkspaceID: r.s.ws(), ConversationID: r.conv.ID, ContactID: r.conv.ContactID,
-		MemberID: r.conv.AssigneeMemberID, Channel: channel, ClosedAt: *r.conv.ClosedAt,
+		MemberID: member, Channel: channel, ClosedAt: *r.conv.ClosedAt,
 		RatedAt: rt.CreatedAt.UTC(), Score: new(int16(rt.Score)), //nolint:gosec // 1 to 5
 		Comment: orNil(cut(rt.Remark, 2000)),
 	})

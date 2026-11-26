@@ -7,7 +7,7 @@ Moving help desks means bringing years of conversations, customers, articles and
 
 Nothing imported sets anything off. dimmi sends no email, runs no workflow, starts no SLA clock, fires no webhook and asks the dimmi agent for no reply.
 
-The API never learns which tool the data came from. A client reads the other tool with your own credentials and translates each record into the import format. The `dimmi-migrate` CLI does this on your computer, so dimmi never holds the other tool's keys.
+The API never learns which tool the data came from. A client reads the other tool with your own credentials and translates each record into the import format. The [dimmi CLI](#access) does this on your computer, with `dimmi migrate`, so dimmi never holds the other tool's keys.
 
 ## A migration from start to finish
 
@@ -118,7 +118,7 @@ Every endpoint needs the **imports:manage** permission, which a token reaches th
 
 The records are written with your role's permissions, so a token granted only `settings:write` can still bring in conversations, contacts and articles your role allows.
 
-The `dimmi-migrate` CLI signs in as a registered app with client id `dimmi-migrate`. It asks only for `settings:write` and `offline_access`, and its grant belongs to the one workspace you pick.
+The dimmi CLI signs in with `dimmi login` as a registered app with client id `dimmi-cli`. It asks only for `settings:write` and `offline_access`, and its grant belongs to the one workspace you pick.
 
 ## Rules and limits
 

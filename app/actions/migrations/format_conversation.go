@@ -49,9 +49,10 @@ type ConversationSource struct {
 Rating is how the customer rated the conversation once it closed.
 */
 type Rating struct {
-	Score     int       `json:"score"`
-	Remark    string    `json:"remark,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	Score       int       `json:"score"`
+	Remark      string    `json:"remark,omitempty"`
+	TeammateRef string    `json:"teammate_ref,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 /*

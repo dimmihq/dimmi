@@ -98,3 +98,32 @@ func emptyIfNil[T any](list []T) []T {
 
 	return list
 }
+
+/*
+MigrationLookup is where one record looked up stands: applied, deferred,
+failed, unsupported, or missing when the migration never received it,
+and the dimmi id it became.
+*/
+type MigrationLookup struct {
+	SourceID string  `json:"source_id"`
+	Status   string  `json:"status"    enum:"applied,deferred,failed,unsupported,missing"`
+	ID       *string `json:"id"`
+}
+
+/*
+NewMigrationLookups shapes the records looked up.
+*/
+func NewMigrationLookups(kind string, found []migrations.Found) []MigrationLookup {
+	out := make([]MigrationLookup, 0, len(found))
+
+	for _, f := range found {
+		l := MigrationLookup{SourceID: f.SourceID, Status: f.Status}
+		if f.RecordID != nil {
+			l.ID = new(models.PublicID(migrations.PrefixOf(kind), *f.RecordID))
+		}
+
+		out = append(out, l)
+	}
+
+	return out
+}

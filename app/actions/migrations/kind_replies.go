@@ -207,6 +207,16 @@ func (sc *Schedule) apply(ctx context.Context, s *step) (outcome, error) {
 		holidays = append(holidays, officehours.Holiday{Date: h.Date, Name: h.Name, Yearly: h.Yearly})
 	}
 
+	for _, e := range sc.Exceptions {
+		if !e.Closed {
+			out.unsupported("exceptions")
+
+			continue
+		}
+
+		holidays = append(holidays, officehours.Holiday{Date: e.Date, Name: e.Name, Yearly: e.Yearly})
+	}
+
 	name := cut(strings.TrimSpace(sc.Name), 60)
 	in := schedules.Input{
 		Membership: s.runner.m, Name: &name, Timezone: &sc.Timezone, Weekly: weekly, Holidays: holidays,

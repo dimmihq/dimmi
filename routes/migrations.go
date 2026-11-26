@@ -50,6 +50,8 @@ func migrationRoutes(workspace *routing.Router, a *app.App) {
 		)
 	routing.Post(workspace, one+"/records", "migrations.records.store", c.Records).Ability("settings:write").
 		Use(middleware.BodyLimit(migrations.MaxBatchBytes)).Status(fhttp.StatusOK)
+	routing.Post(workspace, one+"/lookups", "migrations.lookups.store", c.Lookups).Ability("settings:write").
+		Status(fhttp.StatusOK)
 	routing.Post(workspace, one+"/rollbacks", "migrations.rollbacks.store", c.Rollback).Ability("settings:write").
 		Status(fhttp.StatusAccepted)
 }

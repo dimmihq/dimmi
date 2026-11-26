@@ -111,8 +111,9 @@ func TestMigrations(t *testing.T) {
 		}).AssertJSONPath("data.results.0.status", "created")
 		d.send(t, "schedule", testkit.JSON{
 			"source_id": "sch-1", "name": "Office hours", "timezone": "Europe/Paris",
-			"weekly":   []testkit.JSON{{"day": "mon", "start": "09:00", "end": "17:00"}},
-			"holidays": []testkit.JSON{{"date": "2024-12-25", "name": "Christmas", "yearly": true}},
+			"weekly":     []testkit.JSON{{"day": "mon", "start": "09:00", "end": "17:00"}},
+			"holidays":   []testkit.JSON{{"date": "2024-12-25", "name": "Christmas", "yearly": true}},
+			"exceptions": []testkit.JSON{{"date": "2024-12-31", "closed": true}},
 		}).AssertJSONPath("data.results.0.status", "created")
 
 		file := d.upload(t, "invoice.pdf", "att-1", []byte("%PDF-1.4 invoice"))
@@ -133,7 +134,7 @@ func TestMigrations(t *testing.T) {
 			event("p7", 6, testkit.JSON{"type": "custom", "raw_type": "sla_applied", "text": "SLA applied"}),
 			event("p8", 7, testkit.JSON{"type": "status", "status": "closed"}),
 		)
-		conv["rating"] = testkit.JSON{"score": 5, "remark": "Great", "created_at": at(8)}
+		conv["rating"] = testkit.JSON{"score": 5, "remark": "Great", "teammate_ref": "adm-1", "created_at": at(8)}
 		convID := d.send(t, "conversation", conv).AssertJSONPath("data.results.0.status", "created").
 			String("data.results.0.id")
 
@@ -295,6 +296,30 @@ func TestMigrations(t *testing.T) {
 
 		member.GetJSON("/api/v1/migrations").AssertForbidden()
 		d.TC.ActingAsToken(d.TC.Workspace.Owner, "contacts:write").GetJSON("/api/v1/migrations").AssertForbidden()
+	})
+
+	t.Run("a lookup says where each record stands", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+		id := d.send(t, "contact", contact("c-1", "ada@example.com")).String("data.results.0.id")
+
+		res := d.client.PostJSON(d.path("/lookups"), testkit.JSON{
+			"kind": "contact", "source_ids": []string{"c-1", "c-404"},
+		}).AssertOK()
+		res.AssertJSONPath("data.0.status", "applied").AssertJSONPath("data.0.id", id).
+			AssertJSONPath("data.1.status", "missing").AssertJSONPath("data.1.id", nil)
+	})
+
+	t.Run("a workflow is kept but not turned on", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+
+		d.send(t, "workflow", testkit.JSON{
+			"source_id": "wf-1", "name": "Route billing", "trigger": "customer_message",
+			"steps":      []testkit.JSON{{"source_type": "assign_team", "type": "assign", "supported": true}},
+			"definition": testkit.JSON{"anything": true},
+		}).AssertJSONPath("data.results.0.status", "unsupported")
+		assert.Equal(t, 0, d.rows(t, "workflows", "true"))
 	})
 
 	t.Run("an uploaded file sent again is the first copy", func(t *testing.T) {

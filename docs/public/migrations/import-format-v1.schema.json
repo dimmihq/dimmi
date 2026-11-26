@@ -22,6 +22,7 @@
         "snippet",
         "saved_reply",
         "schedule",
+        "workflow",
         "conversation",
         "ticket"
       ]
@@ -284,6 +285,24 @@
           "records": {
             "items": {
               "$ref": "#/$defs/schedule"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "workflow"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/workflow"
             }
           }
         }
@@ -1351,6 +1370,39 @@
               "date"
             ]
           }
+        },
+        "exceptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "A day with other hours: closed all day, or open only from start to end.",
+            "properties": {
+              "date": {
+                "type": "string",
+                "format": "date"
+              },
+              "name": {
+                "type": "string"
+              },
+              "closed": {
+                "type": "boolean"
+              },
+              "start": {
+                "type": "string",
+                "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+              },
+              "end": {
+                "type": "string",
+                "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+              },
+              "yearly": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "date"
+            ]
+          }
         }
       },
       "required": [
@@ -1358,6 +1410,75 @@
         "name",
         "timezone",
         "weekly"
+      ],
+      "additionalProperties": true
+    },
+    "workflow": {
+      "type": "object",
+      "description": "An automation of the source tool, kept for a later version; never turned on.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string"
+        },
+        "channels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source_type": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "supported": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "source_type"
+            ]
+          }
+        },
+        "unsupported": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "definition": {
+          "description": "The raw definition the source tool exported."
+        }
+      },
+      "required": [
+        "source_id",
+        "name"
       ],
       "additionalProperties": true
     },
@@ -1626,6 +1747,12 @@
             },
             "remark": {
               "type": "string"
+            },
+            "teammate_ref": {
+              "type": "string",
+              "description": "source_id of a teammate record.",
+              "minLength": 1,
+              "maxLength": 255
             },
             "created_at": {
               "type": "string",

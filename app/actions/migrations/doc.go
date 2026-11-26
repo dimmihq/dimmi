@@ -2,7 +2,7 @@
 Package migrations brings a workspace's history in from another tool
 through dimmi's own import format.
 
-A client, usually the dimmi-migrate CLI on the customer's machine, reads
+A client, usually the dimmi CLI on the customer's machine, reads
 the other tool with the customer's own credentials, translates what it
 reads into the records of [FormatVersion], and sends them in batches.
 The server never learns which tool the records came from. Each record

@@ -86,7 +86,7 @@ func TestImportFormatSchema(t *testing.T) {
 			migrations.KindSnippet: migrations.Snippet{}, migrations.KindSavedReply: migrations.SavedReply{},
 			migrations.KindSchedule: migrations.Schedule{}, migrations.KindConversation: migrations.Conversation{},
 			"entry": migrations.Entry{}, "event": migrations.Event{}, "author": migrations.Author{},
-			"translation": migrations.Translation{},
+			"translation": migrations.Translation{}, migrations.KindWorkflow: migrations.Workflow{},
 		}
 
 		for name, v := range types {

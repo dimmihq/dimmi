@@ -155,6 +155,10 @@ func (c *Conversation) refs() []Ref {
 	out = append(out, refsOf(KindTeam, c.TeamRef)...)
 	out = append(out, refsOf(KindTag, c.TagRefs...)...)
 
+	if c.Rating != nil {
+		out = append(out, refsOf(KindTeammate, c.Rating.TeammateRef)...)
+	}
+
 	for _, e := range c.Entries {
 		out = append(out, authorRefs(&e.Author)...)
 		if e.Event == nil {

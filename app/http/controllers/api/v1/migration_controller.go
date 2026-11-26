@@ -54,6 +54,13 @@ type MigrationBatchOutput struct {
 }
 
 /*
+MigrationLookupsOutput is where the records looked up stand.
+*/
+type MigrationLookupsOutput struct {
+	Body fhttp.Collection[resources.MigrationLookup]
+}
+
+/*
 MigrationController serves migrations from other tools.
 */
 type MigrationController struct {
@@ -134,6 +141,30 @@ func (c *MigrationController) Records(
 	}
 
 	return &MigrationBatchOutput{Body: fhttp.NewResource(resources.NewMigrationBatch(in.Body.Kind, b))}, nil
+}
+
+/*
+Lookups answers where each record named stands.
+*/
+func (c *MigrationController) Lookups(
+	ctx context.Context, in *requests.MigrationLookupRequest,
+) (*MigrationLookupsOutput, error) {
+	id, err := c.decode(in.Migration)
+	if err != nil {
+		return nil, err
+	}
+
+	found, err := c.Migrations.Lookup(ctx, migrations.LookupInput{
+		Membership: membership(ctx), MigrationID: id, Kind: in.Body.Kind, SourceIDs: in.Body.SourceIDs,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	items := resources.NewMigrationLookups(in.Body.Kind, found)
+	page := pagination.Page[resources.MigrationLookup]{Items: items, Limit: len(items)}
+
+	return &MigrationLookupsOutput{Body: fhttp.NewCollection(page)}, nil
 }
 
 /*
