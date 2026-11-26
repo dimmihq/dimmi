@@ -20,6 +20,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/aiattributes"
 	"github.com/dimmihq/dimmi/app/actions/attachments"
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	conversationviews "github.com/dimmihq/dimmi/app/actions/conversation_views"
@@ -57,7 +58,7 @@ func bootInbox(a *app.App) error {
 		ListConversations: &conversations.ListConversations{DB: a.DB, IDs: a.IDs, Clock: a.Clock},
 		ShowConversation:  &conversations.ShowConversation{DB: a.DB},
 		CreateConversation: &conversations.CreateConversation{
-			DB: a.DB, Events: a.Events, Clock: a.Clock, Delivery: delivery,
+			DB: a.DB, Events: a.Events, Clock: a.Clock, Delivery: delivery, Attributes: aiattributes.WriteNew,
 		},
 		ApplyChanges:       &conversations.ApplyConversationChanges{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		ShowNeighbors:      &conversations.ShowNeighbors{DB: a.DB},

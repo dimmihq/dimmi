@@ -175,7 +175,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
   {
     id: "churn_risk",
     name: "Catch customers at risk of leaving",
-    description: "When an AI attribute flags an upset customer or one who wants to cancel, escalate it.",
+    description: "When the AI flags an upset customer or one who wants to cancel, escalate it.",
     trigger: "conversation.ai_attribute_changed",
     build: (spec) => ({
       ...spec,

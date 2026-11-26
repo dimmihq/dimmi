@@ -6,6 +6,8 @@
  * made. Settings are the server's own, so what the builder saves is
  * exactly what runs.
  */
+
+import { attributesSentence } from "./attribute-sentences";
 import { readableText } from "./message-variables";
 import { splitSentence } from "./split";
 import { stepLook } from "./step-kinds";
@@ -262,7 +264,10 @@ const describers: Partial<Record<StepKind, (step: Step, names: Names) => string>
  */
 export function sentence(step: Step, names: Names): string {
   const kind = step.kind as StepKind;
-  const describer = describers[kind] ?? ticketSentences[kind];
+  const describer =
+    describers[kind] ??
+    ticketSentences[kind] ??
+    (kind === "set_conversation_attributes" ? attributesSentence : undefined);
   if (!describer) {
     return `${stepLook[kind]?.name ?? step.kind}, not available yet`;
   }

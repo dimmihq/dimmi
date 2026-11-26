@@ -35,7 +35,7 @@ import { InputBase } from "@/components/base/input/input";
 import { Popover, PopoverTrigger } from "@/components/base/popover/popover";
 import { Switch } from "@/components/base/switch/switch";
 import { agentsQuery } from "@/lib/api/agents";
-import { type AIAttribute, aiAttributesQuery } from "@/lib/api/ai-attributes";
+import { type ConversationAttribute, conversationAttributesQuery } from "@/lib/api/conversation-attributes";
 import { inboxesQuery } from "@/lib/api/inboxes";
 import { tagsQuery } from "@/lib/api/tags";
 import { teamsQuery } from "@/lib/api/teams";
@@ -198,7 +198,7 @@ function FilterMenu({
   onChange,
 }: {
   defs: FilterDef[];
-  attributes: AIAttribute[];
+  attributes: ConversationAttribute[];
   search: ReportSearch;
   onChange: Change;
 }) {
@@ -267,7 +267,7 @@ function FilterMenu({
             {attributes.length > 0 ? (
               <button type="button" onClick={() => setKey("ai_attribute")} className={row}>
                 <RiListCheck3 aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
-                <span className="min-w-0 flex-1 truncate">AI attribute</span>
+                <span className="min-w-0 flex-1 truncate">Conversation attribute</span>
                 {search.ai_attribute ? (
                   <span className="max-w-24 shrink-0 truncate text-body-2-regular text-text-tertiary">
                     {attributes.find((a) => a.key === search.ai_attribute)?.label ?? search.ai_attribute}
@@ -396,9 +396,9 @@ export function FilterBar({
   onChange: Change;
 }) {
   const defs = useFilterDefs(workspace);
-  const attributes = (useQuery({ ...aiAttributesQuery(workspace), enabled: workspace !== "" }).data ?? []).filter(
-    (a) => a.status === "active" || a.key === search.ai_attribute,
-  );
+  const attributes = (
+    useQuery({ ...conversationAttributesQuery(workspace), enabled: workspace !== "" }).data ?? []
+  ).filter((a) => a.status === "active" || a.key === search.ai_attribute);
   const preset: RangePreset | null = search.range ?? (search.from || search.to ? null : "30d");
   const days = preset ? presetDays(preset) : null;
   const value = days

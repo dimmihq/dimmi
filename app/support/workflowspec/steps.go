@@ -115,7 +115,7 @@ func Kinds() []Kind {
 		{Key: KindClose, Ready: true, Action: true},
 		{Key: KindApplySLA, Ready: true, Action: true},
 		{Key: KindHTTPRequest, Fixed: []string{OutcomeFailure}, Ready: true, Action: true},
-	}, slices.Concat(ticketKinds(), automationKinds(), agentKinds(), splitKinds())...)
+	}, slices.Concat(ticketKinds(), attributeKinds(), automationKinds(), agentKinds(), splitKinds())...)
 }
 
 /*

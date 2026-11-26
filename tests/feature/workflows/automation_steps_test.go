@@ -190,7 +190,9 @@ func TestAIConversationAttributes(t *testing.T) {
 	t.Run("detects an attribute, keeps it on the conversation and starts workflows on it", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
-		llm := fake.New(contracts.LLMProviderAnthropic).Script(fake.Step{Text: `{"intent":"refund"}`})
+		llm := fake.New(contracts.LLMProviderAnthropic).Script(fake.Step{
+			Text: `{"intent":"refund","_reasons":{"intent":"The customer asks for their money back."}}`,
+		})
 		classifyingModel(t, d, llm)
 
 		d.Owner.PostJSON("/api/v1/ai/conversation-attributes", testkit.JSON{
@@ -213,6 +215,9 @@ func TestAIConversationAttributes(t *testing.T) {
 
 		d.Owner.GetJSON(conv+"/ai-attributes").AssertOK().
 			AssertJSONPath("data.values.0.attribute.key", "intent").AssertJSONPath("data.values.0.value", "refund")
+		d.Owner.GetJSON(conv+"/attributes").AssertOK().
+			AssertJSONPath("data.values.0.set_by.by", "ai").
+			AssertJSONPath("data.values.0.set_by.reason", "The customer asks for their money back.")
 		d.Owner.GetJSON(conv).AssertOK().AssertJSONPath("data.tags.0.id", tag)
 
 		sent := llm.Sent()
@@ -234,5 +239,115 @@ func TestAIConversationAttributes(t *testing.T) {
 		d.Owner.PatchJSON("/api/v1/ai/conversation-attributes/"+id, testkit.JSON{"status": "archived"}).AssertOK().
 			AssertJSONPath("data.status", "archived")
 		d.Owner.GetJSON("/api/v1/ai/conversation-attributes").AssertOK().AssertJSONPath("data.0.key", "order")
+	})
+
+	t.Run("never replaces a value a teammate set, and starts workflows on any change", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		llm := fake.New(contracts.LLMProviderAnthropic).Script(fake.Step{
+			Text: `{"intent":"refund","_reasons":{"intent":"The customer asks for their money back."}}`,
+		})
+		classifyingModel(t, d, llm)
+
+		d.Owner.PostJSON("/api/v1/conversation-attributes", testkit.JSON{
+			"key": "intent", "label": "Intent", "description": "What the customer wants",
+			"data_type": "choice", "options": []string{"refund", "question"},
+		}).AssertCreated().AssertJSONPath("data.filled_by", "both")
+
+		tag := d.Owner.PostJSON("/api/v1/tags", testkit.JSON{"name": "questions"}).AssertCreated().String("data.id")
+		live(t, d, "Questions", testkit.JSON{
+			"schema": 1, "trigger": "conversation.attribute_changed",
+			"audience": testkit.JSON{"rules": testkit.JSON{"all": []testkit.JSON{
+				{"field": "attribute.key", "op": "eq", "value": "intent"},
+				{"field": "attribute.by", "op": "eq", "value": "member"},
+				{"field": "conversation.ai.intent", "op": "eq", "value": "question"},
+			}}},
+			"steps": []testkit.JSON{step("s_tag0001", "tag", testkit.JSON{"tag_ids": []string{tag}})},
+		})
+
+		conv := conversation(t, d, "gil", "I want my money back")
+		d.Owner.PatchJSON(conv+"/attributes", testkit.JSON{"values": testkit.JSON{"intent": "question"}}).
+			AssertOK()
+		d.TC.DrainLater()
+		d.TC.Drain()
+
+		d.Owner.GetJSON(conv+"/attributes").AssertOK().
+			AssertJSONPath("data.values.0.value", "question").AssertJSONPath("data.values.0.set_by.by", "member")
+		d.Owner.GetJSON(conv).AssertOK().AssertJSONPath("data.tags.0.id", tag)
+	})
+
+	t.Run("a workflow step sets attributes from variables, and fails on a value that does not fit", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+
+		d.Owner.PostJSON("/api/v1/conversation-attributes", testkit.JSON{
+			"key": "issue", "label": "Issue type", "data_type": "choice", "options": []string{"Billing", "Bug"},
+			"filled_by": "teammates",
+		}).AssertCreated()
+		d.Owner.PostJSON("/api/v1/conversation-attributes", testkit.JSON{
+			"key": "seats", "label": "Seats", "data_type": "number", "filled_by": "teammates",
+		}).AssertCreated()
+
+		live(t, d, "Triage", testkit.JSON{
+			"schema": 1, "trigger": "conversation.first_message",
+			"steps": []testkit.JSON{
+				step("s_set00001", "set_conversation_attributes", testkit.JSON{"attributes": []testkit.JSON{
+					{"key": "issue", "value": "Billing"}, {"key": "seats", "value": "12"},
+				}}),
+				step("s_set00002", "set_conversation_attributes", testkit.JSON{"attributes": []testkit.JSON{
+					{"key": "seats", "value": "many"},
+				}}),
+			},
+		})
+
+		conv := conversation(t, d, "hal", "Invoice question")
+		d.TC.DrainLater()
+		d.TC.Drain()
+
+		res := d.Owner.GetJSON(conv + "/attributes").AssertOK()
+		res.AssertJSONPath("data.values.0.attribute.key", "issue").AssertJSONPath("data.values.0.value", "Billing").
+			AssertJSONPath("data.values.0.set_by.by", "workflow").
+			AssertJSONPath("data.values.0.set_by.name", "Workflow: Triage")
+		res.AssertJSONPath("data.values.1.attribute.key", "seats").AssertJSONPath("data.values.1.value", 12.0)
+	})
+
+	t.Run("deletes an attribute only while no conversation, workflow or view uses it", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+
+		used := d.Owner.PostJSON("/api/v1/conversation-attributes", testkit.JSON{
+			"key": "issue", "label": "Issue type", "data_type": "choice", "options": []string{"Billing"},
+		}).AssertCreated().String("data.id")
+		held := d.Owner.PostJSON("/api/v1/conversation-attributes", testkit.JSON{
+			"key": "plan", "label": "Plan", "data_type": "text",
+		}).AssertCreated().String("data.id")
+		free := d.Owner.PostJSON("/api/v1/conversation-attributes", testkit.JSON{
+			"key": "issue_extra", "label": "Extra", "data_type": "text",
+		}).AssertCreated().String("data.id")
+
+		create(t, d, testkit.JSON{"name": "Billing triage", "spec": testkit.JSON{
+			"schema": 1, "trigger": "conversation.first_message",
+			"audience": testkit.JSON{
+				"rules": testkit.JSON{"field": "conversation.ai.issue", "op": "eq", "value": "Billing"},
+			},
+			"steps": []testkit.JSON{step("s_note0001", "note", testkit.JSON{"text": "Billing"})},
+		}})
+
+		conv := conversation(t, d, "ida", "Hello")
+		d.Owner.PatchJSON(conv+"/attributes", testkit.JSON{"values": testkit.JSON{"plan": "Pro"}}).AssertOK()
+
+		d.Owner.GetJSON("/api/v1/conversation-attributes/"+used+"/usage").AssertOK().
+			AssertJSONPath("data.deletable", false).AssertJSONPath("data.workflows.0.name", "Billing triage")
+		d.Owner.Delete("/api/v1/conversation-attributes/"+used).AssertStatus(409).
+			AssertJSONPath("code", "attribute_in_use").AssertJSONPath("workflows.0", "Billing triage")
+
+		d.Owner.GetJSON("/api/v1/conversation-attributes/"+held+"/usage").AssertOK().
+			AssertJSONPath("data.conversations", 1.0)
+		d.Owner.Delete("/api/v1/conversation-attributes/" + held).AssertStatus(409)
+
+		d.Owner.GetJSON("/api/v1/conversation-attributes/"+free+"/usage").AssertOK().
+			AssertJSONPath("data.deletable", true)
+		d.Owner.Delete("/api/v1/conversation-attributes/" + free).AssertStatus(204)
+		d.Owner.GetJSON("/api/v1/conversation-attributes").AssertOK().AssertJSONPath("data.#", 2)
 	})
 }

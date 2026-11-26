@@ -39,6 +39,8 @@ type Field struct {
 	Description string
 	Type        string
 	Options     []string
+	// OptionDescriptions says what some options mean, by option.
+	OptionDescriptions map[string]string
 }
 
 /*
@@ -48,6 +50,8 @@ type Extraction struct {
 	Subject
 	Instructions string
 	Fields       []Field
+	// Explain asks the chat model for a short reason beside each value.
+	Explain bool
 }
 
 /*
@@ -60,6 +64,11 @@ type Extracted struct {
 	Values map[string]any
 	Unsure []string
 	By     string
+	// Sureness is the decision model's confidence in each value it gave.
+	Sureness map[string]float64
+	// Reasons is the chat model's reason for each value it gave, when
+	// the extraction asked for them.
+	Reasons map[string]string
 }
 
 /*
@@ -82,7 +91,7 @@ const maxText = 500
 Extract pulls out the values of the fields.
 */
 func (d *Decider) Extract(ctx context.Context, e Extraction) (Extracted, error) {
-	out := Extracted{Values: map[string]any{}}
+	out := Extracted{Values: map[string]any{}, Sureness: map[string]float64{}, Reasons: map[string]string{}}
 	if len(e.Fields) == 0 {
 		return out, nil
 	}
@@ -90,9 +99,10 @@ func (d *Decider) Extract(ctx context.Context, e Extraction) (Extracted, error) 
 	left, answered := d.extractChoices(ctx, e, &out)
 
 	if len(left) > 0 && d.Model != nil {
-		if values, err := d.extractByModel(ctx, e, left); err == nil {
+		if values, reasons, err := d.extractByModel(ctx, e, left); err == nil {
 			answered, out.By = true, ByModel
 			maps.Copy(out.Values, values)
+			maps.Copy(out.Reasons, reasons)
 		}
 	}
 
@@ -126,16 +136,23 @@ func (d *Decider) extractChoices(ctx context.Context, e Extraction, out *Extract
 	out.By = ByDecision
 	maps.Copy(out.Values, values)
 
-	return slices.DeleteFunc(slices.Clone(e.Fields), func(f Field) bool { return sure[f.Key] }), true
+	for key := range values {
+		out.Sureness[key] = sure[key]
+	}
+
+	return slices.DeleteFunc(slices.Clone(e.Fields), func(f Field) bool {
+		_, settled := sure[f.Key]
+		return settled
+	}), true
 }
 
 /*
 extractByDecision asks the decision model for the yes-or-no and choice
-fields. Sure names every field it settled, a value or a sure unknown,
-so the chat model is not asked about them again; false means it never
-answered.
+fields. Sure holds the confidence of every field it settled, a value or
+a sure unknown, so the chat model is not asked about them again; false
+means it never answered.
 */
-func (d *Decider) extractByDecision(ctx context.Context, e Extraction) (map[string]any, map[string]bool, bool) {
+func (d *Decider) extractByDecision(ctx context.Context, e Extraction) (map[string]any, map[string]float64, bool) {
 	questions := map[string]contracts.DecisionQuestion{}
 	for _, f := range e.Fields {
 		if f.Type == TypeBoolean || f.Type == TypeChoice {
@@ -173,6 +190,9 @@ func choiceQuestion(f Field, instructions string) contracts.DecisionQuestion {
 	} else {
 		for _, o := range f.Options {
 			choices[o] = o
+			if d := strings.TrimSpace(f.OptionDescriptions[o]); d != "" {
+				choices[o] = o + ": " + cut(d, maxDescription)
+			}
 		}
 	}
 
@@ -190,8 +210,8 @@ among its choices. A sure unknown settles a field with no value.
 */
 func readChoices(
 	answers map[string]contracts.DecisionAnswer, questions map[string]contracts.DecisionQuestion,
-) (map[string]any, map[string]bool, bool) {
-	values, sure := map[string]any{}, map[string]bool{}
+) (map[string]any, map[string]float64, bool) {
+	values, sure := map[string]any{}, map[string]float64{}
 
 	for key, q := range questions {
 		a, ok := answers[key]
@@ -203,7 +223,7 @@ func readChoices(
 			continue
 		}
 
-		sure[key] = true
+		sure[key] = a.Confidence
 
 		switch {
 		case a.Choice == unknown:
@@ -221,8 +241,10 @@ func readChoices(
 extractByModel asks the chat model for the fields, and asks again
 about the values that came back in the wrong shape.
 */
-func (d *Decider) extractByModel(ctx context.Context, e Extraction, fields []Field) (map[string]any, error) {
-	out := map[string]any{}
+func (d *Decider) extractByModel(
+	ctx context.Context, e Extraction, fields []Field,
+) (map[string]any, map[string]string, error) {
+	out, reasons := map[string]any{}, map[string]string{}
 	asking := fields
 
 	var err error
@@ -231,33 +253,74 @@ func (d *Decider) extractByModel(ctx context.Context, e Extraction, fields []Fie
 		var answer map[string]json.RawMessage
 		if err = d.askFields(ctx, e, asking, &answer); err != nil {
 			if try == 0 {
-				return nil, err
+				return nil, nil, err
 			}
 
 			break
 		}
 
-		var wrong []Field
+		readReasons(answer[reasonsKey], reasons)
 
-		for _, f := range asking {
-			v, state := valueOf(f, answer[f.Key])
-			switch state {
-			case valueOK:
-				out[f.Key] = v
-			case valueWrong:
-				wrong = append(wrong, f)
-			}
-		}
-
-		if len(wrong) == 0 {
+		asking = readValues(asking, answer, out)
+		if len(asking) == 0 {
 			break
 		}
-
-		asking = wrong
 	}
 
-	return out, nil
+	maps.DeleteFunc(reasons, func(key, _ string) bool {
+		_, ok := out[key]
+		return !ok
+	})
+
+	return out, reasons, nil
 }
+
+/*
+readValues keeps the values that fit their fields and returns the
+fields whose value came back in the wrong shape, to ask again.
+*/
+func readValues(asking []Field, answer map[string]json.RawMessage, out map[string]any) []Field {
+	var wrong []Field
+
+	for _, f := range asking {
+		v, state := valueOf(f, answer[f.Key])
+		switch state {
+		case valueOK:
+			out[f.Key] = v
+		case valueWrong:
+			wrong = append(wrong, f)
+		}
+	}
+
+	return wrong
+}
+
+/*
+reasonsKey holds the chat model's reasons beside the values. Field keys
+start with a letter, so it never names a field.
+*/
+const reasonsKey = "_reasons"
+
+/*
+readReasons keeps the reasons the chat model gave, each cut short.
+*/
+func readReasons(raw json.RawMessage, into map[string]string) {
+	var reasons map[string]*string
+	if len(raw) == 0 || json.Unmarshal(raw, &reasons) != nil {
+		return
+	}
+
+	for key, r := range reasons {
+		if r != nil && strings.TrimSpace(*r) != "" {
+			into[key] = cut(strings.TrimSpace(*r), maxReason)
+		}
+	}
+}
+
+/*
+maxReason is the longest reason kept.
+*/
+const maxReason = 300
 
 /*
 askFields asks the chat model for the fields under a schema where each
@@ -268,10 +331,22 @@ func (d *Decider) askFields(ctx context.Context, e Extraction, fields []Field, o
 
 	var lines strings.Builder
 
+	reasonProps := map[string]any{}
+
 	for _, f := range fields {
 		keys = append(keys, f.Key)
 		props[f.Key] = fieldSchema(f)
+		reasonProps[f.Key] = map[string]any{"type": []string{"string", "null"}}
 		fmt.Fprintf(&lines, "- %s\n", fieldLine(f))
+	}
+
+	explain := ""
+	if e.Explain {
+		props[reasonsKey] = map[string]any{
+			"type": "object", "additionalProperties": false, "required": slices.Clone(keys), "properties": reasonProps,
+		}
+		keys = append(keys, reasonsKey)
+		explain = prompts.Task("decisions/extract_reasons", nil)
 	}
 
 	schema, err := json.Marshal(map[string]any{
@@ -285,6 +360,7 @@ func (d *Decider) askFields(ctx context.Context, e Extraction, fields []Field, o
 		Subject: withContext(e.Subject), SchemaName: "ai_values", Schema: schema,
 		System: prompts.Task("decisions/extract", prompts.Vars{
 			"instructions": instructionsOf(e.Instructions), "fields": strings.TrimSpace(lines.String()),
+			"explain": explain,
 		}),
 	}, out)
 }
@@ -327,7 +403,16 @@ func fieldLine(f Field) string {
 	}
 
 	if f.Type == TypeChoice {
-		line += ". One of: " + strings.Join(f.Options, ", ")
+		options := make([]string, 0, len(f.Options))
+		for _, o := range f.Options {
+			if d := strings.TrimSpace(f.OptionDescriptions[o]); d != "" {
+				o += " (" + cut(d, maxDescription) + ")"
+			}
+
+			options = append(options, o)
+		}
+
+		line += ". One of: " + strings.Join(options, ", ")
 	}
 
 	return line

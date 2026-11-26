@@ -76,6 +76,7 @@ import { Route as DInboxViewIndexRouteImport } from './routes/d/inbox/$view/inde
 import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$view/$conversation'
 import { Route as DRoutinesRoutineIndexRouteImport } from './routes/d/routines/$routine/index'
 import { Route as DSettingsActionsActionRouteImport } from './routes/d/settings/actions.$action'
+import { Route as DSettingsConversationAttributesAttributeRouteImport } from './routes/d/settings/conversation-attributes.$attribute'
 import { Route as DSettingsInboxesInboxRouteImport } from './routes/d/settings/inboxes.$inbox'
 import { Route as DSettingsIntegrationsIntegrationRouteImport } from './routes/d/settings/integrations.$integration'
 import { Route as DSettingsIntegrationsFacebookRouteImport } from './routes/d/settings/integrations.facebook'
@@ -436,6 +437,12 @@ const DSettingsActionsActionRoute = DSettingsActionsActionRouteImport.update({
   path: '/settings/actions/$action',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DSettingsConversationAttributesAttributeRoute =
+  DSettingsConversationAttributesAttributeRouteImport.update({
+    id: '/settings/conversation-attributes/$attribute',
+    path: '/settings/conversation-attributes/$attribute',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 const DSettingsInboxesInboxRoute = DSettingsInboxesInboxRouteImport.update({
   id: '/settings/inboxes/$inbox',
   path: '/settings/inboxes/$inbox',
@@ -634,6 +641,7 @@ export interface FileRoutesByFullPath {
   '/d/help-center/requests/$changeset': typeof DHelpCenterRequestsChangesetRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
+  '/d/settings/conversation-attributes/$attribute': typeof DSettingsConversationAttributesAttributeRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
   '/d/settings/integrations/facebook': typeof DSettingsIntegrationsFacebookRoute
@@ -718,6 +726,7 @@ export interface FileRoutesByTo {
   '/d/help-center/requests/$changeset': typeof DHelpCenterRequestsChangesetRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
+  '/d/settings/conversation-attributes/$attribute': typeof DSettingsConversationAttributesAttributeRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
   '/d/settings/integrations/facebook': typeof DSettingsIntegrationsFacebookRoute
@@ -810,6 +819,7 @@ export interface FileRoutesById {
   '/d/help-center/requests/$changeset': typeof DHelpCenterRequestsChangesetRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
+  '/d/settings/conversation-attributes/$attribute': typeof DSettingsConversationAttributesAttributeRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
   '/d/settings/integrations/facebook': typeof DSettingsIntegrationsFacebookRoute
@@ -903,6 +913,7 @@ export interface FileRouteTypes {
     | '/d/help-center/requests/$changeset'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
+    | '/d/settings/conversation-attributes/$attribute'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
     | '/d/settings/integrations/facebook'
@@ -987,6 +998,7 @@ export interface FileRouteTypes {
     | '/d/help-center/requests/$changeset'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
+    | '/d/settings/conversation-attributes/$attribute'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
     | '/d/settings/integrations/facebook'
@@ -1078,6 +1090,7 @@ export interface FileRouteTypes {
     | '/d/help-center/requests/$changeset'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
+    | '/d/settings/conversation-attributes/$attribute'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
     | '/d/settings/integrations/facebook'
@@ -1585,6 +1598,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DSettingsActionsActionRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/settings/conversation-attributes/$attribute': {
+      id: '/d/settings/conversation-attributes/$attribute'
+      path: '/settings/conversation-attributes/$attribute'
+      fullPath: '/d/settings/conversation-attributes/$attribute'
+      preLoaderRoute: typeof DSettingsConversationAttributesAttributeRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/settings/inboxes/$inbox': {
       id: '/d/settings/inboxes/$inbox'
       path: '/settings/inboxes/$inbox'
@@ -1902,6 +1922,7 @@ interface DRouteRouteChildren {
   DSettingsIndexRoute: typeof DSettingsIndexRoute
   DWorkflowsIndexRoute: typeof DWorkflowsIndexRoute
   DSettingsActionsActionRoute: typeof DSettingsActionsActionRoute
+  DSettingsConversationAttributesAttributeRoute: typeof DSettingsConversationAttributesAttributeRoute
   DSettingsInboxesInboxRoute: typeof DSettingsInboxesInboxRoute
   DSettingsIntegrationsIntegrationRoute: typeof DSettingsIntegrationsIntegrationRoute
   DSettingsIntegrationsFacebookRoute: typeof DSettingsIntegrationsFacebookRoute
@@ -1955,6 +1976,8 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsIndexRoute: DSettingsIndexRoute,
   DWorkflowsIndexRoute: DWorkflowsIndexRoute,
   DSettingsActionsActionRoute: DSettingsActionsActionRoute,
+  DSettingsConversationAttributesAttributeRoute:
+    DSettingsConversationAttributesAttributeRoute,
   DSettingsInboxesInboxRoute: DSettingsInboxesInboxRoute,
   DSettingsIntegrationsIntegrationRoute: DSettingsIntegrationsIntegrationRoute,
   DSettingsIntegrationsFacebookRoute: DSettingsIntegrationsFacebookRoute,
