@@ -67,7 +67,7 @@ func keep(key string) bool {
 	switch key {
 	case "type", "part_type", "data_type", "model", "state", "role",
 		"category", "delivered_as", "exception_type", "visible_to", "parent_type",
-		"help_center_audience", "priority", "content_type", "trigger_type", "channel":
+		"help_center_audience", "priority", "content_type", "trigger_type", "channel", "action_type", "step_type":
 		return true
 	}
 
@@ -238,7 +238,7 @@ func (s *Source) Inventory(ctx context.Context, dir, visitorID string) (Report, 
 
 	r.Admins = len(known)
 
-	for _, e := range inventoryEndpoints() {
+	for _, e := range s.inventoryEndpoints() {
 		iv.get(ctx, e.name, e.path, e.query)
 	}
 
@@ -268,8 +268,8 @@ type endpoint struct {
 	query url.Values
 }
 
-func inventoryEndpoints() []endpoint {
-	return []endpoint{
+func (s *Source) inventoryEndpoints() []endpoint {
+	list := []endpoint{
 		{"admins", "/admins", nil},
 		{"teams", "/teams", nil},
 		{"tags", "/tags", nil},
@@ -285,6 +285,12 @@ func inventoryEndpoints() []endpoint {
 		{"office_hours", "/office_hours_schedules", nil},
 		{"internal_articles", "/internal_articles", nil},
 	}
+
+	for _, id := range s.Workflows {
+		list = append(list, endpoint{"workflow", "/export/workflows/" + url.PathEscape(id), nil})
+	}
+
+	return list
 }
 
 /*

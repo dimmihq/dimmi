@@ -50,9 +50,10 @@ func stepType(t string) (string, bool) {
 		"wait": "wait", "branches": "branch", "condition": "branch", "collect_customer_data": "collect",
 		"collect_data": "collect", "reply_buttons": "choice", "buttons": "choice", "priority": "set_priority",
 		"mark_priority": "set_priority", "convert_to_ticket": "create_ticket",
+		"conditional_branches": "branch", "mid_path_actions": "actions", "terminal": "end",
 	}
 
-	dimmi, ok := types[t]
+	dimmi, ok := types[strings.ReplaceAll(t, "-", "_")]
 
 	return dimmi, ok
 }
@@ -125,7 +126,6 @@ type workflowExport struct {
 		Title       string   `json:"title"`
 		Description string   `json:"description"`
 		TriggerType string   `json:"trigger_type"`
-		State       string   `json:"state"`
 		Channels    []string `json:"target_channels"`
 	} `json:"workflow"`
 }

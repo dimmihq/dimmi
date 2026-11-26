@@ -140,7 +140,7 @@
       "ios_os_version": null,
       "ios_sdk_version": null,
       "language_override": null,
-      "last_contacted_at": null,
+      "last_contacted_at": 0,
       "last_email_clicked_at": null,
       "last_email_opened_at": null,
       "last_replied_at": 0,

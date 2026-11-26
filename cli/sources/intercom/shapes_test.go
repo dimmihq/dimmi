@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/dimmihq/dimmi/cli/format"
 )
 
 /*
@@ -33,6 +35,7 @@ func TestRealShapesDecode(t *testing.T) {
 		"contacts.json":                func() any { return &list[contact]{} },
 		"articles.json":                func() any { return &list[article]{} },
 		"conversation.json":            func() any { return &conversation{} },
+		"ticket.json":                  func() any { return &ticket{} },
 	}
 
 	files, _ := filepath.Glob(filepath.Join("testdata", "shapes", "*.json"))
@@ -55,6 +58,39 @@ func TestRealShapesDecode(t *testing.T) {
 
 		if err := json.Unmarshal(raw, target()); err != nil {
 			t.Errorf("%s: %v", name, err)
+		}
+	}
+}
+
+/*
+TestRealWorkflowExport translates the workflow export Intercom gave for a
+workflow made from its routing template: every step is listed, its
+assignment step is one dimmi can run, and it arrives switched off.
+*/
+func TestRealWorkflowExport(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "shapes", "workflow.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec, err := translateWorkflow("73828290", raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wf, ok := rec.Data.(*format.Workflow)
+	if !ok || wf.Enabled {
+		t.Fatalf("workflow %+v", rec.Data)
+	}
+
+	types := map[string]bool{}
+	for _, s := range wf.Steps {
+		types[s.SourceType] = s.Supported
+	}
+
+	for _, want := range []string{"conditional_branches", "mid_path_actions", "terminal", "assign-conversation"} {
+		if supported, found := types[want]; !found || !supported {
+			t.Errorf("step %s: found %v supported %v in %+v", want, found, supported, wf.Steps)
 		}
 	}
 }
