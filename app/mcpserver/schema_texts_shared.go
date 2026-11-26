@@ -23,6 +23,7 @@ func sharedTexts() map[string]string {
 	for _, part := range []map[string]string{
 		sharedTextsFromAIActionBodyStatus(),
 		sharedTextsFromChangelogLabelBodyPosition(),
+		sharedTextsFromContactCompanies(),
 		sharedTextsFromFeedbackBoardBodySlug(),
 		sharedTextsFromOperatorRoutineDeliveryInputEmailMemberIDs(),
 		sharedTextsFromSavedReplyMacroInputAssigneeID(),

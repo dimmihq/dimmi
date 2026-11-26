@@ -58,14 +58,13 @@ export function Company({ person }: { person: Contact }) {
       {others.length > 0 ? (
         <TooltipTrigger delay={200}>
           <Focusable>
-            <span
-              role="img"
-              tabIndex={0}
+            <button
+              type="button"
               aria-label={`Also at ${others.map((c) => c.name).join(", ")}`}
-              className="inline-flex shrink-0 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+              className="inline-flex shrink-0 cursor-default rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring"
             >
               <Badge aria-hidden>+{others.length}</Badge>
-            </span>
+            </button>
           </Focusable>
           <Tooltip size="md" className="max-w-[280px]">
             Also at {others.map((c) => c.name).join(", ")}

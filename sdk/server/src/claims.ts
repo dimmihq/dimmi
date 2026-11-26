@@ -99,16 +99,28 @@ export function toClaims(user: IdentityUser): Record<string, unknown> {
   if (Object.keys(attributes).length > 0) {
     claims.custom_attributes = attributes;
   }
+  setCompanies(claims, user);
+  return claims;
+}
+
+/*
+ * setCompanies adds the user's company and the companies they belong to,
+ * refusing more than dimmi takes in one token.
+ */
+function setCompanies(claims: Record<string, unknown>, user: IdentityUser) {
   if (user.company) {
     claims.company = companyClaims(user.company);
   }
-  if (user.companies && user.companies.length > 0) {
-    if (user.companies.length > maxCompanies) {
-      throw new DimmiIdentityError("company_limit", `send at most ${maxCompanies} companies; add others through the API.`);
-    }
-    claims.companies = user.companies.map(companyClaims);
+  if (!user.companies || user.companies.length === 0) {
+    return;
   }
-  return claims;
+  if (user.companies.length > maxCompanies) {
+    throw new DimmiIdentityError(
+      "company_limit",
+      `send at most ${maxCompanies} companies; add others through the API.`,
+    );
+  }
+  claims.companies = user.companies.map(companyClaims);
 }
 
 function set(claims: Record<string, unknown>, name: string, value: string | null | undefined) {

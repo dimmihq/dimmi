@@ -75,8 +75,16 @@ describe("identity tokens", () => {
 
   it("lists further companies and refuses one without an id or more than fifty", () => {
     expect(
-      toClaims({ id: "u1", company: { id: "c1" }, companies: [{ id: 8, name: "Beta", domain: "beta.test" }, { id: "c3" }] }),
-    ).toEqual({ sub: "u1", company: { id: "c1" }, companies: [{ id: "8", name: "Beta", domain: "beta.test" }, { id: "c3" }] });
+      toClaims({
+        id: "u1",
+        company: { id: "c1" },
+        companies: [{ id: 8, name: "Beta", domain: "beta.test" }, { id: "c3" }],
+      }),
+    ).toEqual({
+      sub: "u1",
+      company: { id: "c1" },
+      companies: [{ id: "8", name: "Beta", domain: "beta.test" }, { id: "c3" }],
+    });
     expect(toClaims({ id: "u1", companies: [] })).toEqual({ sub: "u1" });
     expect(() => toClaims({ id: "u", companies: [{ name: "x" } as never] })).toThrow(/identify_user_invalid/);
     const many = Array.from({ length: 51 }, (_, i) => ({ id: `c${i}` }));
