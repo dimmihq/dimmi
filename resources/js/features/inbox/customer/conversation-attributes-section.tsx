@@ -438,7 +438,7 @@ function FilesField({
         </span>
       ))}
       <input ref={picker} type="file" multiple hidden onChange={(e) => void add(e.target.files)} />
-      <Button variant="ghost" size="xs" disabled={uploading} onClick={() => picker.current?.click()}>
+      <Button variant="secondary" size="xs" disabled={uploading} onClick={() => picker.current?.click()}>
         {uploading ? "Uploading…" : ids.length === 0 ? "Add files" : "Add more"}
       </Button>
     </div>

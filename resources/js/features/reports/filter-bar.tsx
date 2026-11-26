@@ -267,7 +267,7 @@ function FilterMenu({
             {attributes.length > 0 ? (
               <button type="button" onClick={() => setKey("ai_attribute")} className={row}>
                 <RiListCheck3 aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
-                <span className="min-w-0 flex-1 truncate">AI attribute</span>
+                <span className="min-w-0 flex-1 truncate">Conversation attribute</span>
                 {search.ai_attribute ? (
                   <span className="max-w-24 shrink-0 truncate text-body-2-regular text-text-tertiary">
                     {attributes.find((a) => a.key === search.ai_attribute)?.label ?? search.ai_attribute}

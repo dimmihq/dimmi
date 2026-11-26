@@ -243,7 +243,7 @@ function AttributeDrawer({ editing, draft, onClose }: { editing: Editing; draft:
   };
 
   return (
-    <Drawer isOpen onOpenChange={(open) => (open ? undefined : onClose())} size="md">
+    <Drawer isOpen onOpenChange={(open) => (open ? undefined : onClose())} size="lg">
       <DrawerHeader
         title={saved ? `Edit ${editing.attribute.label}` : "New conversation attribute"}
         description={
@@ -292,10 +292,7 @@ function AttributeDrawer({ editing, draft, onClose }: { editing: Editing; draft:
           </RadioGroup>
         </div>
         {choosable.includes(form.dataType) ? (
-          <div className="flex flex-col gap-2">
-            <span className="text-body-2-medium text-text-secondary">Options</span>
-            <OptionsEditor label="Options" value={form.options} onChange={(next) => set({ options: next })} />
-          </div>
+          <OptionsEditor label="Options" value={form.options} onChange={(next) => set({ options: next })} />
         ) : null}
         <Textarea
           label="Description"

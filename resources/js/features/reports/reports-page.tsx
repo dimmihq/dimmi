@@ -131,7 +131,7 @@ function BreakdownPicker({
 
   return (
     <Select
-      aria-label="Split by AI attribute"
+      aria-label="Split by conversation attribute"
       size="sm"
       variant="quiet"
       className="w-40"
