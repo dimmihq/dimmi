@@ -45,7 +45,7 @@ func (a *Articles) Restore(ctx context.Context, m authz.Membership, article, ver
 		kept, err := q.FindArticleVersion(ctx, models.FindArticleVersionParams{
 			WorkspaceID: m.Workspace.ID, ID: version,
 		})
-		if errors.Is(err, database.ErrNotFound) || (err == nil && kept.ArticleID != article) {
+		if errors.Is(err, database.ErrNotFound) || (err == nil && (kept.ArticleID != article || kept.Locale != nil)) {
 			return exceptions.ErrNotFound
 		}
 

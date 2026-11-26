@@ -1,0 +1,140 @@
+{
+  "type": "text type",
+  "id": "136",
+  "external_id": "137",
+  "workspace_id": "138",
+  "role": "text role",
+  "email": "text email",
+  "email_domain": "text email_domain",
+  "email_verified": true,
+  "phone": "text phone",
+  "whatsapp_number": "text whatsapp_number",
+  "name": "text name",
+  "owner_id": "139",
+  "has_hard_bounced": true,
+  "marked_email_as_spam": true,
+  "unsubscribed_from_emails": true,
+  "created_at": 1700000140,
+  "updated_at": 1700000141,
+  "signed_up_at": 1700000142,
+  "last_seen_at": 1700000143,
+  "last_replied_at": 1700000144,
+  "last_contacted_at": 1700000145,
+  "last_email_opened_at": 1700000146,
+  "last_email_clicked_at": 1700000147,
+  "language_override": "text language_override",
+  "browser": "text browser",
+  "browser_version": "text browser_version",
+  "browser_language": "text browser_language",
+  "os": "text os",
+  "android_app_name": "text android_app_name",
+  "android_app_version": "text android_app_version",
+  "android_device": "text android_device",
+  "android_os_version": "text android_os_version",
+  "android_sdk_version": "text android_sdk_version",
+  "android_last_seen_at": 1700000148,
+  "ios_app_name": "text ios_app_name",
+  "ios_app_version": "text ios_app_version",
+  "ios_device": "text ios_device",
+  "ios_os_version": "text ios_os_version",
+  "ios_sdk_version": "text ios_sdk_version",
+  "ios_last_seen_at": 1700000149,
+  "custom_attributes": {},
+  "avatar": "https://example.com/x",
+  "tags": {
+    "data": [
+      {
+        "type": "https://example.com/x",
+        "id": "150",
+        "url": "https://example.com/x"
+      }
+    ],
+    "url": "https://example.com/x",
+    "total_count": 1700000151,
+    "has_more": true
+  },
+  "notes": {
+    "data": [
+      {
+        "type": "https://example.com/x",
+        "id": "152",
+        "url": "https://example.com/x"
+      }
+    ],
+    "url": "https://example.com/x",
+    "total_count": 1700000153,
+    "has_more": true
+  },
+  "companies": {
+    "data": [
+      {
+        "id": "154",
+        "type": "company",
+        "url": "https://example.com/x"
+      }
+    ],
+    "url": "https://example.com/x",
+    "total_count": 1700000155,
+    "has_more": true
+  },
+  "location": {
+    "type": "text type",
+    "country": "text country",
+    "region": "text region",
+    "city": "text city",
+    "country_code": "text country_code",
+    "continent_code": "text continent_code"
+  },
+  "social_profiles": {
+    "data": [
+      {
+        "type": "text type",
+        "name": "text name",
+        "url": "https://example.com/x"
+      }
+    ]
+  },
+  "opted_out_subscription_types": {
+    "type": "list",
+    "data": [
+      {
+        "type": "https://example.com/x",
+        "id": "156",
+        "url": "https://example.com/x"
+      }
+    ],
+    "url": "https://example.com/x",
+    "total_count": 1700000157,
+    "has_more": true
+  },
+  "opted_in_subscription_types": {
+    "type": "list",
+    "data": [
+      {
+        "type": "https://example.com/x",
+        "id": "158",
+        "url": "https://example.com/x"
+      }
+    ],
+    "url": "https://example.com/x",
+    "total_count": 1700000159,
+    "has_more": true
+  },
+  "utm_campaign": "text utm_campaign",
+  "utm_content": "text utm_content",
+  "utm_medium": "text utm_medium",
+  "utm_source": "text utm_source",
+  "utm_term": "text utm_term",
+  "referrer": "text referrer",
+  "sms_consent": true,
+  "unsubscribed_from_sms": true,
+  "enabled_push_messaging": true,
+  "merge_history": [
+    {
+      "type": "text type",
+      "source_contact_id": "160",
+      "source_contact_role": "lead",
+      "merged_at": 1700000161
+    }
+  ]
+}

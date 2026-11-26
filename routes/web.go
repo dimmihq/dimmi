@@ -64,9 +64,9 @@ func Web(a *app.App) {
 		}
 
 		pages.Handle(fhttp.MethodGet, middleware.GatePath, "gate", fhttp.HandlerFunc(spa.ShowAuth))
-
-		helpCenter(pages, a)
 	})
+
+	a.Router.Group("", func(pages *routing.Router) { helpCenter(pages, a) })
 
 	a.Router.Handle(fhttp.MethodGet, "/build/*", "build",
 		static.Handler(a.Frontend, static.Options{Immutable: true, Prefix: "/build"}))
@@ -138,16 +138,20 @@ func ssoPages(a *app.App) {
 /*
 helpCenter declares the public portal under the app's /hc/{center}
 path: the help center, its changelog, feature requests, the visitor's
-conversations, and the files their pages show.
+conversations, and the files their pages show. Its pages may frame the
+video and demo players articles embed.
 */
 func helpCenter(pages *routing.Router, a *app.App) {
+	pages.Middleware("csp:embeds")
+
 	hc := &web.HelpCenterController{
 		Library: a.HelpSample, Public: a.Actions.HelpPublic, Readers: a.Actions.HelpReaders, Errors: a.Errors,
 		Changelog: a.Actions.ChangelogPublic, Subscribers: a.Actions.ChangelogSubscribers, Board: a.Actions.Feedback,
 		Assets: static.Handler(helpsample.Assets(), static.Options{}),
 		Vite:   vite.New(vite.Options{Build: a.Frontend, Base: "/build", HotFile: a.Config.Frontend.HotPath}),
 		AppURL: a.Application.Config.App.URL, Ratings: a.Actions.HelpRatings, Passes: a.Actions.IdentityPasses,
-		Analytics: a.Actions.HelpAnalytics, Addresses: a.Actions.HelpCenterAddresses,
+		Analytics: a.Actions.HelpAnalytics, Addresses: a.Actions.HelpCenterAddresses, Lang: a.Lang,
+		Clock: a.Clock,
 	}
 	cl := web.ChangelogController{HelpCenterController: hc}
 	images := &web.HelpImageController{Disks: a.Storage, Dir: helpcenters.ImageDir}
@@ -233,6 +237,7 @@ func authPages() map[string]string {
 		"two-factor-reset":    "/two-factor-reset",
 		"invitation":          "/invitation",
 		"onboarding":          "/onboarding",
+		"waiting":             "/waiting",
 		"oauth.authorize":     "/oauth/authorize",
 		"email.preferences":   "/email-preferences",
 		"conversation.rating": "/rate",

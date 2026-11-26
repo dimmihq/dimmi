@@ -50,15 +50,25 @@ export interface Member {
   conversation_access: ConversationAccess;
   conversation_access_unassigned: boolean;
   access_team_ids: string[];
+  /** Brought over from another tool and still waiting for an admin to enable them. */
+  awaiting_enable?: boolean;
+  /** The tool an imported teammate came from, null for everyone else. */
+  imported_from?: string | null;
+  /** When enabling mailed an imported teammate an invitation, null before. */
+  enable_invited_at?: string | null;
+  /** The teams enabling an imported teammate puts them in. */
+  enable_team_ids?: string[];
 }
 
 /*
  * MemberFilter narrows the member list: twoFactor keeps only members
- * with, or without, a second factor. Only those who manage members may
- * narrow by it.
+ * with, or without, a second factor, and awaitingEnable only imported
+ * teammates waiting to be enabled, or everyone else. Only those who
+ * manage members may narrow by a second factor.
  */
 export interface MemberFilter {
   twoFactor?: boolean;
+  awaitingEnable?: boolean;
 }
 
 /*
@@ -68,6 +78,9 @@ function memberParams(filter: MemberFilter): URLSearchParams {
   const params = new URLSearchParams();
   if (filter.twoFactor !== undefined) {
     params.set("filter[two_factor]", String(filter.twoFactor));
+  }
+  if (filter.awaitingEnable !== undefined) {
+    params.set("filter[awaiting_enable]", String(filter.awaitingEnable));
   }
 
   return params;

@@ -358,6 +358,30 @@ const minute = 60_000;
 const hour = 60 * minute;
 
 /*
+ * updatedAgo writes when an article last changed the way help centers
+ * do: today, yesterday, then whole days, weeks, months or years ago,
+ * rounded down. It is the date where the browser cannot write the words.
+ */
+export function updatedAgo(at: string, now = Date.now()): string {
+  const time = Date.parse(at);
+  const rtf = relative();
+  if (!rtf || Number.isNaN(time)) {
+    return Number.isNaN(time) ? "" : new Date(time).toLocaleDateString(reading.locale);
+  }
+  const days = Math.floor(Math.max(0, now - time) / (24 * hour));
+  const [count, unit]: [number, Intl.RelativeTimeFormatUnit] =
+    days < 7
+      ? [days, "day"]
+      : days < 30
+        ? [days / 7, "week"]
+        : days < 365
+          ? [days / 30, "month"]
+          : [days / 365, "year"];
+
+  return rtf.format(-Math.floor(count), unit);
+}
+
+/*
  * recent is how far back a time is still read as a distance from now.
  * Beyond it a clock time or a date places a message better than a
  * growing count of hours does.

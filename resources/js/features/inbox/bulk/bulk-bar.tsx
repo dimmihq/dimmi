@@ -96,8 +96,11 @@ export function BulkBar({
     onSuccess: (results, change) => {
       const changed = results.filter((r) => r.ok).length;
       const skipped = results.length - changed;
+      const unfilled = results.filter((r) => r.error === "conversation_attributes_required").length;
       const text = `${done(change)} ${plural(changed)}`;
-      if (skipped > 0) {
+      if (unfilled > 0 && unfilled === skipped) {
+        toast.error(`${text}. ${plural(unfilled)} need required attributes filled before closing.`);
+      } else if (skipped > 0) {
         toast.error(`${text}. ${plural(skipped)} could not be changed.`);
       } else {
         toast.success(text);

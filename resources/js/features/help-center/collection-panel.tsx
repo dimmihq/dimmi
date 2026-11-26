@@ -15,6 +15,7 @@ import {
   RiBarChart2Line,
   RiFolderForbidLine,
   RiGitPullRequestLine,
+  RiTranslate2,
 } from "@remixicon/react";
 import { type ReactNode, useState } from "react";
 
@@ -33,6 +34,7 @@ import {
   childrenOf,
   descendantsOf,
   requestsKey,
+  translationsKey,
   unfiledKey,
 } from "./collection-tree";
 import { useCollectionEdits } from "./use-collection-edits";
@@ -82,6 +84,7 @@ export function CollectionPanel({
   pick,
   onPick,
   requests,
+  translations = null,
 }: {
   workspace: string;
   helpCenter: string;
@@ -91,6 +94,8 @@ export function CollectionPanel({
   pick: string;
   onPick: (pick: string) => void;
   requests: number;
+  /* What is left to translate, when the help center speaks several languages. */
+  translations?: number | null;
 }) {
   const edits = useCollectionEdits({ workspace, helpCenter, collections, onCreated: (made) => onPick(made.id) });
   const [deleting, setDeleting] = useState<Collection | null>(null);
@@ -156,6 +161,15 @@ export function CollectionPanel({
             current={pick === requestsKey}
             onPress={() => onPick(requestsKey)}
           />
+          {translations !== null ? (
+            <PickRow
+              label="Translations"
+              icon={RiTranslate2}
+              count={translations}
+              current={pick === translationsKey}
+              onPress={() => onPick(translationsKey)}
+            />
+          ) : null}
           {unfiled > 0 ? (
             <PickRow
               label="No collection"
@@ -175,7 +189,9 @@ export function CollectionPanel({
               aria-label="Collections"
               size="sm"
               selectionMode="single"
-              selectedKeys={[allKey, unfiledKey, analyticsKey, requestsKey].includes(pick) ? [] : [pick]}
+              selectedKeys={
+                [allKey, unfiledKey, analyticsKey, requestsKey, translationsKey].includes(pick) ? [] : [pick]
+              }
               onSelectionChange={(keys) => {
                 const [key] = keys === "all" ? [] : [...keys];
                 if (key !== undefined && key !== "new-collection") {

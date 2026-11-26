@@ -108,6 +108,16 @@
     "expiry": "The invitation works until {{.date}}.",
     "unexpected": "If you did not expect this invitation, you can ignore this email."
   },
+  "imported_teammate_waiting": {
+    "subject": "{{.teammate}} is waiting to join {{.workspace}}",
+    "intro": "{{.teammate}} ({{.email}}) came over with your import and just signed up. They can't see anything in {{.workspace}} until an admin enables them.",
+    "action": "Review imported teammates"
+  },
+  "access_enabled": {
+    "subject": "You're in: {{.workspace}} is ready for you",
+    "intro": "An admin enabled your access to {{.workspace}}. Your old conversations are already there, under your name.",
+    "action": "Open {{.workspace}}"
+  },
   "invitation_accepted": {
     "subject": "{{.member}} joined {{.workspace}}",
     "intro": "{{.member}} accepted your invitation and joined the workspace {{.workspace}}.",

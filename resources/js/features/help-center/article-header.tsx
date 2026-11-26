@@ -13,6 +13,7 @@ import {
   RiSparkling2Line,
 } from "@remixicon/react";
 import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
@@ -33,6 +34,7 @@ export function ArticleHeader({
   onSave,
   onConfirm,
   request = null,
+  languages = null,
 }: {
   article: Article;
   live: string | null;
@@ -42,6 +44,8 @@ export function ArticleHeader({
   onSave: () => void;
   onConfirm: (what: "publish" | "unpublish") => void;
   request?: { busy: boolean; onAccept: () => void; onDecline: () => void } | null;
+  /* The article's language menu, when its help center speaks several. */
+  languages?: ReactNode;
 }) {
   return (
     <PageHeader
@@ -62,6 +66,7 @@ export function ArticleHeader({
         </span>
       }
     >
+      {languages}
       {live ? (
         <a
           href={live}

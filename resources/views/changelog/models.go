@@ -33,8 +33,8 @@ type Label struct {
 }
 
 /*
-Reaction is one of the fixed emoji visitors react with and how many
-have.
+Reaction is one of the fixed emoji visitors react with, by the name it
+is stored under, such as thumbsup, and how many have.
 */
 type Reaction struct {
 	Emoji string

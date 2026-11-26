@@ -14,8 +14,11 @@ SELECT * FROM help_centers WHERE workspace_id = @workspace_id AND is_default AND
 
 -- name: CreateHelpCenter :one
 -- CreateHelpCenter stores a new help center.
-INSERT INTO help_centers (id, workspace_id, name, subdomain, locale, is_default, settings, created_at, updated_at)
-VALUES (@id, @workspace_id, @name, @subdomain, @locale, @is_default, @settings, @now, @now)
+INSERT INTO help_centers (
+    id, workspace_id, name, subdomain, locale, locales, is_default, settings, created_at, updated_at
+) VALUES (
+    @id, @workspace_id, @name, @subdomain, @locale, ARRAY[@locale::text], @is_default, @settings, @now, @now
+)
 RETURNING *;
 
 -- name: UpdateHelpCenter :one
@@ -33,6 +36,17 @@ RETURNING *;
 -- can see.
 UPDATE help_centers SET cache_version = cache_version + 1, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: TouchWorkspaceHelpCenters :exec
+-- TouchWorkspaceHelpCenters moves every help center of the workspace on
+-- after a change all of them show, such as the workspace's logo.
+UPDATE help_centers SET cache_version = cache_version + 1
+WHERE workspace_id = @workspace_id AND deleted_at IS NULL;
+
+-- name: HelpCenterLogo :one
+-- HelpCenterLogo returns the path of the workspace's logo, which its help
+-- centers show, null when it has none.
+SELECT logo_path FROM workspaces WHERE id = @workspace_id;
 
 -- name: ResolveHelpCenter :one
 -- ResolveHelpCenter finds which workspace's help center answers a

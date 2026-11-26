@@ -1,0 +1,47 @@
+{
+  "data": [
+    {
+      "api_writable": true,
+      "archived": false,
+      "custom": false,
+      "data_type": "string",
+      "description": "\u003cstring\u003e",
+      "full_name": "\u003cstring\u003e",
+      "label": "\u003cstring\u003e",
+      "messenger_writable": true,
+      "model": "contact",
+      "name": "\u003cstring\u003e",
+      "type": "data_attribute",
+      "ui_writable": false
+    },
+    {
+      "api_writable": true,
+      "archived": false,
+      "custom": false,
+      "data_type": "string",
+      "description": "\u003cstring\u003e",
+      "full_name": "\u003cstring\u003e",
+      "label": "\u003cstring\u003e",
+      "messenger_writable": true,
+      "model": "contact",
+      "name": "\u003cstring\u003e",
+      "type": "data_attribute",
+      "ui_writable": true
+    },
+    {
+      "api_writable": true,
+      "archived": false,
+      "custom": false,
+      "data_type": "integer",
+      "description": "\u003cstring\u003e",
+      "full_name": "\u003cstring\u003e",
+      "label": "\u003cstring\u003e",
+      "messenger_writable": true,
+      "model": "contact",
+      "name": "\u003cstring\u003e",
+      "type": "data_attribute",
+      "ui_writable": false
+    }
+  ],
+  "type": "list"
+}

@@ -1,0 +1,94 @@
+---
+title: "Add videos, buttons and sections to articles"
+description: "Embed videos and product demos, add buttons, fold answers into collapsible sections, center text, and caption or link pictures."
+---
+
+Articles can hold more than text. Type `/` on an empty line in the article writer to add a **video or demo**, a **button**, a **collapsible section** or **centered text**. Select a picture to give it a **caption** or a **link**.
+
+You never need to type Markdown for any of these. Articles are stored as Markdown, though, so here is the syntax for anyone writing articles through the [API](/api-reference/) or importing them from another tool.
+
+## Videos and demos
+
+Paste a share link and dimmi plays it on the page. You can also paste a supported link onto an empty line and it turns into a player.
+
+```md
+::embed[Set up your inbox]{src="https://youtu.be/dQw4w9WgXcQ"}
+```
+
+The text in brackets is the player's title. Screen readers announce it, so describe what the video shows.
+
+| Kind | Hosts |
+| --- | --- |
+| **Video** | YouTube (including Shorts), Vimeo, Loom, Wistia, Vidyard, Tella |
+| **Interactive demo** | Arcade, Supademo, Storylane, Navattic |
+
+dimmi reads the video's id from your link and builds the player address itself. The writer refuses links from other hosts. An article written through the API with one shows it as a plain link.
+
+A few details about players:
+
+- **YouTube** plays in its privacy-enhanced mode, from `youtube-nocookie.com`. A `t=` start time in your link is kept.
+- **Unlisted Vimeo** links keep their privacy hash, so `vimeo.com/76979871/a1b2c3d4e5` plays.
+- **Loading** waits until the reader scrolls near the player, so long articles stay fast.
+
+## Buttons
+
+A button is a link drawn in your help center's brand color. Use one for the single action a reader should take next.
+
+```md
+::button[Start a free trial]{href="https://example.com/trial" align="center"}
+```
+
+`align` is `start` (the default) or `center`. Links can be web addresses, `mailto:` addresses or paths on your own site, such as `/pricing`. The writer refuses any other link. Through the API, a button with one shows only its label.
+
+## Collapsible sections
+
+A collapsible section shows its title and opens when a reader clicks it. Use sections for FAQs and for detail most readers can skip.
+
+```md
+:::details[How long does forwarding take to verify?]
+Most providers verify within **five minutes**.
+
+- Check the forwarding rule is on
+- Send a test message
+:::
+```
+
+A section holds anything an article can: lists, code, pictures, videos and other sections. To put one section inside another, give the outer one more colons:
+
+```md
+::::details[Refunds]
+Refunds take five working days.
+
+:::details[Partial refunds]
+Partial refunds go back to the original card.
+:::
+::::
+```
+
+## Centered text
+
+Select text and click the **Center** button in the bar above it, or wrap blocks in `:::center`:
+
+```md
+:::center
+## Need a hand?
+
+Our team answers within one working day.
+:::
+```
+
+## Captions and linked pictures
+
+Select a picture and click **Add caption** to type a caption under it, or **Link image** to make it clickable. In Markdown, the caption is the picture's title:
+
+```md
+[![The inbox settings page](/help-images/settings.png "Inbox settings, with forwarding on")](https://example.com/settings)
+```
+
+## Where the blocks show
+
+| Where | What readers see |
+| --- | --- |
+| **Help center** | Every block as designed. Sections use the browser's own disclosure, so they open with the keyboard too. |
+| **Messenger** | Videos and demos as a row that opens them on their own site, so no player loads inside your product. Buttons and sections work as on the help center. |
+| **AI agent** | Videos, demos and buttons become links, and a section becomes its title followed by its text. The agent can answer from what a section holds and point customers to a video. |

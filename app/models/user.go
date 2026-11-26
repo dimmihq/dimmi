@@ -56,3 +56,12 @@ func (u User) AvatarURL() *string {
 
 	return &url
 }
+
+/*
+IsPlaceholder reports whether the account is one an import made for a
+teammate of another tool and nobody has claimed yet: it has no password
+and its address is unproven, so nobody can sign in to it.
+*/
+func (u User) IsPlaceholder() bool {
+	return u.CreatedVia != nil && *u.CreatedVia == "import" && !u.HasPassword() && !u.IsVerified() && !u.IsDeleted()
+}

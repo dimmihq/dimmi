@@ -33,15 +33,26 @@ import {
   createArticle,
   type HelpCenter,
 } from "@/lib/api/help-centers";
+import { translationStatesQuery } from "@/lib/api/translations";
 import { cx } from "@/utils/cx";
 import { useCenterRequests } from "./change-requests";
 import { CollectionPanel } from "./collection-panel";
 import { CollectionSelect } from "./collection-select";
-import { allKey, analyticsKey, articlesIn, childrenOf, requestsKey, unfiledKey } from "./collection-tree";
+import {
+  allKey,
+  analyticsKey,
+  articlesIn,
+  childrenOf,
+  requestsKey,
+  translationsKey,
+  unfiledKey,
+} from "./collection-tree";
 import { articleDetail, articleState } from "./docs-format";
 import { HelpAnalytics } from "./help-analytics";
 import { HelpCenterSwitcher } from "./help-center-switcher";
 import { RequestList } from "./request-list";
+import { TranslationList } from "./translation-list";
+import { leftToTranslate } from "./translation-standing";
 import { useHelpCenterPick } from "./use-help-center-pick";
 
 type Dialog = "article" | "collections" | null;
@@ -63,6 +74,9 @@ function pickTitle(pick: string, collections: Collection[]): string {
   }
   if (pick === requestsKey) {
     return "Change requests";
+  }
+  if (pick === translationsKey) {
+    return "Translations";
   }
   const picked = collections.find((c) => c.id === pick);
   const parent = collections.find((c) => c.id === picked?.parent_id);
@@ -92,6 +106,27 @@ function useDocs() {
   return { workspace, centers, center, pick, hc, collections, articles, isPending };
 }
 
+/*
+ * collectionOf is the collection a pick shows, empty for the picks above
+ * the tree.
+ */
+function collectionOf(pick: string): string {
+  return [allKey, unfiledKey, analyticsKey, requestsKey, translationsKey].includes(pick) ? "" : pick;
+}
+
+/*
+ * useLeftToTranslate counts what is left to translate, null for a help
+ * center that speaks one language.
+ */
+function useLeftToTranslate(workspace: string, center: HelpCenter | undefined): number | null {
+  const several = (center?.locales?.length ?? 1) > 1;
+  const { data: states = [] } = useQuery({
+    ...translationStatesQuery(workspace, center?.id ?? ""),
+    enabled: center !== undefined && several,
+  });
+  return several ? leftToTranslate(states) : null;
+}
+
 export function HelpCenterPage() {
   const docs = useDocs();
   const { workspace, center, hc, collections, articles } = docs;
@@ -99,8 +134,9 @@ export function HelpCenterPage() {
   const [pick, setPick] = usePick();
   const [dialog, setDialog] = useState<Dialog>(null);
   const wide = useWide(1024);
-  const inCollection = [allKey, unfiledKey, analyticsKey, requestsKey].includes(pick) ? "" : pick;
+  const inCollection = collectionOf(pick);
   const requests = useCenterRequests(workspace, hc, articles);
+  const left = useLeftToTranslate(workspace, center);
   const switcher = (
     <HelpCenterSwitcher
       workspace={workspace}
@@ -123,13 +159,21 @@ export function HelpCenterPage() {
       pick={pick}
       onPick={onPicked}
       requests={requests.length}
+      translations={left}
     />
   );
-  const chips = wide ? null : <CollectionChips collections={collections} pick={pick} onPick={setPick} />;
+  const chips = wide ? null : (
+    <CollectionChips collections={collections} pick={pick} onPick={setPick} translations={left !== null} />
+  );
+  const views: Record<string, ReactNode> = {
+    [analyticsKey]: <HelpAnalytics workspace={workspace} center={center} header={wide ? null : switcher} />,
+    [translationsKey]: (
+      <TranslationList workspace={workspace} center={center} collections={collections} chips={chips} />
+    ),
+  };
   const list =
-    pick === analyticsKey ? (
-      <HelpAnalytics workspace={workspace} center={center} header={wide ? null : switcher} />
-    ) : pick === requestsKey ? (
+    views[pick] ??
+    (pick === requestsKey ? (
       <RequestList requests={requests} articles={articles} title={pickTitle(pick, collections)} chips={chips} />
     ) : (
       <ArticleList
@@ -142,7 +186,7 @@ export function HelpCenterPage() {
         onDialog={setDialog}
         chips={chips}
       />
-    );
+    ));
 
   return (
     <>
@@ -292,13 +336,16 @@ function CollectionChips({
   collections,
   pick,
   onPick,
+  translations,
 }: {
   collections: Collection[];
   pick: string;
   onPick: (pick: string) => void;
+  translations: boolean;
 }) {
   const parent = collections.find((c) => c.id === pick)?.parent_id ?? null;
-  const openTop = parent ?? ([allKey, unfiledKey, analyticsKey, requestsKey].includes(pick) ? null : pick);
+  const openTop =
+    parent ?? ([allKey, unfiledKey, analyticsKey, requestsKey, translationsKey].includes(pick) ? null : pick);
   const subs = openTop ? childrenOf(collections, openTop) : [];
 
   return (
@@ -308,6 +355,7 @@ function CollectionChips({
           { id: analyticsKey, name: "Analytics" },
           { id: allKey, name: "All articles" },
           { id: requestsKey, name: "Change requests" },
+          ...(translations ? [{ id: translationsKey, name: "Translations" }] : []),
           ...childrenOf(collections, null),
         ].map((c) => {
           const on = pick === c.id || c.id === parent;

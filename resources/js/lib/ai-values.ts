@@ -5,35 +5,66 @@
  * split by the choice and yes-or-no attributes only, since their values
  * are a short, known list; with none picked, the first active one.
  */
-import type { AIAttribute } from "@/lib/api/ai-attributes";
+import type { ConversationAttribute } from "@/lib/api/conversation-attributes";
 
 export interface ValueOption {
   id: string;
   label: string;
 }
 
+function dayOf(value: unknown): string {
+  const at = new Date(String(value));
+  return Number.isNaN(at.getTime())
+    ? String(value)
+    : at.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+}
+
+function momentOf(value: unknown): string {
+  const at = new Date(String(value));
+  return Number.isNaN(at.getTime())
+    ? String(value)
+    : at.toLocaleString(undefined, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+}
+
+function numberOf(value: unknown): string {
+  return typeof value === "number" ? value.toLocaleString() : String(value);
+}
+
+function listOf(value: unknown): string | null {
+  return Array.isArray(value) ? (value.length === 0 ? null : value.join(", ")) : String(value);
+}
+
+function filesOf(value: unknown): string | null {
+  if (!Array.isArray(value) || value.length === 0) {
+    return null;
+  }
+  return value.length === 1 ? "1 file" : `${value.length} files`;
+}
+
+const formats: Partial<Record<ConversationAttribute["data_type"], (value: unknown) => string | null>> = {
+  boolean: (value) => (value === true || value === "true" ? "Yes" : "No"),
+  number: numberOf,
+  decimal: numberOf,
+  date: dayOf,
+  datetime: momentOf,
+  multiple_choice: listOf,
+  file: filesOf,
+};
+
 /*
- * aiValueLabel writes a value the AI found, or null when it found none.
+ * aiValueLabel writes a conversation attribute's value, or null when it
+ * has none.
  */
-export function aiValueLabel(attribute: Pick<AIAttribute, "data_type">, value: unknown): string | null {
+export function aiValueLabel(attribute: Pick<ConversationAttribute, "data_type">, value: unknown): string | null {
   if (value === null || value === undefined || value === "") {
     return null;
   }
-
-  switch (attribute.data_type) {
-    case "boolean":
-      return value === true || value === "true" ? "Yes" : "No";
-    case "number":
-      return typeof value === "number" ? value.toLocaleString() : String(value);
-    case "date": {
-      const at = new Date(String(value));
-      return Number.isNaN(at.getTime())
-        ? String(value)
-        : at.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-    }
-    default:
-      return typeof value === "string" ? value : JSON.stringify(value);
+  const format = formats[attribute.data_type];
+  if (format) {
+    return format(value);
   }
+
+  return typeof value === "string" ? value : JSON.stringify(value);
 }
 
 /*
@@ -41,7 +72,7 @@ export function aiValueLabel(attribute: Pick<AIAttribute, "data_type">, value: u
  * attribute: a choice's options, or yes and no. Other types offer none
  * and filter on whether a value was found.
  */
-export function aiValueOptions(attribute: Pick<AIAttribute, "data_type" | "options">): ValueOption[] {
+export function aiValueOptions(attribute: Pick<ConversationAttribute, "data_type" | "options">): ValueOption[] {
   if (attribute.data_type === "boolean") {
     return [
       { id: "true", label: "Yes" },
@@ -59,7 +90,7 @@ export function aiValueOptions(attribute: Pick<AIAttribute, "data_type" | "optio
 /*
  * splitsReports says whether a report can split by the attribute.
  */
-export function splitsReports(attribute: Pick<AIAttribute, "data_type">): boolean {
+export function splitsReports(attribute: Pick<ConversationAttribute, "data_type">): boolean {
   return attribute.data_type === "choice" || attribute.data_type === "boolean";
 }
 
@@ -68,7 +99,7 @@ export function splitsReports(attribute: Pick<AIAttribute, "data_type">): boolea
  * picked: the first active choice or yes-or-no one, in the order the API
  * lists them, as the server picks it.
  */
-export function defaultBreakdown(attributes: AIAttribute[]): AIAttribute | undefined {
+export function defaultBreakdown(attributes: ConversationAttribute[]): ConversationAttribute | undefined {
   return attributes.find((a) => a.status === "active" && splitsReports(a));
 }
 
@@ -77,7 +108,7 @@ export function defaultBreakdown(attributes: AIAttribute[]): AIAttribute | undef
  * "Reason: billing", or "Reason: found" with no value.
  */
 export function aiFilterSummary(
-  attributes: AIAttribute[],
+  attributes: ConversationAttribute[],
   key: string,
   value: string | undefined,
 ): { attribute: string; value: string } {

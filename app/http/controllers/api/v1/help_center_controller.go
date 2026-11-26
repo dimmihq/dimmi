@@ -100,9 +100,13 @@ func (c *HelpCenterController) Update(ctx context.Context, in *requests.UpdateHe
 		return nil, err
 	}
 	b := in.Body
+	locale := b.Locale
+	if b.DefaultLocale != nil {
+		locale = b.DefaultLocale
+	}
 	change := helpcenters.HelpCenterChange{
-		Membership: membership(ctx), ID: id, Name: b.Name, Subdomain: b.Subdomain, Locale: b.Locale, Status: b.Status,
-		Indexing: b.IndexingEnabled, AskAI: b.AskAIEnabled,
+		Membership: membership(ctx), ID: id, Name: b.Name, Subdomain: b.Subdomain, Locale: locale,
+		Locales: b.Locales, Status: b.Status, Indexing: b.IndexingEnabled, AskAI: b.AskAIEnabled,
 	}
 	if b.Settings != nil {
 		change.Settings = new(helpcenters.HelpCenterSettingsChange(*b.Settings))

@@ -1,0 +1,22 @@
+{
+  "type": "admin",
+  "id": "991267459",
+  "email": "admin1@email.com",
+  "name": "Ciaran1 Lee",
+  "email_verified": true,
+  "app": {
+    "type": "app",
+    "id_code": "this_is_an_id1_that_should_be_at_least_40",
+    "name": "MyApp 1",
+    "created_at": 1734537243,
+    "secure": false,
+    "identity_verification": false,
+    "timezone": "America/Los_Angeles",
+    "region": "US"
+  },
+  "avatar": {
+    "type": "avatar",
+    "image_url": "https://static.intercomassets.com/assets/default-avatars/admins/128.png"
+  },
+  "has_inbox_seat": true
+}

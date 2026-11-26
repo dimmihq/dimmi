@@ -1,6 +1,9 @@
 package helpcenter
 
-import "strconv"
+import (
+	"strconv"
+	"strings"
+)
 
 /*
 Layout is the frame of every portal page: a top bar with the logo, the
@@ -19,7 +22,7 @@ so browsers do not ask the server for one.
 
 templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) {
 	<!DOCTYPE html>
-	<html lang="en" style={ BrandStyle(c) } data-appearance={ fixedTheme(c) }>
+	<html lang={ pageLang(c) } dir={ pageDir(c) } style={ BrandStyle(c) } data-appearance={ fixedTheme(c) }>
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -35,8 +38,8 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 			<meta property="og:title" content={ m.Title }/>
 			<meta property="og:site_name" content={ c.Name }/>
 			<meta name="theme-color" content={ c.Brand }/>
-			if c.LogoLight != "" {
-				<link rel="icon" href={ Path(c, c.LogoLight) }/>
+			if icon := tabIcon(c); icon != "" {
+				<link rel="icon" href={ icon }/>
 			} else {
 				<link rel="icon" href="data:,"/>
 			}
@@ -45,6 +48,9 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 			}
 			if c.Canonical != "" && !m.NoIndex {
 				<link rel="canonical" href={ templ.SafeURL(c.Canonical) }/>
+			}
+			for _, a := range c.Alternates {
+				<link rel="alternate" hreflang={ a.Lang } href={ templ.SafeURL(a.URL) }/>
 			}
 			if m.Markdown != "" {
 				<link rel="alternate" type="text/markdown" href={ Href(c, m.Markdown) }/>
@@ -58,7 +64,7 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 			}
 		</head>
 		<body class="bg-background-full font-inter text-text-primary">
-			<a href="#main" class="sr-only rounded-xl bg-background-primary-default px-4 py-2 text-body-medium focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50">Skip to content</a>
+			<a href="#main" class="sr-only rounded-xl bg-background-primary-default px-4 py-2 text-body-medium focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50">{ c.T("skip_to_content") }</a>
 			if hasDrawer(m) {
 				@drawerPanel(c, m, sidebar)
 			}
@@ -77,7 +83,7 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 								<p class="whitespace-pre-line">{ c.FooterText }</p>
 							}
 							if c.ContactURL != "" {
-								<a href={ templ.SafeURL(c.ContactURL) } class="text-link hover:underline">Contact us</a>
+								<a href={ templ.SafeURL(c.ContactURL) } class="text-link hover:underline">{ c.T("contact_us") }</a>
 							}
 						</div>
 					}
@@ -87,7 +93,7 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 							<path d="M19.8 4.5a20 20 0 0 1 4.9-.5L44 23.3a20 20 0 0 1-.5 4.9Z"></path>
 							<path d="M27.6 4.3A20 20 0 0 1 35 7.3l5.7 5.7a20 20 0 0 1 3 7.4Z"></path>
 						</svg>
-						Powered by dimmi
+						{ c.T("powered_by") }
 					</a>
 				</footer>
 			</div>
@@ -141,7 +147,7 @@ first paint, so it never changes once the page loads.
 templ themeSwitch(c Center) {
 	if fixedTheme(c) == "" {
 		<details data-menu data-theme-switch class="relative">
-			<summary aria-label="Theme" title="Theme" class="grid size-8 cursor-pointer list-none place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+			<summary aria-label={ c.T("theme") } title={ c.T("theme") } class="grid size-8 cursor-pointer list-none place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
 				<span data-theme-icon="light">
 					@Icon("sun", "size-4")
 				</span>
@@ -153,9 +159,47 @@ templ themeSwitch(c Center) {
 				</span>
 			</summary>
 			<div class="absolute end-0 top-10 z-40 w-44 rounded-xl border border-border-button-default bg-background-primary-default p-1 shadow-lg">
-				@themeChoice("light", "Light", "sun")
-				@themeChoice("dark", "Dark", "moon")
-				@themeChoice("system", "System", "system")
+				@themeChoice("light", c.T("theme_light"), "sun")
+				@themeChoice("dark", c.T("theme_dark"), "moon")
+				@themeChoice("system", c.T("theme_system"), "system")
+			</div>
+		</details>
+	}
+}
+
+/*
+languageSwitch lets a reader read the page in another language the help
+center speaks, from a small menu naming each in itself. Each choice
+leads to the same page in that language, or to that language's home
+when the page is not translated. It shows only where the help center
+speaks more than one language.
+*/
+
+templ languageSwitch(c Center) {
+	if len(c.Languages) > 1 {
+		<details data-menu data-language-switch class="relative">
+			<summary aria-label={ c.T("language") } title={ c.T("language") } class="flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-lg px-2 text-body-2-medium text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+				@Icon("globe", "size-4 text-foreground-icon-secondary")
+				<span class="max-sm:sr-only">{ currentLanguage(c) }</span>
+			</summary>
+			<div class="absolute end-0 top-10 z-40 max-h-80 w-56 overflow-y-auto rounded-xl border border-border-button-default bg-background-primary-default p-1 shadow-lg">
+				for _, l := range c.Languages {
+					<a
+						href={ templ.SafeURL(l.URL) }
+						hreflang={ l.Code }
+						lang={ l.Code }
+						data-turbo="false"
+						if l.Current {
+							aria-current="true"
+						}
+						class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-2-medium text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:bg-background-secondary-hover aria-[current=true]:text-text-primary"
+					>
+						<span class="flex-1 text-start">{ l.Name }</span>
+						if l.Current {
+							@Icon("check", "size-4 text-link")
+						}
+					</a>
+				}
 			</div>
 		</details>
 	}
@@ -189,17 +233,17 @@ templ topBar(c Center, m Meta) {
 	<header class="sticky top-0 z-30 isolate flex h-14 shrink-0 items-center gap-3 border-b border-separator-border px-4 lg:px-6">
 		<span aria-hidden="true" class="absolute inset-0 -z-10 bg-background-full/85 backdrop-blur-xl backdrop-saturate-150"></span>
 		if hasDrawer(m) {
-			@drawerToggle()
+			@drawerToggle(c)
 		}
 		@homeLink(c)
 		if m.Section == "help" && len(m.Trail) > 1 {
 			<form action={ Href(c, "/search") } method="get" role="search" class="ms-2 flex h-8 min-w-0 max-w-[18rem] flex-1 items-center gap-2 rounded-lg border border-border-button-default bg-background-secondary-default px-2.5 max-xl:hidden">
 				@Icon("search", "size-3.5 shrink-0 text-foreground-icon-tertiary")
-				<label for="top-search" class="sr-only">Search the help center</label>
-				<input id="top-search" type="search" name="q" placeholder="Search help center" class="min-w-0 flex-1 bg-transparent text-body-2-regular outline-none placeholder:text-text-placeholder"/>
+				<label for="top-search" class="sr-only">{ c.T("search_label") }</label>
+				<input id="top-search" type="search" name="q" placeholder={ c.T("search_short") } class="min-w-0 flex-1 bg-transparent text-body-2-regular outline-none placeholder:text-text-placeholder"/>
 			</form>
 		}
-		<nav aria-label="Sections" class="ms-auto flex items-center gap-0.5 max-lg:hidden">
+		<nav aria-label={ c.T("sections") } class="ms-auto flex items-center gap-0.5 max-lg:hidden">
 			for _, s := range Sections(c) {
 				<a
 					href={ Href(c, s.Path) }
@@ -211,11 +255,12 @@ templ topBar(c Center, m Meta) {
 			}
 		</nav>
 		<div class="flex shrink-0 items-center gap-2 max-lg:ms-auto">
+			@languageSwitch(c)
 			@themeSwitch(c)
 			@HelpButton(c, "inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-body-medium text-text-secondary transition-colors hover:text-text-primary max-sm:hidden [&>span]:max-xl:sr-only", "", "size-4")
 			@account(c)
 			<details data-menu class="group relative lg:hidden">
-				<summary aria-label="Sections" class="grid size-8 cursor-pointer list-none place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+				<summary aria-label={ c.T("sections") } class="grid size-8 cursor-pointer list-none place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
 					@Icon("more", "size-4")
 				</summary>
 				<div class="absolute end-0 top-11 z-40 w-60 rounded-2xl border border-border-button-default bg-background-primary-default p-2 shadow-lg">
@@ -239,9 +284,9 @@ open, and the portal's script closes it on a click on the page or
 Escape.
 */
 
-templ drawerToggle() {
+templ drawerToggle(c Center) {
 	<details data-drawer>
-		<summary aria-label="Browse" class="grid size-8 cursor-pointer list-none place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+		<summary aria-label={ c.T("browse") } class="grid size-8 cursor-pointer list-none place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
 			@Icon("menu", "size-4")
 		</summary>
 	</details>
@@ -253,18 +298,18 @@ so it stays put while the page moves aside to make room for it.
 */
 
 templ drawerPanel(c Center, m Meta, sidebar templ.Component) {
-	<aside data-drawer-panel aria-label={ drawerTitle(m) } class="fixed inset-y-0 start-0 z-50 flex flex-col border-e border-separator-border bg-background-full">
+	<aside data-drawer-panel aria-label={ drawerTitle(c, m) } class="fixed inset-y-0 start-0 z-50 flex flex-col border-e border-separator-border bg-background-full">
 		<div class="flex h-14 shrink-0 items-center justify-between px-4">
-			<p class="text-body-semibold">{ drawerTitle(m) }</p>
-			<button type="button" data-drawer-close aria-label="Close" class="grid size-8 cursor-pointer place-items-center rounded-lg text-foreground-icon-secondary hover:bg-background-secondary-hover">
+			<p class="text-body-semibold">{ drawerTitle(c, m) }</p>
+			<button type="button" data-drawer-close aria-label={ c.T("close") } class="grid size-8 cursor-pointer place-items-center rounded-lg text-foreground-icon-secondary hover:bg-background-secondary-hover">
 				@Icon("close", "size-4")
 			</button>
 		</div>
 		if m.Section == "help" {
 			<form action={ Href(c, "/search") } method="get" role="search" class="mx-4 mb-3 flex h-9 items-center gap-2 rounded-lg border border-border-button-default bg-background-secondary-default px-2.5">
 				@Icon("search", "size-3.5 shrink-0 text-foreground-icon-tertiary")
-				<label for="drawer-search" class="sr-only">Search the help center</label>
-				<input id="drawer-search" type="search" name="q" placeholder="Search help center" class="min-w-0 flex-1 bg-transparent text-body-2-regular outline-none placeholder:text-text-placeholder"/>
+				<label for="drawer-search" class="sr-only">{ c.T("search_label") }</label>
+				<input id="drawer-search" type="search" name="q" placeholder={ c.T("search_short") } class="min-w-0 flex-1 bg-transparent text-body-2-regular outline-none placeholder:text-text-placeholder"/>
 			</form>
 		}
 		<div class="min-h-0 flex-1 overflow-y-auto px-3 pb-6">
@@ -274,17 +319,51 @@ templ drawerPanel(c Center, m Meta, sidebar templ.Component) {
 }
 
 /*
+pageLang is the language the page is in.
+*/
+func pageLang(c Center) string {
+	if c.Locale == "" {
+		return "en"
+	}
+	return c.Locale
+}
+
+/*
+pageDir is the direction the page's language is written in.
+*/
+func pageDir(c Center) string {
+	lang, _, _ := strings.Cut(pageLang(c), "-")
+	switch lang {
+	case "ar", "he", "fa", "ur":
+		return "rtl"
+	}
+	return "ltr"
+}
+
+/*
+currentLanguage names the page's language in the language menu.
+*/
+func currentLanguage(c Center) string {
+	for _, l := range c.Languages {
+		if l.Current {
+			return l.Name
+		}
+	}
+	return pageLang(c)
+}
+
+/*
 hasDrawer says whether a page's section lists anything to browse.
 */
 func hasDrawer(m Meta) bool {
 	return m.Section == "help" || m.Section == "conversations"
 }
 
-func drawerTitle(m Meta) string {
+func drawerTitle(c Center, m Meta) string {
 	if m.Section == "conversations" {
-		return "Your conversations"
+		return c.T("your_conversations")
 	}
-	return "Browse articles"
+	return c.T("browse_articles")
 }
 
 /*
@@ -301,10 +380,10 @@ templ account(c Center) {
 		</a>
 	} else if c.SignedIn {
 		<form method="post" action={ templ.SafeURL(c.SignOutURL) }>
-			<button type="submit" class="inline-flex h-8 cursor-pointer items-center rounded-full border border-border-button-default px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Sign out</button>
+			<button type="submit" class="inline-flex h-8 cursor-pointer items-center rounded-full border border-border-button-default px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">{ c.T("sign_out") }</button>
 		</form>
 	} else if c.SignInURL != "" {
-		<a href={ templ.SafeURL(c.SignInURL) } class="button-brand inline-flex h-8 items-center whitespace-nowrap rounded-full px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Sign in</a>
+		<a href={ templ.SafeURL(c.SignInURL) } class="button-brand inline-flex h-8 items-center whitespace-nowrap rounded-full px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">{ c.T("sign_in") }</a>
 	}
 }
 
@@ -329,14 +408,27 @@ templ HelpButton(c Center, class, lead, icon string) {
 }
 
 /*
+OrHelpButton is the help button offered as the other way, such as "Or
+ask AI" under a form.
+*/
+
+templ OrHelpButton(c Center, class string) {
+	if c.Messenger != "" {
+		<button type="button" data-dimmi="open" title={ HelpLabel(c) } class={ "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring " + class }>
+			<span>{ c.T("or", "action", HelpLabel(c)) }</span>
+		</button>
+	}
+}
+
+/*
 HelpLabel names the way to get help: Ask AI where the AI agent answers
 first, Contact us where the team does.
 */
 func HelpLabel(c Center) string {
 	if c.MessengerAI {
-		return "Ask AI"
+		return c.T("ask_ai")
 	}
-	return "Contact us"
+	return c.T("contact_us")
 }
 
 func helpIcon(c Center) string {
@@ -348,16 +440,36 @@ func helpIcon(c Center) string {
 
 /*
 Logo draws the portal's logo, in its light or dark version to match the
-page, or the product's name when it has none.
+page, or the company's square mark beside the product's name, or the
+name alone when it has neither.
 */
 
 templ Logo(c Center) {
 	if c.LogoLight != "" {
-		<img src={ Path(c, c.LogoLight) } alt={ c.Product } height="22" class="theme-logo-light h-[1.375rem] w-auto"/>
-		<img src={ Path(c, c.LogoDark) } alt={ c.Product } height="22" class="theme-logo-dark h-[1.375rem] w-auto"/>
+		<img src={ Asset(c, c.LogoLight) } alt={ c.Product } height="22" class="theme-logo-light h-[1.375rem] w-auto"/>
+		<img src={ Asset(c, c.LogoDark) } alt={ c.Product } height="22" class="theme-logo-dark h-[1.375rem] w-auto"/>
 	} else {
-		<span class="truncate text-headline-semibold text-text-primary">{ c.Product }</span>
+		<span class="flex min-w-0 items-center gap-2">
+			if c.Mark != "" {
+				<img src={ Asset(c, c.Mark) } alt="" width="28" height="28" class="aspect-square h-7 w-auto shrink-0 rounded-lg object-cover"/>
+			}
+			<span class="truncate text-headline-semibold text-text-primary">{ c.Product }</span>
+		</span>
 	}
+}
+
+/*
+tabIcon is the picture the browser tab shows: the company's square mark,
+else its logo, empty for none.
+*/
+func tabIcon(c Center) string {
+	if c.Mark != "" {
+		return Asset(c, c.Mark)
+	}
+	if c.LogoLight != "" {
+		return Asset(c, c.LogoLight)
+	}
+	return ""
 }
 
 /*
@@ -373,11 +485,16 @@ templ Icon(name, class string) {
 }
 
 /*
-Avatar draws a person's initials in a circle; Avatars overlaps several.
+Avatar draws a person's photo in a circle, or their initials without one;
+Avatars overlaps several.
 */
 
 templ Avatar(p Person, size string) {
-	<span title={ p.Name } class={ "grid shrink-0 place-items-center rounded-full bg-background-tertiary-default text-text-secondary ring-2 ring-background-full " + size }>{ p.Initials }</span>
+	if p.Photo != "" {
+		<img src={ p.Photo } alt="" title={ p.Name } loading="lazy" class={ "shrink-0 rounded-full object-cover ring-2 ring-background-full " + size }/>
+	} else {
+		<span title={ p.Name } class={ "grid shrink-0 place-items-center rounded-full bg-background-tertiary-default text-text-secondary ring-2 ring-background-full " + size }>{ p.Initials }</span>
+	}
 }
 
 templ Avatars(people []Person) {

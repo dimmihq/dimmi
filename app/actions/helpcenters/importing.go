@@ -276,19 +276,3 @@ func (a *Articles) ImportRedirect(ctx context.Context, tx *database.Tx, art mode
 	}
 	return nil
 }
-
-/*
-HelpCenterLocales maps each live help center of the workspace to its
-language, so translations land in the help center of theirs.
-*/
-func HelpCenterLocales(ctx context.Context, tx *database.Tx, ws ids.UUID) (map[ids.UUID]string, error) {
-	rows, err := models.New(tx).ListHelpCenterLocales(ctx, ws)
-	if err != nil {
-		return nil, fmt.Errorf("list help center locales: %w", err)
-	}
-	out := make(map[ids.UUID]string, len(rows))
-	for _, r := range rows {
-		out[r.ID] = r.Locale
-	}
-	return out, nil
-}

@@ -1,0 +1,32 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "conversation_attribute",
+      "id": 1700000020,
+      "name": "text name",
+      "description": "text description",
+      "data_type": "string",
+      "required": true,
+      "visible_to_team_ids": [
+        "text visible_to_team_ids"
+      ],
+      "archived": true,
+      "created_at": 1700000021,
+      "updated_at": 1700000022,
+      "admin_id": "23",
+      "reference": {
+        "type": "one",
+        "object_type_id": "49"
+      },
+      "options": [
+        {
+          "id": "32",
+          "label": "text label",
+          "archived": true
+        }
+      ],
+      "multiline": true
+    }
+  ]
+}

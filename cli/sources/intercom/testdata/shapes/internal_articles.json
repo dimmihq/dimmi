@@ -1,0 +1,32 @@
+{
+  "data": [
+    {
+      "ai_chatbot_availability": false,
+      "ai_copilot_availability": false,
+      "ai_sales_agent_availability": false,
+      "audience_ids": [],
+      "author_id": 0,
+      "body": "\u003chtml\u003e",
+      "body_markdown": "\u003cstring\u003e",
+      "created_at": 0,
+      "folder_id": 0,
+      "id": 0,
+      "locale": "\u003cstring\u003e",
+      "owner_id": 0,
+      "tags": {
+        "tags": [],
+        "type": "tag.list"
+      },
+      "title": "\u003cstring\u003e",
+      "updated_at": 0
+    }
+  ],
+  "pages": {
+    "page": 0,
+    "per_page": 0,
+    "total_pages": 0,
+    "type": "pages"
+  },
+  "total_count": 0,
+  "type": "list"
+}

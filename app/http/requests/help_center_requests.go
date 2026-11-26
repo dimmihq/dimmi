@@ -43,6 +43,8 @@ type HelpCenterSettingsBody struct {
 	ChangelogSubscriptions *bool   `json:"changelog_subscriptions,omitempty"`
 	ChangelogEmail         *string `json:"changelog_email,omitempty"         enum:"full,summary"`
 	ChangelogUndoMinutes   *int    `json:"changelog_undo_minutes,omitempty"  enum:"0,5,15,60"`
+
+	UntranslatedArticles *string `json:"untranslated_articles,omitempty" enum:"original,hide"`
 }
 
 /*
@@ -54,6 +56,8 @@ type UpdateHelpCenterRequest struct {
 		Name            *string                 `json:"name,omitempty"             maxLength:"80"`
 		Subdomain       *string                 `json:"subdomain,omitempty"        maxLength:"40"`
 		Locale          *string                 `json:"locale,omitempty"           maxLength:"16"`
+		DefaultLocale   *string                 `json:"default_locale,omitempty"   maxLength:"16"`
+		Locales         *[]string               `json:"locales,omitempty"          maxItems:"30"`
 		Status          *string                 `json:"status,omitempty"           enum:"active,disabled"`
 		IndexingEnabled *bool                   `json:"indexing_enabled,omitempty"`
 		AskAIEnabled    *bool                   `json:"ask_ai_enabled,omitempty"`

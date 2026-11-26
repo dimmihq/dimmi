@@ -23,6 +23,9 @@ export const Route = createFileRoute("/onboarding")({
       return { me, workspace: null, canSetUp: true, canLeave: me.workspaces.length > 0 };
     }
     const current = currentWorkspace(me.workspaces);
+    if (!current && (me.awaiting_access ?? []).length > 0) {
+      throw redirect({ to: "/waiting" });
+    }
     const workspace = current
       ? await context.queryClient.query({ ...workspaceQuery(current.id), staleTime: 60_000 })
       : null;

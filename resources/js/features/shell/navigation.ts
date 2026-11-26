@@ -334,12 +334,12 @@ export const settingsPages = {
     "/d/settings/actions",
     "What the agent can do in your own systems, such as looking up an order.",
   ),
-  "ai-attributes": page(
-    "settings-ai-attributes",
-    "AI attributes",
+  "conversation-attributes": page(
+    "settings-conversation-attributes",
+    "Conversation attributes",
     RiPriceTag3Line,
-    "/d/settings/ai-attributes",
-    "What the AI notes on every conversation, for workflows and views.",
+    "/d/settings/conversation-attributes",
+    "What your team and the AI note on every conversation, such as the issue type.",
   ),
   "ai-providers": page(
     "settings-ai-providers",
@@ -547,6 +547,7 @@ export function settingsSections(): DashboardNavSection[] {
         pages.tags,
         pages["saved-replies"],
         pages.attributes,
+        pages["conversation-attributes"],
         pages.tickets,
         pages.sla,
         pages["office-hours"],
@@ -559,7 +560,7 @@ export function settingsSections(): DashboardNavSection[] {
       label: "Channels",
       items: [pages.messenger, pages.email, pages.integrations],
     },
-    { key: "ai", label: "AI", items: [pages.agent, pages.actions, pages["ai-attributes"], pages["ai-providers"]] },
+    { key: "ai", label: "AI", items: [pages.agent, pages.actions, pages["ai-providers"]] },
     {
       key: "content",
       label: "Content",

@@ -1,0 +1,21 @@
+{
+  "type": "text type",
+  "data": [
+    {
+      "type": "text type",
+      "id": "585",
+      "name": "text name",
+      "time_zone_name": "text time_zone_name",
+      "time_intervals": [
+        {
+          "start_minute": 1700000586,
+          "end_minute": 1700000587,
+          "day_of_week": 1700000588
+        }
+      ],
+      "twenty_four_seven": true,
+      "created_at": 1700000589,
+      "updated_at": 1700000590
+    }
+  ]
+}

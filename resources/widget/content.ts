@@ -80,18 +80,28 @@ export interface Token {
 }
 
 export interface Block {
-  kind: "p" | "h2" | "list" | "steps" | "code" | "note" | "image";
+  kind: "p" | "h2" | "list" | "steps" | "code" | "note" | "image" | "embed" | "button" | "details";
   text?: string;
   items?: string[];
   tokens?: Token[];
+  /*
+   * url is where an embed or a button goes, and blocks what a details
+   * block holds.
+   */
+  url?: string;
+  blocks?: Block[];
 }
 
 export interface Article {
   slug: string;
   title: string;
   summary: string;
-  author: string;
+  /*
+   * updated is when the article last changed, as an ISO date, and author
+   * the teammate who wrote it, unset when none did.
+   */
   updated: string;
+  author?: { name: string; avatar_url: string | null };
   body: Block[];
   /*
    * rated is what the visitor answered about the article, unset until

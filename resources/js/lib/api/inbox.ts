@@ -135,6 +135,9 @@ export interface TimelineEvent {
   comment?: string;
   /* ai.agent_transferred: the agent the conversation went to. */
   to_agent?: { id: string; name: string };
+  /* conversation.attribute_changed: the attribute and who set it: ai, member, workflow or import. */
+  attribute?: { key: string; label: string };
+  by?: string;
 }
 
 /*

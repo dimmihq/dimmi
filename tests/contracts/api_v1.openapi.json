@@ -4179,6 +4179,99 @@
         ],
         "type": "object"
       },
+      "ArticleTranslation": {
+        "additionalProperties": false,
+        "properties": {
+          "article_id": {
+            "description": "The id of the article translated, such as art_abc123.",
+            "type": "string"
+          },
+          "body_markdown": {
+            "description": "The translation's working copy in Markdown. Left out of lists.",
+            "type": "string"
+          },
+          "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "description": "The translated summary shown under the title. Null when it has none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "has_unpublished_changes": {
+            "description": "True when the working copy differs from the version readers of the language see.",
+            "type": "boolean"
+          },
+          "locale": {
+            "description": "The language of the translation, as a code such as fr or pt-BR.",
+            "type": "string"
+          },
+          "lock_version": {
+            "description": "Goes up with every save; send it back to save over this version only.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "outdated": {
+            "description": "True when the source was published with other words since the translation caught up.",
+            "type": "boolean"
+          },
+          "published_at": {
+            "description": "When the translation was last published. Null while it never was.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "slug": {
+            "description": "The translation's address in its language, such as remboursements.",
+            "type": "string"
+          },
+          "status": {
+            "description": "draft until the translation is published, then published.",
+            "type": "string"
+          },
+          "title": {
+            "description": "The translated title.",
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "When it last changed, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "word_count": {
+            "description": "The number of words in the translation's working copy.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object",
+          "article_id",
+          "locale",
+          "title",
+          "slug",
+          "description",
+          "status",
+          "has_unpublished_changes",
+          "outdated",
+          "lock_version",
+          "word_count",
+          "published_at",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
       "ArticleVersion": {
         "additionalProperties": false,
         "properties": {
@@ -5375,6 +5468,29 @@
           "id",
           "name",
           "avatar_url"
+        ],
+        "type": "object"
+      },
+      "AwaitingAccess": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the workspace the caller waits to be enabled in.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "name"
         ],
         "type": "object"
       },
@@ -8087,6 +8203,71 @@
         ],
         "type": "object"
       },
+      "CollectionArticleTranslation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/ArticleTranslation"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionArticleTranslationMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionArticleTranslationMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
       "CollectionArticleVersion": {
         "additionalProperties": false,
         "properties": {
@@ -8985,6 +9166,71 @@
         ],
         "type": "object"
       },
+      "CollectionCollectionTranslation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/CollectionTranslation"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionCollectionTranslationMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionCollectionTranslationMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
       "CollectionCompany": {
         "additionalProperties": false,
         "properties": {
@@ -9467,6 +9713,71 @@
         "required": [
           "data",
           "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionConversationAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/ConversationAttribute"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionConversationAttributeMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionConversationAttributeMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
         ],
         "type": "object"
       },
@@ -11226,6 +11537,71 @@
         "type": "object"
       },
       "CollectionKnowledgeSyncRunMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionLanguage": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/Language"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionLanguageMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionLanguageMetaStruct": {
         "additionalProperties": false,
         "properties": {
           "next_cursor": {
@@ -14055,6 +14431,129 @@
         ],
         "type": "object"
       },
+      "CollectionTranslation": {
+        "additionalProperties": false,
+        "properties": {
+          "collection_id": {
+            "description": "The id of the collection translated, such as col_abc123.",
+            "type": "string"
+          },
+          "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "description": "The collection's description in that language. Null when it has none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "locale": {
+            "description": "The language of the translation, as a code such as fr.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The collection's name in that language.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "outdated": {
+            "description": "True when the collection's default name or description changed since.",
+            "type": "boolean"
+          },
+          "slug": {
+            "description": "The collection's address in that language.",
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "When it last changed, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "collection_id",
+          "locale",
+          "name",
+          "slug",
+          "description",
+          "outdated",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "CollectionTranslationState": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/TranslationState"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionTranslationStateMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionTranslationStateMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
       "CollectionWebhookDelivery": {
         "additionalProperties": false,
         "properties": {
@@ -16584,6 +17083,268 @@
             "description": "Each value found, with its attribute. An attribute with nothing found is left out.",
             "items": {
               "$ref": "#/components/schemas/AIAttributeValue"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "object",
+          "values",
+          "checked_at"
+        ],
+        "type": "object"
+      },
+      "ConversationAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "data_type": {
+            "description": "What the value is: text, long_text, number, decimal, choice, multiple_choice, boolean, date, datetime, file, contact or company.",
+            "type": "string"
+          },
+          "description": {
+            "description": "What it means; the AI reads it to decide the value. Empty when not set.",
+            "type": "string"
+          },
+          "filled_by": {
+            "description": "Who fills it: ai, teammates or both.",
+            "type": "string"
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "key": {
+            "description": "The attribute's key, as conditions and variables name it: conversation.ai.\u003ckey\u003e.",
+            "type": "string"
+          },
+          "label": {
+            "description": "What the team calls the attribute.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "option_descriptions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "What some options mean, by option, for the AI to read. Empty when none is described.",
+            "type": "object"
+          },
+          "options": {
+            "description": "With choice or multiple_choice, the values it may take. Empty otherwise.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "required_to_close": {
+            "description": "Whether teammates must fill it before closing a conversation.",
+            "type": "boolean"
+          },
+          "status": {
+            "description": "active while it is filled, archived once it stopped.",
+            "type": "string"
+          },
+          "team_ids": {
+            "description": "The teams that see it in the inbox. Empty when every team does.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "updated_at": {
+            "description": "When it last changed, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "key",
+          "label",
+          "description",
+          "data_type",
+          "options",
+          "option_descriptions",
+          "filled_by",
+          "required_to_close",
+          "team_ids",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "ConversationAttributeSource": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "description": "When it was set, as an RFC 3339 time.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "by": {
+            "description": "ai, member, workflow or import.",
+            "type": "string"
+          },
+          "id": {
+            "description": "The teammate's id when a teammate set it. Null otherwise.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "The teammate's or the workflow's name. Null for the AI and imports.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "description": "Why the AI chose the value, in a sentence. Null when the AI gave none or someone else set it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sureness": {
+            "description": "How sure the AI was, from 0 to 1. Null when the AI did not say or someone else set it.",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "by",
+          "id",
+          "name",
+          "at",
+          "reason",
+          "sureness"
+        ],
+        "type": "object"
+      },
+      "ConversationAttributeUsage": {
+        "additionalProperties": false,
+        "properties": {
+          "conversations": {
+            "description": "How many conversations hold a value of the attribute.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "deletable": {
+            "description": "Whether it can be deleted: true only when nothing uses it.",
+            "type": "boolean"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "views": {
+            "description": "The inbox views that filter by it.",
+            "items": {
+              "$ref": "#/components/schemas/NamedRecord"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "workflows": {
+            "description": "The workflows that read or set it.",
+            "items": {
+              "$ref": "#/components/schemas/NamedRecord"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "object",
+          "conversations",
+          "workflows",
+          "views",
+          "deletable"
+        ],
+        "type": "object"
+      },
+      "ConversationAttributeValue": {
+        "additionalProperties": false,
+        "properties": {
+          "attribute": {
+            "$ref": "#/components/schemas/ConversationAttribute"
+          },
+          "files": {
+            "description": "With a file attribute, the files the value holds, each with a short-lived link. Empty otherwise.",
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "set_by": {
+            "$ref": "#/components/schemas/ConversationAttributeSource"
+          },
+          "value": {
+            "description": "The value, in the attribute's type: text, a number, true or false, a YYYY-MM-DD date, an RFC 3339 date and time, an option, a list of options or file ids, or a contact or company id. Null when empty."
+          }
+        },
+        "required": [
+          "object",
+          "attribute",
+          "value",
+          "set_by",
+          "files"
+        ],
+        "type": "object"
+      },
+      "ConversationAttributeValues": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_at": {
+            "description": "When the AI last read the conversation. Null when it never has.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "values": {
+            "description": "Each active attribute with its value, and each archived one that still holds one.",
+            "items": {
+              "$ref": "#/components/schemas/ConversationAttributeValue"
             },
             "type": [
               "array",
@@ -19896,6 +20657,10 @@
               "null"
             ]
           },
+          "default_locale": {
+            "description": "The language articles are written in, as a code such as en. Same as locale.",
+            "type": "string"
+          },
           "id": {
             "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
@@ -19911,6 +20676,16 @@
           "locale": {
             "description": "The help center's main language as a language code, such as en or fr.",
             "type": "string"
+          },
+          "locales": {
+            "description": "Every language the help center is read in, the default first. Readers of another language read it under /\u003ccode\u003e/.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "name": {
             "description": "The help center's name.",
@@ -19949,6 +20724,8 @@
           "url",
           "custom_domain",
           "locale",
+          "default_locale",
+          "locales",
           "is_default",
           "status",
           "indexing_enabled",
@@ -20226,6 +21003,10 @@
           "primary_color": {
             "description": "The help center's main color as a hex code, such as #10b981. Left out when not set.",
             "type": "string"
+          },
+          "untranslated_articles": {
+            "description": "What readers of another language see of an article not translated into it: original shows it in the default language, hide leaves it out.",
+            "type": "string"
           }
         },
         "type": "object"
@@ -20331,6 +21112,14 @@
           "primary_color": {
             "description": "Main color of the help center, as # and six hex digits, such as #10b981. An empty text clears it.",
             "maxLength": 7,
+            "type": "string"
+          },
+          "untranslated_articles": {
+            "description": "What readers of another language see of an article not translated into it: original shows it in the default language, hide leaves it out.",
+            "enum": [
+              "original",
+              "hide"
+            ],
             "type": "string"
           }
         },
@@ -21911,7 +22700,7 @@
             "$ref": "#/components/schemas/IntegrationMemberGrant"
           },
           "provider": {
-            "description": "The tool connected, such as linear, jira, github, notion, intercom or zendesk.",
+            "description": "The tool connected, such as linear, jira, github or notion.",
             "type": "string"
           },
           "scopes": {
@@ -22050,7 +22839,7 @@
         "additionalProperties": false,
         "properties": {
           "account": {
-            "description": "For a service hosted per customer, such as Zendesk, the account to connect, up to 63 characters, such as the subdomain acme.",
+            "description": "For a service hosted per customer, the account to connect, up to 63 characters, such as the subdomain acme.",
             "maxLength": 63,
             "type": "string"
           },
@@ -23130,7 +23919,7 @@
             ]
           },
           "type": {
-            "description": "What kind of source it is, such as website, notion, github, markdown_upload, zendesk_help_center or intercom_help_center.",
+            "description": "What kind of source it is, such as website, notion, github or markdown_upload.",
             "type": "string"
           },
           "updated_at": {
@@ -23615,6 +24404,34 @@
         ],
         "type": "object"
       },
+      "Language": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "description": "The language's code, such as fr or pt-BR.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The language's name in English, such as French.",
+            "type": "string"
+          },
+          "native_name": {
+            "description": "The language's name in itself, such as Français.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "code",
+          "name",
+          "native_name"
+        ],
+        "type": "object"
+      },
       "Launcher": {
         "additionalProperties": false,
         "properties": {
@@ -23942,6 +24759,16 @@
           "auth": {
             "$ref": "#/components/schemas/Auth"
           },
+          "awaiting_access": {
+            "description": "The workspaces the caller was brought into from another tool and waits for an admin to enable them in. Null for personal access tokens.",
+            "items": {
+              "$ref": "#/components/schemas/AwaitingAccess"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "instance": {
             "$ref": "#/components/schemas/Instance"
           },
@@ -23980,6 +24807,7 @@
           "member",
           "auth",
           "workspaces",
+          "awaiting_access",
           "instance",
           "locale"
         ],
@@ -24985,6 +25813,24 @@
         "required": [
           "id",
           "object",
+          "name"
+        ],
+        "type": "object"
+      },
+      "NamedRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The workflow's or view's name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
           "name"
         ],
         "type": "object"
@@ -29352,6 +30198,26 @@
         ],
         "type": "object"
       },
+      "ReorderConversationAttributesRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "ids": {
+            "description": "Every attribute's id in the order to show them; those left out follow.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 500,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "type": "object"
+      },
       "ReorderConversationViewsRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -30456,6 +31322,18 @@
         ],
         "type": "object"
       },
+      "ResourceArticleTranslation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ArticleTranslation"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceAssignmentStatus": {
         "additionalProperties": false,
         "properties": {
@@ -30660,6 +31538,18 @@
         ],
         "type": "object"
       },
+      "ResourceCollectionTranslation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CollectionTranslation"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceCompany": {
         "additionalProperties": false,
         "properties": {
@@ -30749,6 +31639,42 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/ConversationAIAttributes"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceConversationAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConversationAttribute"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceConversationAttributeUsage": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConversationAttributeUsage"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceConversationAttributeValues": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConversationAttributeValues"
           }
         },
         "required": [
@@ -32822,6 +33748,20 @@
             "description": "Id of the version (artv_...) to put back. Find it with GET /articles/{article}/versions.",
             "maxLength": 64,
             "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id"
+        ],
+        "type": "object"
+      },
+      "RestoreArticleTranslationRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "version_id": {
+            "description": "Id of one of this translation's versions (artv_...).",
+            "maxLength": 64,
             "type": "string"
           }
         },
@@ -37434,12 +38374,105 @@
         ],
         "type": "object"
       },
+      "StoreConversationAttributeRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "data_type": {
+            "description": "text, long_text, number, decimal, choice, multiple_choice, boolean, date, datetime, file, contact or company.",
+            "enum": [
+              "text",
+              "long_text",
+              "number",
+              "decimal",
+              "choice",
+              "multiple_choice",
+              "boolean",
+              "date",
+              "datetime",
+              "file",
+              "contact",
+              "company"
+            ],
+            "type": "string"
+          },
+          "description": {
+            "description": "What it means, up to 500 characters. The AI reads it to decide the value, so say what to look for.",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "filled_by": {
+            "description": "ai, teammates or both. The AI fills only text, numbers, yes or no, dates and lists.",
+            "enum": [
+              "ai",
+              "teammates",
+              "both"
+            ],
+            "type": "string"
+          },
+          "key": {
+            "description": "The attribute's key, lowercase letters, digits and underscores, such as issue_type.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "label": {
+            "description": "What the team calls it, up to 80 characters, such as Issue type.",
+            "maxLength": 80,
+            "type": "string"
+          },
+          "option_descriptions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "With choice or multiple_choice, what some options mean, by option, 300 characters each, such as {\"Billing\": \"Charges, invoices and refunds\"}. The AI reads them.",
+            "maxProperties": 200,
+            "type": "object"
+          },
+          "options": {
+            "description": "With choice or multiple_choice, the values it may take, at most 200.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "required_to_close": {
+            "description": "true to stop teammates closing a conversation while it is empty.",
+            "type": "boolean"
+          },
+          "team_ids": {
+            "description": "The teams that see it in the inbox, every team when empty.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "data_type"
+        ],
+        "type": "object"
+      },
       "StoreConversationRequestBody": {
         "additionalProperties": false,
         "properties": {
           "assignee_id": {
             "description": "mem_..., me, or null for nobody. A teammate's conversation is theirs by default.",
             "type": "string"
+          },
+          "attributes": {
+            "additionalProperties": {},
+            "description": "Object of conversation attribute values to set, by key, such as {\"issue_type\": \"Billing\"}. Each must fit its attribute's type; GET /conversation-attributes lists the keys. An import sets even what only the AI fills.",
+            "maxProperties": 100,
+            "type": "object"
           },
           "author": {
             "description": "member (default): you write first and the customer receives it. contact: you record what the customer wrote.",
@@ -39316,7 +40349,7 @@
             "description": "A whole definition to start from, in the shape GET /workflows/{workflow} returns."
           },
           "trigger": {
-            "description": "conversation.opener, conversation.first_message, conversation.customer_reopened, message.customer, conversation.customer_quiet, conversation.rated, message.teammate, note.created, conversation.assignment_changed, conversation.status_changed, conversation.teammate_quiet, conversation.ai_attribute_changed, dimmi.handed_over, dimmi.resolved, agent.transferred, sla.warning, sla.breached, the ticket triggers or reusable (called from other workflows).",
+            "description": "conversation.opener, conversation.first_message, conversation.customer_reopened, message.customer, conversation.customer_quiet, conversation.rated, message.teammate, note.created, conversation.assignment_changed, conversation.status_changed, conversation.teammate_quiet, conversation.attribute_changed, conversation.ai_attribute_changed, dimmi.handed_over, dimmi.resolved, agent.transferred, sla.warning, sla.breached, the ticket triggers or reusable (called from other workflows).",
             "maxLength": 40,
             "type": "string"
           }
@@ -42207,6 +43240,57 @@
         ],
         "type": "object"
       },
+      "TranslationState": {
+        "additionalProperties": false,
+        "properties": {
+          "article_id": {
+            "description": "The id of the article, such as art_abc123.",
+            "type": "string"
+          },
+          "collection_id": {
+            "description": "The id of the article's collection. Null when it is in none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "locale": {
+            "description": "The language this row is about, as a code such as fr.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "outdated": {
+            "description": "True when the translation is behind the source.",
+            "type": "boolean"
+          },
+          "state": {
+            "description": "Where the article stands in that language: missing, draft or published.",
+            "type": "string"
+          },
+          "status": {
+            "description": "The article's own status, such as published.",
+            "type": "string"
+          },
+          "title": {
+            "description": "The article's title in the help center's default language.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "article_id",
+          "title",
+          "status",
+          "collection_id",
+          "locale",
+          "state",
+          "outdated"
+        ],
+        "type": "object"
+      },
       "TryRedactionRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -42379,6 +43463,37 @@
         },
         "type": "object"
       },
+      "UpdateArticleTranslationRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "body_markdown": {
+            "description": "The full translated article in Markdown, at most 256 KB; it replaces the old text.",
+            "maxLength": 262144,
+            "type": "string"
+          },
+          "description": {
+            "description": "The translated summary shown under the title, at most 300 characters.",
+            "maxLength": 300,
+            "type": "string"
+          },
+          "lock_version": {
+            "description": "The lock_version the translation had when you read it; zero skips the check.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "slug": {
+            "description": "The translated address; made from the title when a translation starts without one.",
+            "maxLength": 120,
+            "type": "string"
+          },
+          "title": {
+            "description": "The translated title, 1 to 150 characters. Needed to start a translation.",
+            "maxLength": 150,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "UpdateAttributeRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -42488,6 +43603,31 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "UpdateCollectionTranslationRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "description": "The translated description, at most 300 characters.",
+            "maxLength": 300,
+            "type": "string"
+          },
+          "name": {
+            "description": "The translated name, 1 to 80 characters.",
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "slug": {
+            "description": "The translated address; made from the name when left out.",
+            "maxLength": 80,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
         "type": "object"
       },
       "UpdateCompanyRequestBody": {
@@ -42649,6 +43789,82 @@
             ]
           }
         },
+        "type": "object"
+      },
+      "UpdateConversationAttributeRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "description": "What it means, up to 500 characters. The AI reads it to decide the value, so say what to look for.",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "filled_by": {
+            "description": "ai, teammates or both. The AI fills only text, numbers, yes or no, dates and lists.",
+            "enum": [
+              "ai",
+              "teammates",
+              "both"
+            ],
+            "type": "string"
+          },
+          "label": {
+            "description": "What the team calls it, up to 80 characters, such as Issue type.",
+            "maxLength": 80,
+            "type": "string"
+          },
+          "option_descriptions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "With choice or multiple_choice, what some options mean, by option, 300 characters each, such as {\"Billing\": \"Charges, invoices and refunds\"}. The AI reads them.",
+            "maxProperties": 200,
+            "type": "object"
+          },
+          "options": {
+            "description": "With choice or multiple_choice, the values it may take, at most 200.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "type": "array"
+          },
+          "required_to_close": {
+            "description": "true to stop teammates closing a conversation while it is empty.",
+            "type": "boolean"
+          },
+          "status": {
+            "description": "active to keep it, archived to stop filling it.",
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "type": "string"
+          },
+          "team_ids": {
+            "description": "The teams that see it in the inbox, every team when empty.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateConversationAttributeValuesRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "values": {
+            "additionalProperties": {},
+            "description": "The values to set, by key, such as {\"issue_type\": \"Billing\"}; null clears one. Each must fit its attribute's type.",
+            "maxProperties": 100,
+            "type": "object"
+          }
+        },
+        "required": [
+          "values"
+        ],
         "type": "object"
       },
       "UpdateConversationRatingSettingsRequestBody": {
@@ -43106,6 +44322,11 @@
             "description": "Whether readers of the help center may ask a question and get an answer from its articles (the Ask AI feature). Example: true.",
             "type": "boolean"
           },
+          "default_locale": {
+            "description": "The language articles are written in, as a code such as en; it must be one of locales. A language with translations cannot become the default.",
+            "maxLength": 16,
+            "type": "string"
+          },
           "indexing_enabled": {
             "description": "Whether search engines such as Google may index the help center's articles. false marks the site as not to be indexed. Example: true.",
             "type": "boolean"
@@ -43114,6 +44335,14 @@
             "description": "A language code, such as en or pt-BR.",
             "maxLength": 16,
             "type": "string"
+          },
+          "locales": {
+            "description": "Every language the help center is read in, as codes such as [\"en\", \"fr\"], at most 30; the default is always kept. Readers of another language read it under /\u003ccode\u003e/.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "type": "array"
           },
           "name": {
             "description": "The name of the help center, at most 80 characters.",
@@ -47629,6 +48858,10 @@
             "description": "What the member shows teammates and customers: online or away.",
             "type": "string"
           },
+          "awaiting_enable": {
+            "description": "True when the member was brought over from another tool and waits for an admin to enable them. Set status to active to enable them.",
+            "type": "boolean"
+          },
           "away_reassign": {
             "description": "True when customers' answers go back to the pool while the member is away.",
             "type": "boolean"
@@ -47681,9 +48914,34 @@
               "null"
             ]
           },
+          "enable_invited_at": {
+            "description": "When enabling mailed the member an invitation, because they had not signed up yet. Null before that.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "enable_team_ids": {
+            "description": "Ids of the teams enabling puts the member in, each starting with team_. Empty for anyone not waiting to be enabled.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "id": {
             "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
+          },
+          "imported_from": {
+            "description": "The tool the member was brought over from, such as intercom. Null for anyone else.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "joined_via": {
             "description": "How the member arrived in the workspace, such as created, cli or an invitation. Null when not recorded.",
@@ -47754,6 +49012,10 @@
           "sign_in_locked",
           "two_factor_enabled",
           "last_active_at",
+          "awaiting_enable",
+          "imported_from",
+          "enable_team_ids",
+          "enable_invited_at",
           "away_reassign",
           "away_since",
           "assign_on_reply",
@@ -49749,6 +51011,7 @@
     },
     "/ai/conversation-attributes": {
       "get": {
+        "deprecated": true,
         "description": "Lists the facts the AI reads off each conversation, active and archived. Returns the attributes with their key, type, options and status.",
         "operationId": "ai.conversation-attributes.index",
         "responses": {
@@ -49776,9 +51039,11 @@
         "summary": "List AI conversation attributes",
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-sunset": "2027-12-01"
       },
       "post": {
+        "deprecated": true,
         "description": "Adds a fact the AI reads off each conversation and checks again as the customer writes. Workflows can start when it changes and branch on its value. Returns the attribute.",
         "operationId": "ai.conversation-attributes.store",
         "requestBody": {
@@ -49816,11 +51081,13 @@
         "summary": "Add an AI conversation attribute",
         "x-abilities": [
           "ai:write"
-        ]
+        ],
+        "x-sunset": "2027-12-01"
       }
     },
     "/ai/conversation-attributes/{attribute}": {
       "patch": {
+        "deprecated": true,
         "description": "Changes an attribute's label, description or options, or archives it. Its key and type stay. Returns the attribute as saved.",
         "operationId": "ai.conversation-attributes.update",
         "parameters": [
@@ -49869,7 +51136,8 @@
         "summary": "Edit an AI conversation attribute",
         "x-abilities": [
           "ai:write"
-        ]
+        ],
+        "x-sunset": "2027-12-01"
       }
     },
     "/ai/keys": {
@@ -50538,6 +51806,480 @@
         "summary": "Restore an article version",
         "x-abilities": [
           "articles:write"
+        ]
+      }
+    },
+    "/articles/{article}/translations": {
+      "get": {
+        "description": "Lists the article's translations into the help center's other languages, without their bodies. Returns each translation's language, title, status and whether it is behind the source.",
+        "operationId": "articles.translations.index",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionArticleTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List an article's translations",
+        "x-abilities": [
+          "articles:read"
+        ]
+      }
+    },
+    "/articles/{article}/translations/{locale}": {
+      "delete": {
+        "description": "Deletes the translation; readers of its language read the original again. Its versions stay.",
+        "operationId": "articles.translations.destroy",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language the help center offers besides its default, as a code such as fr or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete an article's translation",
+        "x-abilities": [
+          "articles:write"
+        ]
+      },
+      "get": {
+        "description": "Reads the article's translation into one language, with its working copy in Markdown. Returns the translation with its body_markdown and lock_version.",
+        "operationId": "articles.translations.show",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language the help center offers besides its default, as a code such as fr or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceArticleTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get an article's translation",
+        "x-abilities": [
+          "articles:read"
+        ]
+      },
+      "patch": {
+        "description": "Saves the article's translation into a language, starting a draft when there is none. Readers of that language keep reading the published translation, or the original, until it is published. Returns the translation as it now is, with its new lock_version.",
+        "operationId": "articles.translations.update",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language the help center offers besides its default, as a code such as fr or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateArticleTranslationRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceArticleTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Translate an article",
+        "x-abilities": [
+          "articles:write"
+        ]
+      }
+    },
+    "/articles/{article}/translations/{locale}/publications": {
+      "delete": {
+        "description": "Takes the translation back to a draft; readers of its language read the original again. Returns the translation as a draft.",
+        "operationId": "articles.translations.publications.destroy",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language the help center offers besides its default, as a code such as fr or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceArticleTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Unpublish an article's translation",
+        "x-abilities": [
+          "articles:write"
+        ]
+      },
+      "post": {
+        "description": "Makes the translation's working copy live for readers of its language and marks it caught up with the source. Returns the published translation.",
+        "operationId": "articles.translations.publications.store",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language the help center offers besides its default, as a code such as fr or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceArticleTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Publish an article's translation",
+        "x-abilities": [
+          "articles:write"
+        ]
+      }
+    },
+    "/articles/{article}/translations/{locale}/restorations": {
+      "post": {
+        "description": "Puts an earlier version of the translation back into its working copy, unpublished. Returns the translation with the restored text.",
+        "operationId": "articles.translations.restorations.store",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language the help center offers besides its default, as a code such as fr or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreArticleTranslationRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceArticleTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Restore a translation's version",
+        "x-abilities": [
+          "articles:write"
+        ]
+      }
+    },
+    "/articles/{article}/translations/{locale}/reviews": {
+      "post": {
+        "description": "Says the translation still matches the source after the source changed, without publishing it. Returns the translation, no longer outdated.",
+        "operationId": "articles.translations.reviews.store",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language the help center offers besides its default, as a code such as fr or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceArticleTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Mark a translation up to date",
+        "x-abilities": [
+          "articles:write"
+        ]
+      }
+    },
+    "/articles/{article}/translations/{locale}/versions": {
+      "get": {
+        "description": "Lists the published versions of the article's translation into one language, newest first. Returns each version's number, title and when it was published.",
+        "operationId": "articles.translations.versions.index",
+        "parameters": [
+          {
+            "description": "Id of the help article, starting with art_, such as art_01jx2m8k4t. Find it with GET /help-centers/{help_center}/articles.",
+            "in": "path",
+            "name": "article",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language the help center offers besides its default, as a code such as fr or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionArticleVersion"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List a translation's versions",
+        "x-abilities": [
+          "articles:read"
         ]
       }
     },
@@ -54153,6 +55895,156 @@
         ]
       }
     },
+    "/collections/{collection}/translations": {
+      "get": {
+        "description": "Lists the collection's name, slug and description in each language it is translated into. Returns the collection's translations.",
+        "operationId": "collections.translations.index",
+        "parameters": [
+          {
+            "description": "Id of the help center collection, starting with col_, such as col_01jx2m8k4t. Find it with GET /help-centers/{help_center}/collections.",
+            "in": "path",
+            "name": "collection",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionCollectionTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List a collection's translations",
+        "x-abilities": [
+          "articles:read"
+        ]
+      }
+    },
+    "/collections/{collection}/translations/{locale}": {
+      "delete": {
+        "description": "Deletes the collection's translation; readers of its language see its default name again.",
+        "operationId": "collections.translations.destroy",
+        "parameters": [
+          {
+            "description": "Id of the help center collection, starting with col_, such as col_01jx2m8k4t. Find it with GET /help-centers/{help_center}/collections.",
+            "in": "path",
+            "name": "collection",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language the help center offers besides its default, as a code such as fr or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a collection's translation",
+        "x-abilities": [
+          "articles:write"
+        ]
+      },
+      "patch": {
+        "description": "Saves the collection's name, slug and description in a language the help center offers. It shows to readers of that language at once. Returns the collection's translation.",
+        "operationId": "collections.translations.update",
+        "parameters": [
+          {
+            "description": "Id of the help center collection, starting with col_, such as col_01jx2m8k4t. Find it with GET /help-centers/{help_center}/collections.",
+            "in": "path",
+            "name": "collection",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A language the help center offers besides its default, as a code such as fr or pt-BR.",
+            "in": "path",
+            "name": "locale",
+            "required": true,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCollectionTranslationRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceCollectionTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Translate a collection",
+        "x-abilities": [
+          "articles:write"
+        ]
+      }
+    },
     "/companies": {
       "get": {
         "description": "Lists the companies your customers belong to. q searches by name or domain. Returns a page of companies, with next_cursor for more.",
@@ -56234,6 +58126,250 @@
         ]
       }
     },
+    "/conversation-attributes": {
+      "get": {
+        "description": "Lists the attributes teammates and the AI fill on every conversation, active and archived. Returns the attributes with their key, type, options, who fills them and status.",
+        "operationId": "conversation-attributes.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionConversationAttribute"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List conversation attributes",
+        "x-abilities": [
+          "conversations:read"
+        ]
+      },
+      "post": {
+        "description": "Adds an attribute every conversation can hold, such as the issue type. Teammates fill it in the conversation's details and the AI can fill it as the customer writes. Returns the attribute.",
+        "operationId": "conversation-attributes.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreConversationAttributeRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceConversationAttribute"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Add a conversation attribute",
+        "x-abilities": [
+          "attributes:write"
+        ]
+      }
+    },
+    "/conversation-attributes/order": {
+      "patch": {
+        "description": "Sets the order attributes show in, in the inbox's details and in settings. Returns the attributes in their new order.",
+        "operationId": "conversation-attributes.order.update",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderConversationAttributesRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionConversationAttribute"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Reorder conversation attributes",
+        "x-abilities": [
+          "attributes:write"
+        ]
+      }
+    },
+    "/conversation-attributes/{attribute}": {
+      "delete": {
+        "description": "Deletes an attribute nothing uses: no conversation holds a value and no workflow or view reads or sets it. Otherwise it is refused; archive it instead. Returns nothing.",
+        "operationId": "conversation-attributes.destroy",
+        "parameters": [
+          {
+            "description": "Id of the custom attribute, starting with atd_, such as atd_01jx2m8k4t. Find it with GET /attribute-definitions.",
+            "in": "path",
+            "name": "attribute",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a conversation attribute",
+        "x-abilities": [
+          "attributes:write"
+        ]
+      },
+      "patch": {
+        "description": "Changes an attribute's label, description, options, who fills it, whether it is required to close, the teams that see it, or archives it. Its key and type stay. Returns the attribute as saved.",
+        "operationId": "conversation-attributes.update",
+        "parameters": [
+          {
+            "description": "Id of the custom attribute, starting with atd_, such as atd_01jx2m8k4t. Find it with GET /attribute-definitions.",
+            "in": "path",
+            "name": "attribute",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateConversationAttributeRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceConversationAttribute"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Edit a conversation attribute",
+        "x-abilities": [
+          "attributes:write"
+        ]
+      }
+    },
+    "/conversation-attributes/{attribute}/usage": {
+      "get": {
+        "description": "Says how many conversations hold a value, and which workflows and views use it. Returns the counts and names, and whether it can be deleted.",
+        "operationId": "conversation-attributes.usage.index",
+        "parameters": [
+          {
+            "description": "Id of the custom attribute, starting with atd_, such as atd_01jx2m8k4t. Find it with GET /attribute-definitions.",
+            "in": "path",
+            "name": "attribute",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceConversationAttributeUsage"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "See what uses a conversation attribute",
+        "x-abilities": [
+          "attributes:write"
+        ]
+      }
+    },
     "/conversation-bulk-changes": {
       "post": {
         "description": "Applies one change to up to 200 conversations: the same fields as updating one conversation under changes, or trash: true to move them all to the trash. Each conversation changes on its own, so one that fails does not stop the rest. Returns for each conversation, whether it changed, the fields that changed, or the error code.",
@@ -57142,6 +59278,7 @@
     },
     "/conversations/{conversation}/ai-attributes": {
       "get": {
+        "deprecated": true,
         "description": "Reads what the AI found on a conversation for each active attribute. Returns each value found with its attribute, and when the conversation was last read.",
         "operationId": "conversations.ai-attributes.index",
         "parameters": [
@@ -57180,7 +59317,8 @@
         "summary": "Get a conversation's AI attributes",
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-sunset": "2027-12-01"
       }
     },
     "/conversations/{conversation}/ai/runs": {
@@ -57275,6 +59413,100 @@
         "summary": "Get an AI agent run",
         "x-abilities": [
           "ai:read"
+        ]
+      }
+    },
+    "/conversations/{conversation}/attributes": {
+      "get": {
+        "description": "Reads a conversation's attribute values and who set each. Returns each active attribute with its value, null when empty, and who set it.",
+        "operationId": "conversations.attributes.index",
+        "parameters": [
+          {
+            "description": "Id of the conversation, such as conv_01jx2m8k4t, or its number, such as 1042 for #1042. Find it with GET /conversations or GET /search.",
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceConversationAttributeValues"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get a conversation's attributes",
+        "x-abilities": [
+          "conversations:read"
+        ]
+      },
+      "patch": {
+        "description": "Sets or clears some of a conversation's attribute values. A value set here is never replaced by the AI. Returns the conversation's attributes as they now are.",
+        "operationId": "conversations.attributes.update",
+        "parameters": [
+          {
+            "description": "Id of the conversation, such as conv_01jx2m8k4t, or its number, such as 1042 for #1042. Find it with GET /conversations or GET /search.",
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateConversationAttributeValuesRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceConversationAttributeValues"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Set a conversation's attributes",
+        "x-abilities": [
+          "conversations:write"
         ]
       }
     },
@@ -62052,6 +64284,38 @@
         ]
       }
     },
+    "/help-center-languages": {
+      "get": {
+        "description": "Lists every language a help center can be read in, with its name in English and in itself. Returns each language's code, name and native name.",
+        "operationId": "help-center-languages.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionLanguage"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List the languages a help center can offer",
+        "x-abilities": [
+          "articles:read"
+        ]
+      }
+    },
     "/help-centers": {
       "get": {
         "description": "Lists the workspace's help centers, the public docs sites that also hold the changelog and feature requests. Start here to find the help center id every article, collection, changelog and feature request tool needs. The first call makes the default help center when there is none. Returns every help center with its name, public url, status and settings, the default one marked.",
@@ -62808,6 +65072,49 @@
         ]
       }
     },
+    "/help-centers/{help_center}/collection-translations": {
+      "get": {
+        "description": "Lists the translated names of every collection of the help center, in every language. Returns each collection's name, slug and description in each language it is translated into.",
+        "operationId": "help-centers.collection-translations.index",
+        "parameters": [
+          {
+            "description": "Id of the help center, starting with hc_, such as hc_01jx2m8k4t. Find it with GET /help-centers.",
+            "in": "path",
+            "name": "help_center",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionCollectionTranslation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List a help center's collection translations",
+        "x-abilities": [
+          "articles:read"
+        ]
+      }
+    },
     "/help-centers/{help_center}/collections": {
       "get": {
         "description": "Lists a help center's collections, the groups articles are filed under, up to three levels deep. Returns every collection with its parent, slug, position and audience.",
@@ -63376,6 +65683,75 @@
         "summary": "Post a feature request",
         "x-abilities": [
           "feedback:write"
+        ]
+      }
+    },
+    "/help-centers/{help_center}/translation-states": {
+      "get": {
+        "description": "Lists where every article of the help center stands in each language it offers besides its default: missing, draft or published, and whether it is behind the source. Returns one row per article and language.",
+        "operationId": "help-centers.translation-states.index",
+        "parameters": [
+          {
+            "description": "Id of the help center, starting with hc_, such as hc_01jx2m8k4t. Find it with GET /help-centers.",
+            "in": "path",
+            "name": "help_center",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only this language, as a code such as fr.",
+            "explode": false,
+            "in": "query",
+            "name": "locale",
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only articles in this state: missing, outdated, draft or published.",
+            "explode": false,
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "enum": [
+                "missing",
+                "outdated",
+                "draft",
+                "published",
+                ""
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionTranslationState"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "See what is left to translate",
+        "x-abilities": [
+          "articles:read"
         ]
       }
     },
@@ -66683,6 +69059,14 @@
             "description": "true or false: whether they turned on a second factor.",
             "in": "query",
             "name": "filter[two_factor]",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only items whose awaiting_enable matches; several values separated by commas match any.",
+            "in": "query",
+            "name": "filter[awaiting_enable]",
             "schema": {
               "type": "string"
             }

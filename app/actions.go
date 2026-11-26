@@ -32,6 +32,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/feedback"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/identity"
+	"github.com/dimmihq/dimmi/app/actions/importedteammates"
 	"github.com/dimmihq/dimmi/app/actions/invitations"
 	"github.com/dimmihq/dimmi/app/actions/issues"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
@@ -114,6 +115,7 @@ type Actions struct {
 	ListMembers             *members.ListMembers
 	ShowMember              *members.ShowMember
 	UpdateMember            *members.UpdateMember
+	CreateImportedTeammate  *importedteammates.CreateImportedTeammate
 	ListAccessTeams         *members.ListAccessTeams
 	StartTwoFactorReset     *members.StartTwoFactorReset
 	CompleteTwoFactorReset  *members.CompleteTwoFactorReset
@@ -145,6 +147,7 @@ type Actions struct {
 	HelpCenters                *helpcenters.HelpCenters
 	Collections                *helpcenters.Collections
 	Articles                   *helpcenters.Articles
+	Translations               *helpcenters.Translations
 	KnowledgeSettings          *knowledge.Settings
 	KnowledgeSources           *knowledgesources.Engine
 	Webhooks                   *webhooks.Webhooks

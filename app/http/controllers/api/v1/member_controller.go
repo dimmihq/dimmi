@@ -86,7 +86,7 @@ type memberPage struct {
 Index lists a page of members, by name, newest first with
 sort=-created_at or most recently active first with
 sort=-last_active_at; filter[status], filter[role], filter[team],
-filter[two_factor] and q narrow it.
+filter[two_factor], filter[awaiting_enable] and q narrow it.
 */
 func (c *MemberController) Index(ctx context.Context, _ *requests.NoInput) (*MembersOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
@@ -439,7 +439,7 @@ export takes too, the orders and the teams of each member.
 */
 func MemberListing() pagination.Allow {
 	return pagination.Allow{
-		Filters:  []string{"status", "role", "team", "two_factor"},
+		Filters:  []string{"status", "role", "team", "two_factor", "awaiting_enable"},
 		Sorts:    []string{"name", "created_at", "last_active_at"},
 		Includes: []string{"teams"},
 	}
@@ -475,7 +475,7 @@ func memberSort(sorts []pagination.Sort) string {
 }
 
 /*
-narrow reads the team and second factor filters into the input,
+narrow reads the team, second factor and awaiting filters into the input,
 refusing team ids and values that cannot match.
 */
 func (c *MemberController) narrow(filters map[string][]string, in *members.ListMembersInput) error {
@@ -488,23 +488,36 @@ func (c *MemberController) narrow(filters map[string][]string, in *members.ListM
 		in.TeamIDs = append(in.TeamIDs, id)
 	}
 
-	values := filters["two_factor"]
+	var err error
+
+	if in.TwoFactor, err = boolFilter(filters["two_factor"]); err != nil {
+		return err
+	}
+
+	in.AwaitingEnable, err = boolFilter(filters["awaiting_enable"])
+
+	return err
+}
+
+/*
+boolFilter reads a filter that is true or false, nil when it is not
+given.
+*/
+func boolFilter(values []string) (*bool, error) {
 	if len(values) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	if len(values) > 1 {
-		return pagination.ErrInvalidFilter
+		return nil, pagination.ErrInvalidFilter
 	}
 
 	on, err := strconv.ParseBool(values[0])
 	if err != nil {
-		return pagination.ErrInvalidFilter
+		return nil, pagination.ErrInvalidFilter
 	}
 
-	in.TwoFactor = &on
-
-	return nil
+	return &on, nil
 }
 
 /*

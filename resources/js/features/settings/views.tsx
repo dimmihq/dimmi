@@ -13,11 +13,11 @@ import { SLASettings } from "@/features/tickets/sla/sla-settings";
 
 import { PreferencesSettings, ProfileSettings, SecuritySettings } from "./pages/account";
 import { WorkspaceSecuritySettings } from "./pages/admin";
-import { AIAttributesSettings } from "./pages/ai-attributes";
 import { AttributesSettings } from "./pages/attributes";
 import { AuditLogSettings } from "./pages/audit-log";
 import { ConnectedAppsSettings } from "./pages/connected-apps";
 import { ChangelogSettings, FeedbackSettings, HelpCentersSettings, KnowledgeSettings } from "./pages/content";
+import { ConversationAttributesSettings } from "./pages/conversation-attributes";
 import { ConversationRatingsSettings } from "./pages/conversation-ratings";
 import { ConversationSafetySettings } from "./pages/conversation-safety";
 import { WebhooksSettings } from "./pages/developers";
@@ -61,7 +61,7 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   agent: AgentSettings,
   operator: OperatorSettingsView,
   actions: ActionsSettings,
-  "ai-attributes": AIAttributesSettings,
+  "conversation-attributes": ConversationAttributesSettings,
   "ai-providers": ProvidersSettings,
   "help-centers": HelpCentersSettings,
   knowledge: KnowledgeSettings,

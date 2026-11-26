@@ -13,16 +13,16 @@ without scripts.
 */
 
 templ FeedbackPage(c Center, board Board, assets templ.Component) {
-	@Layout(c, Meta{Title: "Feature requests | " + c.Product, Description: "Discover what " + c.Product + " is building next and suggest improvements.", Section: "feedback", Trail: []Crumb{{Title: "Feature requests", Path: "/feedback"}}}, templ.NopComponent, assets) {
+	@Layout(c, Meta{Title: c.T("feature_requests") + " | " + c.Product, Description: c.T("feedback_description", "product", c.Product), Section: "feedback", Trail: []Crumb{{Title: c.T("feature_requests"), Path: "/feedback"}}}, templ.NopComponent, assets) {
 		<div class={ "mx-auto w-full px-5 pt-12 md:pt-16", boardWidth(board) }>
 			<header class="stagger flex flex-wrap items-end justify-between gap-6">
 				<div>
-					<h1 class="text-display-4-medium tracking-tight">Feature requests</h1>
-					<p class="mt-2 text-title-3-regular text-text-secondary">See what we're building and vote for what you need next.</p>
+					<h1 class="text-display-4-medium tracking-tight">{ c.T("feature_requests") }</h1>
+					<p class="mt-2 text-title-3-regular text-text-secondary">{ c.T("feedback_tagline") }</p>
 				</div>
 				<a href={ Href(c, newIdeaPath(board.Active)) } class="button-brand inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">
 					@Icon("edit", "size-4")
-					Submit idea
+					{ c.T("submit_idea") }
 				</a>
 			</header>
 			if board.Submitted {
@@ -31,9 +31,9 @@ templ FeedbackPage(c Center, board Board, assets templ.Component) {
 						@Icon("check", "size-3.5")
 					</span>
 					if board.Pending {
-						Thanks! The team will look at your idea before it appears here.
+						{ c.T("idea_thanks_pending") }
 					} else {
-						Thanks! We read every idea and will let you know when it moves.
+						{ c.T("idea_thanks") }
 					}
 				</p>
 			}
@@ -41,9 +41,9 @@ templ FeedbackPage(c Center, board Board, assets templ.Component) {
 			@boardTools(c, board)
 			<div class="mt-6 flex flex-col gap-6 animate-rise">
 				if board.Sort != "" || board.Query != "" {
-					<section aria-label="Requests" class="overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
+					<section aria-label={ c.T("requests") } class="overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
 						if len(board.List) == 0 {
-							<p class="px-4 py-6 text-center text-body-regular text-text-tertiary">No requests match. Suggest it instead.</p>
+							<p class="px-4 py-6 text-center text-body-regular text-text-tertiary">{ c.T("no_requests_match") }</p>
 						}
 						<ul>
 							for _, idea := range board.List {
@@ -70,8 +70,8 @@ help center has more than one the visitor may open.
 
 templ boardTabs(c Center, board Board) {
 	if len(board.Boards) > 1 {
-		<nav aria-label="Boards" class="mt-8 flex flex-wrap items-center gap-2 border-b border-separator-border pb-3">
-			@boardTab(c, "", "All boards", board)
+		<nav aria-label={ c.T("boards") } class="mt-8 flex flex-wrap items-center gap-2 border-b border-separator-border pb-3">
+			@boardTab(c, "", c.T("all_boards"), board)
 			for _, b := range board.Boards {
 				@boardTab(c, b.Slug, b.Name, board)
 			}
@@ -96,11 +96,11 @@ searches the requests.
 
 templ boardTools(c Center, board Board) {
 	<div class="mt-10 flex flex-wrap items-center justify-between gap-3">
-		<nav aria-label="Order" class="flex items-center gap-1 rounded-xl bg-background-secondary-default p-1">
-			@sortTab(c, "", "Roadmap", board)
-			@sortTab(c, "trending", "Trending", board)
-			@sortTab(c, "top", "Top", board)
-			@sortTab(c, "new", "New", board)
+		<nav aria-label={ c.T("order") } class="flex items-center gap-1 rounded-xl bg-background-secondary-default p-1">
+			@sortTab(c, "", c.T("sort_roadmap"), board)
+			@sortTab(c, "trending", c.T("sort_trending"), board)
+			@sortTab(c, "top", c.T("sort_top"), board)
+			@sortTab(c, "new", c.T("sort_new"), board)
 		</nav>
 		<form method="get" action={ Href(c, "/feedback") } role="search" class="flex h-9 w-full items-center gap-2 rounded-xl border border-border-button-default bg-background-primary-default px-3 shadow-xs sm:w-64">
 			@Icon("search", "size-4 shrink-0 text-foreground-icon-tertiary")
@@ -110,8 +110,8 @@ templ boardTools(c Center, board Board) {
 			if board.Active != "" {
 				<input type="hidden" name="board" value={ board.Active }/>
 			}
-			<label class="sr-only" for="feedback-search">Search requests</label>
-			<input id="feedback-search" type="search" name="q" value={ board.Query } placeholder="Search requests" class="min-w-0 flex-1 bg-transparent text-body-regular outline-none placeholder:text-text-placeholder"/>
+			<label class="sr-only" for="feedback-search">{ c.T("search_requests") }</label>
+			<input id="feedback-search" type="search" name="q" value={ board.Query } placeholder={ c.T("search_requests") } class="min-w-0 flex-1 bg-transparent text-body-regular outline-none placeholder:text-text-placeholder"/>
 		</form>
 	</div>
 }
@@ -195,7 +195,7 @@ templ voteButton(c Center, idea Idea) {
 	<form method="post" action={ Href(c, "/feedback/"+idea.Slug+"/votes") } data-vote={ idea.Title }>
 		<button
 			type="submit"
-			aria-label={ "Vote for " + idea.Title + ", " + strconv.Itoa(idea.Votes) + " votes" }
+			aria-label={ c.T("vote_for", "title", idea.Title, "count", idea.Votes) }
 			aria-pressed={ strconv.FormatBool(idea.Voted) }
 			class="flex h-12 w-11 cursor-pointer flex-col items-center justify-center rounded-xl border border-border-button-default bg-background-primary-default text-caption-1-semibold tabular-nums text-text-secondary outline-none transition hover:border-border-button-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring active:scale-95 aria-pressed:border-transparent aria-pressed:bg-tint aria-pressed:text-link"
 		>
@@ -244,7 +244,7 @@ templ roadmapColumn(c Center, s Status) {
 			<span class="ms-auto text-caption-1-medium tabular-nums text-text-tertiary">{ strconv.Itoa(s.Count) }</span>
 		</h2>
 		if len(s.Ideas) == 0 {
-			<p class="rounded-2xl border border-dashed border-border-button-default px-3 py-6 text-center text-body-2-regular text-text-tertiary">Nothing here yet.</p>
+			<p class="rounded-2xl border border-dashed border-border-button-default px-3 py-6 text-center text-body-2-regular text-text-tertiary">{ c.T("nothing_here_yet") }</p>
 		}
 		<ul class="flex flex-col gap-2">
 			for _, idea := range s.Ideas {
@@ -291,7 +291,7 @@ backToBoard leads from a request or the idea form back to the board.
 templ backToBoard(c Center) {
 	<a href={ Href(c, "/feedback") } class="inline-flex items-center gap-1 text-body-2-regular text-text-tertiary transition-colors hover:text-text-primary">
 		@Icon("arrow-left-line", "size-3.5 rtl:-scale-x-100")
-		Feature requests
+		{ c.T("feature_requests") }
 	</a>
 }
 
@@ -302,17 +302,17 @@ post theirs anyway.
 */
 
 templ NewIdeaPage(c Center, form IdeaForm, assets templ.Component) {
-	@Layout(c, Meta{Title: "Submit an idea | " + c.Product, Section: "feedback", Trail: []Crumb{{Title: "Feature requests", Path: "/feedback"}, {Title: "Submit an idea", Path: "/feedback/new"}}, NoIndex: true}, templ.NopComponent, assets) {
+	@Layout(c, Meta{Title: c.T("submit_an_idea") + " | " + c.Product, Section: "feedback", Trail: []Crumb{{Title: c.T("feature_requests"), Path: "/feedback"}, {Title: c.T("submit_an_idea"), Path: "/feedback/new"}}, NoIndex: true}, templ.NopComponent, assets) {
 		<div class="stagger mx-auto w-full max-w-[36rem] px-5 pt-12 md:pt-16">
 			@backToBoard(c)
-			<h1 class="mt-5 text-display-4-medium tracking-tight">Submit an idea</h1>
-			<p class="mt-2 text-title-3-regular text-text-secondary">Tell us what you'd like to do and what gets in the way today.</p>
+			<h1 class="mt-5 text-display-4-medium tracking-tight">{ c.T("submit_an_idea") }</h1>
+			<p class="mt-2 text-title-3-regular text-text-secondary">{ c.T("idea_tagline") }</p>
 			if form.Error != "" {
 				<p role="alert" class="mt-6 rounded-xl border border-border-error-default px-4 py-3 text-body-regular text-text-error-primary">{ form.Error }</p>
 			}
 			if len(form.Similar) > 0 {
 				<section aria-labelledby="similar-title" class="mt-8 overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
-					<h2 id="similar-title" class="border-b border-separator-border bg-background-secondary-default px-4 py-2.5 text-body-2-semibold">Is it one of these? Vote for it instead.</h2>
+					<h2 id="similar-title" class="border-b border-separator-border bg-background-secondary-default px-4 py-2.5 text-body-2-semibold">{ c.T("similar_ideas") }</h2>
 					<ul>
 						for _, idea := range form.Similar {
 							@ideaRow(c, idea)
@@ -326,7 +326,7 @@ templ NewIdeaPage(c Center, form IdeaForm, assets templ.Component) {
 				}
 				if len(form.Boards) > 1 {
 					<label class="flex flex-col gap-1.5">
-						<span class="text-body-medium">Board</span>
+						<span class="text-body-medium">{ c.T("board") }</span>
 						<select name="board" class="h-10 rounded-xl border border-border-button-default bg-background-primary-default px-3 text-body-regular shadow-xs outline-none transition hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint">
 							for _, b := range form.Boards {
 								<option value={ b.Slug } selected?={ b.Slug == form.Board }>{ b.Name }</option>
@@ -337,22 +337,22 @@ templ NewIdeaPage(c Center, form IdeaForm, assets templ.Component) {
 					<input type="hidden" name="board" value={ form.Board }/>
 				}
 				<label class="flex flex-col gap-1.5">
-					<span class="text-body-medium">Title</span>
-					<input type="text" name="title" value={ form.Title } required maxlength="150" placeholder="Short, like “Export conversations to CSV”" class="h-10 rounded-xl border border-border-button-default bg-background-primary-default px-3 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"/>
+					<span class="text-body-medium">{ c.T("idea_title") }</span>
+					<input type="text" name="title" value={ form.Title } required maxlength="150" placeholder={ c.T("idea_title_placeholder") } class="h-10 rounded-xl border border-border-button-default bg-background-primary-default px-3 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"/>
 				</label>
 				<label class="flex flex-col gap-1.5">
-					<span class="text-body-medium">Details</span>
-					<textarea name="details" rows="6" placeholder="What are you trying to do? How do you work around it today?" class="rounded-xl border border-border-button-default bg-background-primary-default px-3 py-2.5 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint">{ form.Details }</textarea>
+					<span class="text-body-medium">{ c.T("idea_details") }</span>
+					<textarea name="details" rows="6" placeholder={ c.T("idea_details_placeholder") } class="rounded-xl border border-border-button-default bg-background-primary-default px-3 py-2.5 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint">{ form.Details }</textarea>
 				</label>
 				<div class="flex items-center gap-3">
 					<button type="submit" class="button-brand inline-flex h-10 cursor-pointer items-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">
 						if len(form.Similar) > 0 {
-							Post mine anyway
+							{ c.T("post_anyway") }
 						} else {
-							Submit idea
+							{ c.T("submit_idea") }
 						}
 					</button>
-					<a href={ Href(c, "/feedback") } class="text-body-medium text-text-secondary hover:text-text-primary">Cancel</a>
+					<a href={ Href(c, "/feedback") } class="text-body-medium text-text-secondary hover:text-text-primary">{ c.T("cancel") }</a>
 				</div>
 			</form>
 		</div>
@@ -365,7 +365,7 @@ its votes, the update that shipped it, and the conversation under it.
 */
 
 templ IdeaPage(c Center, v IdeaView, assets templ.Component) {
-	@Layout(c, Meta{Title: v.Idea.Title + " | " + c.Product, Description: v.Idea.Details, Section: "feedback", Trail: []Crumb{{Title: "Feature requests", Path: "/feedback"}, {Title: v.Idea.Title, Path: v.Idea.Path}}, NoIndex: v.Pending}, templ.NopComponent, assets) {
+	@Layout(c, Meta{Title: v.Idea.Title + " | " + c.Product, Description: v.Idea.Details, Section: "feedback", Trail: []Crumb{{Title: c.T("feature_requests"), Path: "/feedback"}, {Title: v.Idea.Title, Path: v.Idea.Path}}, NoIndex: v.Pending}, templ.NopComponent, assets) {
 		<article class="stagger mx-auto w-full max-w-[44rem] px-5 pt-12 pb-20 md:pt-16">
 			@backToBoard(c)
 			<div class="mt-5 flex items-start gap-5">
@@ -380,12 +380,12 @@ templ IdeaPage(c Center, v IdeaView, assets templ.Component) {
 				</div>
 			</div>
 			if v.Pending {
-				<p role="status" class="mt-6 rounded-xl bg-background-secondary-default px-4 py-3 text-body-regular text-text-secondary">Only you can see this until the team approves it.</p>
+				<p role="status" class="mt-6 rounded-xl bg-background-secondary-default px-4 py-3 text-body-regular text-text-secondary">{ c.T("only_you_until_approved") }</p>
 			}
 			if v.Update != "" {
 				<a href={ Href(c, v.Update) } class="mt-6 flex items-center gap-2 rounded-xl border border-border-button-default bg-background-primary-default px-4 py-3 text-body-medium transition-colors hover:border-border-button-hover">
 					@Icon("megaphone", "size-4 text-link")
-					Shipped. Read what's new
+					{ c.T("shipped_read") }
 					@Icon("arrow-right", "ms-auto size-4 text-foreground-icon-tertiary")
 				</a>
 			}
@@ -395,38 +395,38 @@ templ IdeaPage(c Center, v IdeaView, assets templ.Component) {
 				</div>
 			}
 			<section aria-labelledby="comments-title" class="mt-12 border-t border-separator-border pt-8">
-				<h2 id="comments-title" class="text-headline-semibold">Comments</h2>
+				<h2 id="comments-title" class="text-headline-semibold">{ c.T("comments") }</h2>
 				if len(v.Comments) == 0 {
-					<p class="mt-3 text-body-regular text-text-tertiary">No comments yet.</p>
+					<p class="mt-3 text-body-regular text-text-tertiary">{ c.T("no_comments") }</p>
 				}
 				<ol class="mt-5 flex flex-col gap-5">
 					for _, cm := range v.Comments {
-						@comment(cm)
+						@comment(c, cm)
 					}
 				</ol>
 				if v.Commented {
-					<p role="status" class="mt-6 text-body-2-regular text-text-secondary">Thanks, your comment is up.</p>
+					<p role="status" class="mt-6 text-body-2-regular text-text-secondary">{ c.T("comment_posted") }</p>
 				}
 				if v.CanAct {
 					<form method="post" action={ Href(c, v.Idea.Path+"/comments") } class="mt-6 flex flex-col gap-3">
-						<label class="sr-only" for="comment-body">Add a comment</label>
-						<textarea id="comment-body" name="body" rows="3" required maxlength="5000" placeholder="Add a comment" class="rounded-xl border border-border-button-default bg-background-primary-default px-3 py-2.5 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"></textarea>
-						<button type="submit" class="button-brand inline-flex h-9 cursor-pointer items-center self-start rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Comment</button>
+						<label class="sr-only" for="comment-body">{ c.T("add_comment") }</label>
+						<textarea id="comment-body" name="body" rows="3" required maxlength="5000" placeholder={ c.T("add_comment") } class="rounded-xl border border-border-button-default bg-background-primary-default px-3 py-2.5 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"></textarea>
+						<button type="submit" class="button-brand inline-flex h-9 cursor-pointer items-center self-start rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">{ c.T("comment") }</button>
 					</form>
 				} else if v.SignIn != "" {
-					<a href={ templ.SafeURL(v.SignIn) } class="mt-6 inline-flex h-9 items-center rounded-xl border border-border-button-default px-4 text-body-medium transition-colors hover:border-border-button-hover">Sign in to comment and vote</a>
+					<a href={ templ.SafeURL(v.SignIn) } class="mt-6 inline-flex h-9 items-center rounded-xl border border-border-button-default px-4 text-body-medium transition-colors hover:border-border-button-hover">{ c.T("sign_in_to_comment") }</a>
 				}
 			</section>
 		</article>
 	}
 }
 
-templ comment(cm Comment) {
+templ comment(c Center, cm Comment) {
 	<li class="flex flex-col gap-1.5">
 		<p class="flex items-center gap-2 text-body-2-medium">
 			{ cm.Author }
 			if cm.FromTeam {
-				<span class="rounded-full bg-tint px-2 py-0.5 text-caption-2-medium text-link">Team</span>
+				<span class="rounded-full bg-tint px-2 py-0.5 text-caption-2-medium text-link">{ c.T("team") }</span>
 			}
 			<span class="text-caption-1-regular text-text-tertiary">{ cm.At }</span>
 		</p>
@@ -440,7 +440,7 @@ templ comment(cm Comment) {
 		if len(cm.Replies) > 0 {
 			<ol class="mt-2 flex flex-col gap-4 border-s border-separator-border ps-4">
 				for _, r := range cm.Replies {
-					@comment(r)
+					@comment(c, r)
 				}
 			</ol>
 		}

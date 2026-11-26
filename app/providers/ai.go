@@ -116,6 +116,7 @@ func bootDecisions(a *app.App, decisions *aidecision.Decider) {
 	}
 	a.Actions.AIAttributes = &aiattributes.Attributes{
 		DB: a.DB, Clock: a.Clock, IDs: a.IDs, Events: a.Events, Queue: a.Queue, Decisions: decisions,
+		Disks: a.Storage,
 	}
 	a.Actions.AIAttributes.Listen(a.Events)
 }

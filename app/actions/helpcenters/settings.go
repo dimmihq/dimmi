@@ -37,6 +37,8 @@ type HelpCenterSettingsChange struct {
 	ChangelogSubscriptions *bool
 	ChangelogEmail         *string
 	ChangelogUndoMinutes   *int
+
+	UntranslatedArticles *string
 }
 
 /*
@@ -53,6 +55,7 @@ func (c HelpCenterSettingsChange) Over(s HelpCenterSettings) HelpCenterSettings 
 	keep(&s.FeedbackBoard, c.FeedbackBoard)
 	keep(&s.FeedbackApproval, c.FeedbackApproval)
 	keep(&s.MessengerID, c.MessengerID)
+	keep(&s.UntranslatedArticles, c.UntranslatedArticles)
 	if c.EmailSignIn != nil {
 		s.EmailSignIn = c.EmailSignIn
 	}

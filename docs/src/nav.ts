@@ -22,6 +22,7 @@ export const sidebar: Group[] = [
       { label: "Quickstart", link: "/quickstart/" },
       { label: "Concepts", link: "/concepts/" },
       { label: "Cloud vs self-hosting", link: "/cloud-vs-self-hosted/" },
+      { label: "Move from Intercom", link: "/migrate/intercom/" },
     ],
   },
   {
@@ -31,6 +32,7 @@ export const sidebar: Group[] = [
       { label: "Overview", link: "/inbox/how-the-inbox-works/" },
       { label: "Views", link: "/inbox/views/" },
       { label: "Saved replies", link: "/inbox/saved-replies/" },
+      { label: "Attributes", link: "/inbox/conversation-attributes/" },
       { label: "Inboxes", link: "/inbox/inboxes-and-assignment/" },
       { label: "Assignment", link: "/inbox/how-assignment-works/" },
       { label: "Office hours", link: "/inbox/office-hours/" },
@@ -77,7 +79,6 @@ export const sidebar: Group[] = [
       { label: "Test procedures", link: "/ai/test-procedures/" },
       { label: "Versions and analytics", link: "/ai/procedure-versions/" },
       { label: "Actions", link: "/ai/actions/" },
-      { label: "AI attributes", link: "/ai/ai-attributes/" },
       { label: "First action", link: "/ai/first-action/" },
       { label: "Handover", link: "/ai/handover/" },
       { label: "AI providers", link: "/ai/providers/" },
@@ -128,6 +129,8 @@ export const sidebar: Group[] = [
     items: [
       { label: "Setup", link: "/help-center/set-up/" },
       { label: "Custom domain", link: "/help-center/custom-domain/" },
+      { label: "Article blocks", link: "/help-center/article-blocks/" },
+      { label: "Languages", link: "/help-center/languages/" },
       { label: "Restricted articles", link: "/help-center/limit-articles/" },
       { label: "Feature requests", link: "/help-center/feature-requests/" },
       { label: "Changelog", link: "/help-center/changelog/" },

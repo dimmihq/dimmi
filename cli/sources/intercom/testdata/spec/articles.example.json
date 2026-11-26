@@ -1,0 +1,45 @@
+{
+  "type": "list",
+  "pages": {
+    "type": "pages",
+    "page": 1,
+    "per_page": 25,
+    "total_pages": 1
+  },
+  "total_count": 1,
+  "data": [
+    {
+      "id": "39",
+      "type": "article",
+      "workspace_id": "this_is_an_id64_that_should_be_at_least_4",
+      "parent_ids": [],
+      "folder_id": null,
+      "tags": {
+        "type": "tag.list",
+        "tags": []
+      },
+      "exclude_from_article_suggestions": false,
+      "help_center_audience": "everyone",
+      "scheduled_publish_at": null,
+      "scheduled_unpublish_at": null,
+      "content_id": "61",
+      "title": "This is the article title",
+      "description": "",
+      "body": "",
+      "body_markdown": "",
+      "author_id": 991267492,
+      "state": "published",
+      "created_at": 1734537283,
+      "updated_at": 1734537283,
+      "url": "http://help-center.test/myapp-64/en/articles/39-this-is-the-article-title",
+      "audience_ids": [],
+      "ai_chatbot_availability": true,
+      "ai_copilot_availability": true,
+      "ai_sales_agent_availability": true,
+      "created_by_id": 5017691,
+      "updated_by_id": 5017691,
+      "has_unpublished_changes": false,
+      "draft_updated_at": null
+    }
+  ]
+}

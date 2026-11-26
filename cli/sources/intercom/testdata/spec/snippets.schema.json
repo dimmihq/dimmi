@@ -1,0 +1,29 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "text type",
+      "id": "573",
+      "title": "text title",
+      "locale": "text locale",
+      "json_blocks": [
+        {}
+      ],
+      "body_markdown": "text body_markdown",
+      "chatbot_availability": 1700000574,
+      "copilot_availability": 1700000575,
+      "ai_chatbot_availability": true,
+      "ai_copilot_availability": true,
+      "ai_sales_agent_availability": true,
+      "created_at": 1700000576,
+      "updated_at": 1700000577,
+      "audience_ids": [
+        1700000578
+      ]
+    }
+  ],
+  "total_count": 1700000579,
+  "page": 1700000580,
+  "per_page": 1700000581,
+  "total_pages": 1700000582
+}

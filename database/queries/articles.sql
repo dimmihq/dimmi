@@ -98,9 +98,10 @@ UPDATE articles SET deleted_at = @now::timestamptz, status = 'archived', publish
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL;
 
 -- name: ListArticleVersions :many
--- ListArticleVersions returns an article's versions, newest first.
+-- ListArticleVersions returns the versions of an article's source,
+-- newest first; translations keep their own.
 SELECT id, number, kind, title, created_by_type, created_by_id, created_at FROM article_versions
-WHERE workspace_id = @workspace_id AND article_id = @article_id
+WHERE workspace_id = @workspace_id AND article_id = @article_id AND locale IS NULL
 ORDER BY number DESC;
 
 -- name: FindArticleVersion :one
@@ -131,11 +132,15 @@ WHERE r.workspace_id = @workspace_id AND r.help_center_id = @help_center_id AND 
 
 -- name: ListPublishedArticles :many
 -- ListPublishedArticles returns what readers see of a help center: every
--- published public article with its live version, in collection order.
+-- published public article with its live version and who wrote it, in
+-- collection order. author_name is empty when no teammate wrote it.
 SELECT a.id, a.collection_id, a.position, a.published_at, v.title, v.slug, v.description, v.body_markdown,
-    v.body_html, v.toc, v.id AS version_id, v.created_at AS version_created_at, v.renderer_version
+    v.body_html, v.toc, v.id AS version_id, v.created_at AS version_created_at, v.renderer_version,
+    coalesce(u.name, '')::text AS author_name, u.avatar_path AS author_avatar
 FROM articles a
 JOIN article_versions v ON v.id = a.published_version_id
+LEFT JOIN workspace_members m ON m.id = a.author_member_id
+LEFT JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
 WHERE a.workspace_id = @workspace_id AND a.help_center_id = @help_center_id AND a.deleted_at IS NULL
   AND a.status = 'published' AND v.visibility = 'public'
 ORDER BY a.collection_id NULLS LAST, a.position, a.id;
@@ -168,15 +173,24 @@ LIMIT @row_limit;
 -- name: SearchWorkspaceArticles :many
 -- SearchWorkspaceArticles finds the workspace's published articles, in
 -- every live help center, matching any of the query's words, best first,
--- with the visibilities asked for. The agent retrieves from it.
-SELECT a.id, a.help_center_id, v.id AS version_id, h.subdomain, v.title, v.slug, v.body_markdown, v.visibility,
-    v.created_at, ts_rank_cd(v.search_document, to_tsquery('dimmi_search', @query::text))::real AS rank
+-- with the visibilities asked for. The agent retrieves from it. An
+-- article translated into one of the reader's languages is searched in
+-- the first of them; any other in its source.
+SELECT a.id, a.help_center_id, v.id AS version_id, h.subdomain, v.title, v.slug, v.body_markdown,
+    coalesce((SELECT s.visibility FROM article_versions s WHERE s.id = a.published_version_id), a.visibility)::text
+        AS visibility, v.created_at, v.locale,
+    ts_rank_cd(v.search_document, to_tsquery('dimmi_search', @query::text))::real AS rank
 FROM articles a
-JOIN article_versions v ON v.id = a.published_version_id
 JOIN help_centers h ON h.id = a.help_center_id
-WHERE a.workspace_id = @workspace_id AND a.deleted_at IS NULL AND a.status = 'published' AND h.deleted_at IS NULL
+JOIN article_versions v ON v.id = coalesce(
+    (SELECT t.published_version_id FROM article_translations t
+     WHERE t.article_id = a.id AND t.status = 'published' AND t.locale = ANY (@locales::text[])
+     ORDER BY array_position(@locales::text[], t.locale) LIMIT 1),
+    CASE WHEN a.status = 'published' THEN a.published_version_id END)
+WHERE a.workspace_id = @workspace_id AND a.deleted_at IS NULL AND a.status <> 'archived' AND h.deleted_at IS NULL
   AND v.search_document @@ to_tsquery('dimmi_search', @query::text)
-  AND v.visibility = ANY (@visibilities::text[])
+  AND coalesce((SELECT s.visibility FROM article_versions s WHERE s.id = a.published_version_id), a.visibility)
+      = ANY (@visibilities::text[])
 ORDER BY rank DESC, a.id
 LIMIT @row_limit;
 

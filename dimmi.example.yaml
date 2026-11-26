@@ -1034,9 +1034,8 @@ ai:
 # ServicesConfig holds the credentials of the apps dimmi has registered at
 # other services. Slack is the shared Slack app, WhatsApp the Meta app
 # WhatsApp numbers connect through, Meta the same app for Messenger and
-# Instagram with each one's login; Notion, Intercom,
-# Zendesk and GitHub are the OAuth clients knowledge sources connect
-# through.
+# Instagram with each one's login; Notion and GitHub are the OAuth
+# clients knowledge sources connect through.
 services:
   # SlackServiceConfig is the shared Slack app: its OAuth client id and
   # secret, the signing secret its events are signed with and its app id.
@@ -1082,16 +1081,6 @@ services:
     client_secret: ""  # DIMMI_SERVICES__NOTION__CLIENT_SECRET (secret; or DIMMI_SERVICES__NOTION__CLIENT_SECRET_FILE naming a file)
   # OAuthServiceConfig is an OAuth client registered at a service: its id
   # and secret. Empty means the service cannot be connected.
-  intercom:
-    client_id: ""  # DIMMI_SERVICES__INTERCOM__CLIENT_ID
-    client_secret: ""  # DIMMI_SERVICES__INTERCOM__CLIENT_SECRET (secret; or DIMMI_SERVICES__INTERCOM__CLIENT_SECRET_FILE naming a file)
-  # OAuthServiceConfig is an OAuth client registered at a service: its id
-  # and secret. Empty means the service cannot be connected.
-  zendesk:
-    client_id: ""  # DIMMI_SERVICES__ZENDESK__CLIENT_ID
-    client_secret: ""  # DIMMI_SERVICES__ZENDESK__CLIENT_SECRET (secret; or DIMMI_SERVICES__ZENDESK__CLIENT_SECRET_FILE naming a file)
-  # OAuthServiceConfig is an OAuth client registered at a service: its id
-  # and secret. Empty means the service cannot be connected.
   github:
     client_id: ""  # DIMMI_SERVICES__GITHUB__CLIENT_ID
     client_secret: ""  # DIMMI_SERVICES__GITHUB__CLIENT_SECRET (secret; or DIMMI_SERVICES__GITHUB__CLIENT_SECRET_FILE naming a file)
@@ -1120,6 +1109,6 @@ services:
 # token is renewed, and HealthInterval how often each installation is
 # checked.
 integrations:
-  enabled: [slack, notion, intercom, zendesk, github, linear, jira, incident_io, rootly, pagerduty]  # DIMMI_INTEGRATIONS__ENABLED
+  enabled: [slack, notion, github, linear, jira, incident_io, rootly, pagerduty]  # DIMMI_INTEGRATIONS__ENABLED
   refresh_skew: 5m  # DIMMI_INTEGRATIONS__REFRESH_SKEW
   health_interval: 24h  # DIMMI_INTEGRATIONS__HEALTH_INTERVAL

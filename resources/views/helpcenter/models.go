@@ -13,13 +13,18 @@
 
 package helpcenter
 
-import "time"
+import (
+	"time"
+
+	"github.com/dimmihq/dimmi/framework/i18n"
+)
 
 /*
 Center is the portal a page belongs to: its name, the scheme and host
 it is served on, the path every link starts with, its brand color as a
 hex code, the paths of its logo for light and dark pages (empty to draw
-its initial on the brand), the address of the product it supports, the
+its initial on the brand), Mark, the company's square logo shown beside
+its name when it has no wide one, the address of the product it supports, the
 sections it shows beside the help center, and the visitor signed in to
 it, if any. SignInURL is where a reader signs in, empty when the help
 center takes no sign-in; SignedIn says a reader is signed in, and
@@ -31,7 +36,11 @@ it first, and the messenger asks MessengerIdentity who is signed in.
 HomeTitle is the question the home page asks, empty for the default,
 and FooterText closes every page. Canonical is the page's address on the
 help center's own domain, which search engines should keep, and NoIndex
-keeps every page out of them.
+keeps every page out of them. Locale is the language the page is in,
+empty for English; Languages are the languages a reader may switch to,
+none when the help center speaks one, and Alternates are this page's
+addresses in the other languages it exists in, for search engines.
+Lang holds the help center's words in every language.
 */
 type Center struct {
 	Name       string
@@ -41,6 +50,7 @@ type Center struct {
 	Brand      string
 	LogoLight  string
 	LogoDark   string
+	Mark       string
 	Tagline    string
 	HomeURL    string
 	ContactURL string
@@ -61,6 +71,11 @@ type Center struct {
 
 	Canonical string
 	NoIndex   bool
+
+	Locale     string
+	Languages  []LanguageLink
+	Alternates []Alternate
+	Lang       *i18n.Translator
 }
 
 /*
@@ -76,13 +91,14 @@ type Section struct {
 }
 
 /*
-Person is an author shown with an article or a changelog entry, by name
-and the initials drawn when there is no photo.
+Person is an author shown with an article or a changelog entry, by name,
+the address of their photo and the initials drawn when there is none.
 */
 type Person struct {
 	Name     string
 	Initials string
 	Role     string
+	Photo    string
 }
 
 /*

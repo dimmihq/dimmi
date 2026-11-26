@@ -170,7 +170,7 @@ func (c *ConversationController) Store(
 		Membership: membership(ctx), ByContact: b.Author != nil && *b.Author == "contact", Subject: b.Subject,
 		Body: b.Body, AssignSet: requests.Sent(in.RawBody)["assignee_id"],
 		Contact:    contacts.Ref{ExternalID: b.Contact.ExternalID, Email: b.Contact.Email, Name: b.Contact.Name},
-		MutationID: mutationID(ctx),
+		MutationID: mutationID(ctx), Attributes: b.Attributes,
 	}
 
 	var err error

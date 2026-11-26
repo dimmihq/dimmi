@@ -203,7 +203,44 @@ function ticketText(event: TimelineEvent): string | null {
  * eventText says in words what an event entry records.
  */
 export function eventText(event: TimelineEvent): string {
-  return handoffText(event) ?? transferText(event) ?? ticketText(event) ?? changeText(event);
+  return attributeText(event) ?? handoffText(event) ?? transferText(event) ?? ticketText(event) ?? changeText(event);
+}
+
+/*
+ * attributeValueText words a conversation attribute's value for the
+ * timeline: options and text as written, yes or no, and how many files;
+ * a linked contact or company by what it is.
+ */
+function attributeValueText(value: unknown): string {
+  if (typeof value === "boolean") {
+    return value ? "Yes" : "No";
+  }
+  if (Array.isArray(value)) {
+    const files = value.every((v) => typeof v === "string" && v.startsWith("att_"));
+    return files ? (value.length === 1 ? "1 file" : `${value.length} files`) : value.join(", ");
+  }
+  if (typeof value === "string" && /^(ctc|cmp)_[0-9a-z]{26}$/.test(value)) {
+    return value.startsWith("ctc_") ? "a contact" : "a company";
+  }
+
+  return String(value);
+}
+
+/*
+ * attributeText says a conversation attribute was set or cleared, and by
+ * whom: a teammate, the AI or a workflow; null for any other event.
+ */
+export function attributeText(event: TimelineEvent): string | null {
+  if (event.name !== "conversation.attribute_changed" || !event.attribute) {
+    return null;
+  }
+  const who = event.by === "ai" ? "the AI" : event.actor.name || "dimmi";
+  const to = (event as { to?: unknown }).to;
+  if (to === null || to === undefined) {
+    return `${event.attribute.label} cleared by ${who}`;
+  }
+
+  return `${event.attribute.label} set to ${attributeValueText(to)} by ${who}`;
 }
 
 /*

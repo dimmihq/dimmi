@@ -22,6 +22,7 @@ import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-pass
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthTwoFactorResetRouteImport } from './routes/_auth/two-factor-reset'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth/verify-email'
+import { Route as AuthWaitingRouteImport } from './routes/_auth/waiting'
 import { Route as DIndexRouteImport } from './routes/d/index'
 import { Route as DChangelogRouteImport } from './routes/d/changelog'
 import { Route as DCustomersRouteImport } from './routes/d/customers'
@@ -76,6 +77,7 @@ import { Route as DInboxViewIndexRouteImport } from './routes/d/inbox/$view/inde
 import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$view/$conversation'
 import { Route as DRoutinesRoutineIndexRouteImport } from './routes/d/routines/$routine/index'
 import { Route as DSettingsActionsActionRouteImport } from './routes/d/settings/actions.$action'
+import { Route as DSettingsConversationAttributesAttributeRouteImport } from './routes/d/settings/conversation-attributes.$attribute'
 import { Route as DSettingsInboxesInboxRouteImport } from './routes/d/settings/inboxes.$inbox'
 import { Route as DSettingsIntegrationsIntegrationRouteImport } from './routes/d/settings/integrations.$integration'
 import { Route as DSettingsIntegrationsFacebookRouteImport } from './routes/d/settings/integrations.facebook'
@@ -162,6 +164,11 @@ const AuthTwoFactorResetRoute = AuthTwoFactorResetRouteImport.update({
 const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthWaitingRoute = AuthWaitingRouteImport.update({
+  id: '/waiting',
+  path: '/waiting',
   getParentRoute: () => AuthRoute,
 } as any)
 const DIndexRoute = DIndexRouteImport.update({
@@ -436,6 +443,12 @@ const DSettingsActionsActionRoute = DSettingsActionsActionRouteImport.update({
   path: '/settings/actions/$action',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DSettingsConversationAttributesAttributeRoute =
+  DSettingsConversationAttributesAttributeRouteImport.update({
+    id: '/settings/conversation-attributes/$attribute',
+    path: '/settings/conversation-attributes/$attribute',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 const DSettingsInboxesInboxRoute = DSettingsInboxesInboxRouteImport.update({
   id: '/settings/inboxes/$inbox',
   path: '/settings/inboxes/$inbox',
@@ -585,6 +598,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof AuthSignupRoute
   '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
+  '/waiting': typeof AuthWaitingRoute
   '/d/changelog': typeof DChangelogRouteWithChildren
   '/d/customers': typeof DCustomersRouteWithChildren
   '/d/feedback': typeof DFeedbackRouteWithChildren
@@ -634,6 +648,7 @@ export interface FileRoutesByFullPath {
   '/d/help-center/requests/$changeset': typeof DHelpCenterRequestsChangesetRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
+  '/d/settings/conversation-attributes/$attribute': typeof DSettingsConversationAttributesAttributeRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
   '/d/settings/integrations/facebook': typeof DSettingsIntegrationsFacebookRoute
@@ -674,6 +689,7 @@ export interface FileRoutesByTo {
   '/signup': typeof AuthSignupRoute
   '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
+  '/waiting': typeof AuthWaitingRoute
   '/d/customers': typeof DCustomersListsIndexRoute
   '/d/home': typeof DHomeRoute
   '/d/notifications': typeof DNotificationsRoute
@@ -718,6 +734,7 @@ export interface FileRoutesByTo {
   '/d/help-center/requests/$changeset': typeof DHelpCenterRequestsChangesetRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
+  '/d/settings/conversation-attributes/$attribute': typeof DSettingsConversationAttributesAttributeRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
   '/d/settings/integrations/facebook': typeof DSettingsIntegrationsFacebookRoute
@@ -760,6 +777,7 @@ export interface FileRoutesById {
   '/_auth/signup': typeof AuthSignupRoute
   '/_auth/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
+  '/_auth/waiting': typeof AuthWaitingRoute
   '/d/changelog': typeof DChangelogRouteWithChildren
   '/d/customers': typeof DCustomersRouteWithChildren
   '/d/feedback': typeof DFeedbackRouteWithChildren
@@ -810,6 +828,7 @@ export interface FileRoutesById {
   '/d/help-center/requests/$changeset': typeof DHelpCenterRequestsChangesetRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
+  '/d/settings/conversation-attributes/$attribute': typeof DSettingsConversationAttributesAttributeRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
   '/d/settings/integrations/facebook': typeof DSettingsIntegrationsFacebookRoute
@@ -854,6 +873,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/two-factor-reset'
     | '/verify-email'
+    | '/waiting'
     | '/d/changelog'
     | '/d/customers'
     | '/d/feedback'
@@ -903,6 +923,7 @@ export interface FileRouteTypes {
     | '/d/help-center/requests/$changeset'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
+    | '/d/settings/conversation-attributes/$attribute'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
     | '/d/settings/integrations/facebook'
@@ -943,6 +964,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/two-factor-reset'
     | '/verify-email'
+    | '/waiting'
     | '/d/customers'
     | '/d/home'
     | '/d/notifications'
@@ -987,6 +1009,7 @@ export interface FileRouteTypes {
     | '/d/help-center/requests/$changeset'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
+    | '/d/settings/conversation-attributes/$attribute'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
     | '/d/settings/integrations/facebook'
@@ -1028,6 +1051,7 @@ export interface FileRouteTypes {
     | '/_auth/signup'
     | '/_auth/two-factor-reset'
     | '/_auth/verify-email'
+    | '/_auth/waiting'
     | '/d/changelog'
     | '/d/customers'
     | '/d/feedback'
@@ -1078,6 +1102,7 @@ export interface FileRouteTypes {
     | '/d/help-center/requests/$changeset'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
+    | '/d/settings/conversation-attributes/$attribute'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
     | '/d/settings/integrations/facebook'
@@ -1205,6 +1230,13 @@ declare module '@tanstack/react-router' {
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof AuthVerifyEmailRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/waiting': {
+      id: '/_auth/waiting'
+      path: '/waiting'
+      fullPath: '/waiting'
+      preLoaderRoute: typeof AuthWaitingRouteImport
       parentRoute: typeof AuthRoute
     }
     '/d/': {
@@ -1585,6 +1617,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DSettingsActionsActionRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/settings/conversation-attributes/$attribute': {
+      id: '/d/settings/conversation-attributes/$attribute'
+      path: '/settings/conversation-attributes/$attribute'
+      fullPath: '/d/settings/conversation-attributes/$attribute'
+      preLoaderRoute: typeof DSettingsConversationAttributesAttributeRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/settings/inboxes/$inbox': {
       id: '/d/settings/inboxes/$inbox'
       path: '/settings/inboxes/$inbox'
@@ -1902,6 +1941,7 @@ interface DRouteRouteChildren {
   DSettingsIndexRoute: typeof DSettingsIndexRoute
   DWorkflowsIndexRoute: typeof DWorkflowsIndexRoute
   DSettingsActionsActionRoute: typeof DSettingsActionsActionRoute
+  DSettingsConversationAttributesAttributeRoute: typeof DSettingsConversationAttributesAttributeRoute
   DSettingsInboxesInboxRoute: typeof DSettingsInboxesInboxRoute
   DSettingsIntegrationsIntegrationRoute: typeof DSettingsIntegrationsIntegrationRoute
   DSettingsIntegrationsFacebookRoute: typeof DSettingsIntegrationsFacebookRoute
@@ -1955,6 +1995,8 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsIndexRoute: DSettingsIndexRoute,
   DWorkflowsIndexRoute: DWorkflowsIndexRoute,
   DSettingsActionsActionRoute: DSettingsActionsActionRoute,
+  DSettingsConversationAttributesAttributeRoute:
+    DSettingsConversationAttributesAttributeRoute,
   DSettingsInboxesInboxRoute: DSettingsInboxesInboxRoute,
   DSettingsIntegrationsIntegrationRoute: DSettingsIntegrationsIntegrationRoute,
   DSettingsIntegrationsFacebookRoute: DSettingsIntegrationsFacebookRoute,
@@ -1996,6 +2038,7 @@ interface AuthRouteChildren {
   AuthSignupRoute: typeof AuthSignupRoute
   AuthTwoFactorResetRoute: typeof AuthTwoFactorResetRoute
   AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
+  AuthWaitingRoute: typeof AuthWaitingRoute
   AuthEmailConfirmRoute: typeof AuthEmailConfirmRoute
   AuthLoginMagicRoute: typeof AuthLoginMagicRoute
   AuthLoginTwoFactorRoute: typeof AuthLoginTwoFactorRoute
@@ -2012,6 +2055,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthSignupRoute: AuthSignupRoute,
   AuthTwoFactorResetRoute: AuthTwoFactorResetRoute,
   AuthVerifyEmailRoute: AuthVerifyEmailRoute,
+  AuthWaitingRoute: AuthWaitingRoute,
   AuthEmailConfirmRoute: AuthEmailConfirmRoute,
   AuthLoginMagicRoute: AuthLoginMagicRoute,
   AuthLoginTwoFactorRoute: AuthLoginTwoFactorRoute,
