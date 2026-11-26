@@ -35,7 +35,7 @@ const countMigrationRecords = `-- name: CountMigrationRecords :many
 SELECT kind, status, count(*)::integer AS records, count(*) FILTER (WHERE created)::integer AS created,
     count(*) FILTER (WHERE jsonb_array_length(conflicts) > 0)::integer AS conflicted
 FROM migration_records
-WHERE migration_id = $1
+WHERE migration_id = $1 AND undone_at IS NULL
 GROUP BY kind, status
 ORDER BY kind, status
 `
@@ -155,20 +155,6 @@ func (q *Queries) CreateMigration(ctx context.Context, arg CreateMigrationParams
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const deleteMigrationRecord = `-- name: DeleteMigrationRecord :exec
-DELETE FROM migration_records WHERE migration_id = $1 AND id = $2
-`
-
-type DeleteMigrationRecordParams struct {
-	MigrationID ids.UUID `json:"migration_id"`
-	ID          ids.UUID `json:"id"`
-}
-
-func (q *Queries) DeleteMigrationRecord(ctx context.Context, arg DeleteMigrationRecordParams) error {
-	_, err := q.db.Exec(ctx, deleteMigrationRecord, arg.MigrationID, arg.ID)
-	return err
 }
 
 const findInboxConnectionOfType = `-- name: FindInboxConnectionOfType :one
@@ -310,7 +296,7 @@ func (q *Queries) FindMigration(ctx context.Context, arg FindMigrationParams) (M
 }
 
 const findMigrationRecord = `-- name: FindMigrationRecord :one
-SELECT id, workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash, source_updated_at, payload, waiting_for, state, error, warnings, conflicts, created_at, updated_at FROM migration_records
+SELECT id, workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash, source_updated_at, payload, waiting_for, state, error, warnings, conflicts, created_at, updated_at, undone_at FROM migration_records
 WHERE migration_id = $1 AND kind = $2 AND source_id = $3
 `
 
@@ -343,13 +329,14 @@ func (q *Queries) FindMigrationRecord(ctx context.Context, arg FindMigrationReco
 		&i.Conflicts,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }
 
 const findMigrationRecords = `-- name: FindMigrationRecords :many
-SELECT id, workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash, source_updated_at, payload, waiting_for, state, error, warnings, conflicts, created_at, updated_at FROM migration_records
-WHERE migration_id = $1 AND kind = $2 AND source_id = ANY ($3::text[])
+SELECT id, workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash, source_updated_at, payload, waiting_for, state, error, warnings, conflicts, created_at, updated_at, undone_at FROM migration_records
+WHERE migration_id = $1 AND kind = $2 AND source_id = ANY ($3::text[]) AND undone_at IS NULL
 `
 
 type FindMigrationRecordsParams struct {
@@ -359,7 +346,7 @@ type FindMigrationRecordsParams struct {
 }
 
 // FindMigrationRecords returns the records of the kind with the source
-// ids.
+// ids, leaving out those an undo removed.
 func (q *Queries) FindMigrationRecords(ctx context.Context, arg FindMigrationRecordsParams) ([]MigrationRecord, error) {
 	rows, err := q.db.Query(ctx, findMigrationRecords, arg.MigrationID, arg.Kind, arg.SourceIds)
 	if err != nil {
@@ -389,6 +376,7 @@ func (q *Queries) FindMigrationRecords(ctx context.Context, arg FindMigrationRec
 			&i.Conflicts,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UndoneAt,
 		); err != nil {
 			return nil, err
 		}
@@ -456,8 +444,8 @@ func (q *Queries) FinishMigrationRollback(ctx context.Context, arg FinishMigrati
 }
 
 const listCreatedMigrationRecords = `-- name: ListCreatedMigrationRecords :many
-SELECT id, workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash, source_updated_at, payload, waiting_for, state, error, warnings, conflicts, created_at, updated_at FROM migration_records
-WHERE migration_id = $1 AND kind = $2 AND created AND record_id IS NOT NULL
+SELECT id, workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash, source_updated_at, payload, waiting_for, state, error, warnings, conflicts, created_at, updated_at, undone_at FROM migration_records
+WHERE migration_id = $1 AND kind = $2 AND created AND record_id IS NOT NULL AND undone_at IS NULL
 ORDER BY id DESC
 LIMIT $3
 `
@@ -499,6 +487,7 @@ func (q *Queries) ListCreatedMigrationRecords(ctx context.Context, arg ListCreat
 			&i.Conflicts,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UndoneAt,
 		); err != nil {
 			return nil, err
 		}
@@ -511,7 +500,7 @@ func (q *Queries) ListCreatedMigrationRecords(ctx context.Context, arg ListCreat
 }
 
 const listDeferredMigrationRecords = `-- name: ListDeferredMigrationRecords :many
-SELECT id, workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash, source_updated_at, payload, waiting_for, state, error, warnings, conflicts, created_at, updated_at FROM migration_records
+SELECT id, workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash, source_updated_at, payload, waiting_for, state, error, warnings, conflicts, created_at, updated_at, undone_at FROM migration_records
 WHERE migration_id = $1 AND status = 'deferred'
 ORDER BY updated_at, id
 LIMIT $2
@@ -553,6 +542,7 @@ func (q *Queries) ListDeferredMigrationRecords(ctx context.Context, arg ListDefe
 			&i.Conflicts,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UndoneAt,
 		); err != nil {
 			return nil, err
 		}
@@ -565,7 +555,7 @@ func (q *Queries) ListDeferredMigrationRecords(ctx context.Context, arg ListDefe
 }
 
 const listMigrationProblems = `-- name: ListMigrationProblems :many
-SELECT id, workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash, source_updated_at, payload, waiting_for, state, error, warnings, conflicts, created_at, updated_at FROM migration_records
+SELECT id, workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash, source_updated_at, payload, waiting_for, state, error, warnings, conflicts, created_at, updated_at, undone_at FROM migration_records
 WHERE migration_id = $1
   AND (status IN ('failed', 'unsupported') OR jsonb_array_length(conflicts) > 0)
 ORDER BY updated_at DESC, id DESC
@@ -608,6 +598,7 @@ func (q *Queries) ListMigrationProblems(ctx context.Context, arg ListMigrationPr
 			&i.Conflicts,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UndoneAt,
 		); err != nil {
 			return nil, err
 		}
@@ -928,7 +919,7 @@ func (q *Queries) MigrateRating(ctx context.Context, arg MigrateRatingParams) er
 }
 
 const migrationFileByAttachment = `-- name: MigrationFileByAttachment :one
-SELECT id, workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash, source_updated_at, payload, waiting_for, state, error, warnings, conflicts, created_at, updated_at FROM migration_records
+SELECT id, workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash, source_updated_at, payload, waiting_for, state, error, warnings, conflicts, created_at, updated_at, undone_at FROM migration_records
 WHERE workspace_id = $1 AND kind = 'file' AND record_id = $2
 LIMIT 1
 `
@@ -963,6 +954,7 @@ func (q *Queries) MigrationFileByAttachment(ctx context.Context, arg MigrationFi
 		&i.Conflicts,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }
@@ -975,7 +967,7 @@ conv AS (
     RETURNING c.id
 ),
 tick AS (
-    UPDATE tickets k SET deleted_at = t.now, updated_at = t.now FROM target t
+    UPDATE tickets k SET deleted_at = t.now, external_id = NULL, updated_at = t.now FROM target t
     WHERE t.kind = 'ticket' AND k.workspace_id = t.ws AND k.id = t.id AND k.deleted_at IS NULL
     RETURNING k.id
 ),
@@ -1035,9 +1027,16 @@ team AS (
 tag AS (
     DELETE FROM tags g USING target t
     WHERE t.kind = 'tag' AND g.workspace_id = t.ws AND g.id = t.id
-      AND NOT EXISTS (SELECT 1 FROM conversation_tag x WHERE x.tag_id = g.id)
-      AND NOT EXISTS (SELECT 1 FROM contact_tag x WHERE x.tag_id = g.id)
-      AND NOT EXISTS (SELECT 1 FROM company_tag x WHERE x.tag_id = g.id)
+      AND NOT EXISTS (
+        SELECT 1 FROM conversation_tag x JOIN conversations v ON v.id = x.conversation_id
+        WHERE x.tag_id = g.id AND v.deleted_at IS NULL
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM contact_tag x JOIN contacts k ON k.id = x.contact_id WHERE x.tag_id = g.id AND k.deleted_at IS NULL
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM company_tag x JOIN companies k ON k.id = x.company_id WHERE x.tag_id = g.id AND k.deleted_at IS NULL
+      )
     RETURNING g.id
 ),
 attr AS (
@@ -1072,7 +1071,8 @@ type RemoveMigratedRecordParams struct {
 
 // RemoveMigratedRecord undoes one record a migration created, by its
 // ledger kind: trashing what can be trashed, archiving fields and ticket
-// setup, and deleting the rest. Records others now use are kept: a
+// setup, and deleting the rest. A trashed ticket gives up its external
+// id, which is the migration's own, so running again makes it anew. Records others now use are kept: a
 // contact with conversations the migration did not bring, a tag, team or
 // company still in use, a help center with other articles, a schedule
 // an inbox follows.
@@ -1176,6 +1176,58 @@ func (q *Queries) RequestMigrationRollback(ctx context.Context, arg RequestMigra
 	return i, err
 }
 
+const reviveUndoneCompany = `-- name: ReviveUndoneCompany :one
+UPDATE companies c SET deleted_at = NULL, updated_at = $1::timestamptz
+WHERE c.workspace_id = $2 AND c.external_id = $3::text AND c.deleted_at IS NOT NULL
+  AND EXISTS (
+    SELECT 1 FROM migration_records r
+    WHERE r.workspace_id = c.workspace_id AND r.record_id = c.id AND r.kind = 'company' AND r.created
+      AND r.undone_at IS NOT NULL
+  )
+RETURNING c.id
+`
+
+type ReviveUndoneCompanyParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ExternalID  string    `json:"external_id"`
+}
+
+// ReviveUndoneCompany restores the trashed company with the external id
+// when an undone migration created it, so running again finds it.
+func (q *Queries) ReviveUndoneCompany(ctx context.Context, arg ReviveUndoneCompanyParams) (ids.UUID, error) {
+	row := q.db.QueryRow(ctx, reviveUndoneCompany, arg.Now, arg.WorkspaceID, arg.ExternalID)
+	var id ids.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const reviveUndoneContact = `-- name: ReviveUndoneContact :one
+UPDATE contacts c SET deleted_at = NULL, updated_at = $1::timestamptz
+WHERE c.workspace_id = $2 AND c.external_id = $3::text AND c.deleted_at IS NOT NULL
+  AND EXISTS (
+    SELECT 1 FROM migration_records r
+    WHERE r.workspace_id = c.workspace_id AND r.record_id = c.id AND r.kind = 'contact' AND r.created
+      AND r.undone_at IS NOT NULL
+  )
+RETURNING c.id
+`
+
+type ReviveUndoneContactParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ExternalID  string    `json:"external_id"`
+}
+
+// ReviveUndoneContact restores the trashed contact with the external id
+// when an undone migration created it, so running again finds it.
+func (q *Queries) ReviveUndoneContact(ctx context.Context, arg ReviveUndoneContactParams) (ids.UUID, error) {
+	row := q.db.QueryRow(ctx, reviveUndoneContact, arg.Now, arg.WorkspaceID, arg.ExternalID)
+	var id ids.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const saveMigrationRecord = `-- name: SaveMigrationRecord :one
 INSERT INTO migration_records (
     workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash,
@@ -1191,7 +1243,7 @@ SET status = EXCLUDED.status, record_id = coalesce(EXCLUDED.record_id, migration
     content_hash = EXCLUDED.content_hash, source_updated_at = EXCLUDED.source_updated_at,
     payload = EXCLUDED.payload, waiting_for = EXCLUDED.waiting_for, state = EXCLUDED.state, error = EXCLUDED.error,
     warnings = EXCLUDED.warnings, conflicts = EXCLUDED.conflicts, updated_at = EXCLUDED.updated_at
-RETURNING id, workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash, source_updated_at, payload, waiting_for, state, error, warnings, conflicts, created_at, updated_at
+RETURNING id, workspace_id, migration_id, kind, source_id, status, record_id, created, label, content_hash, source_updated_at, payload, waiting_for, state, error, warnings, conflicts, created_at, updated_at, undone_at
 `
 
 type SaveMigrationRecordParams struct {
@@ -1257,6 +1309,7 @@ func (q *Queries) SaveMigrationRecord(ctx context.Context, arg SaveMigrationReco
 		&i.Conflicts,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }
@@ -1309,6 +1362,23 @@ type TouchMigrationParams struct {
 // TouchMigration notes when the migration last received records.
 func (q *Queries) TouchMigration(ctx context.Context, arg TouchMigrationParams) error {
 	_, err := q.db.Exec(ctx, touchMigration, arg.Now, arg.WorkspaceID, arg.ID)
+	return err
+}
+
+const undoMigrationRecord = `-- name: UndoMigrationRecord :exec
+UPDATE migration_records SET undone_at = $1::timestamptz, updated_at = $1::timestamptz WHERE migration_id = $2 AND id = $3
+`
+
+type UndoMigrationRecordParams struct {
+	Now         time.Time `json:"now"`
+	MigrationID ids.UUID  `json:"migration_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// UndoMigrationRecord marks a record the undo removed. The row stays, so
+// a later migration of the account can bring back what the undo trashed.
+func (q *Queries) UndoMigrationRecord(ctx context.Context, arg UndoMigrationRecordParams) error {
+	_, err := q.db.Exec(ctx, undoMigrationRecord, arg.Now, arg.MigrationID, arg.ID)
 	return err
 }
 

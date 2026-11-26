@@ -14,10 +14,12 @@ package migrations
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/companies"
@@ -82,9 +84,14 @@ func (s *step) company(ctx context.Context, f companies.Fields) (models.Company,
 	}
 
 	if f.ExternalID != nil || companies.NormalizeDomain(f.Domain) != nil {
+		revived, err := s.revived(ctx, KindCompany, f.ExternalID)
+		if err != nil {
+			return models.Company{}, false, err
+		}
+
 		c, created, err := companies.Identify(ctx, s.tx, companies.Identity{WorkspaceID: s.ws(), Fields: f, Now: s.now})
 
-		return c, created, err
+		return c, created || revived, err
 	}
 
 	attrs, err := s.gate(ctx, attributedefs.ObjectCompany, f.CustomAttributes)
@@ -277,8 +284,13 @@ contact finds the contact this record made before, else the one with
 its external id or email, else adds one.
 */
 func (s *step) contact(ctx context.Context, c *Contact) (models.Contact, bool, error) {
+	revived, err := s.revived(ctx, KindContact, orNil(c.ExternalID))
+	if err != nil {
+		return models.Contact{}, false, err
+	}
+
 	if found, ok := s.matchContact(ctx, c); ok {
-		return found, false, nil
+		return found, revived, nil
 	}
 
 	kind := c.Kind
@@ -486,4 +498,38 @@ func (n *ContactNote) subject(s *step, params *models.CreateMigratedNoteParams) 
 	params.CompanyID = &id
 
 	return err
+}
+
+/*
+revived brings back the contact or company with the external id that
+an undone migration created and trashed, so running the account again
+finds it instead of clashing with its id, and reports whether it did.
+The record counts as created again, so a later undo removes it too.
+*/
+func (s *step) revived(ctx context.Context, kind string, external *string) (bool, error) {
+	if external == nil || *external == "" {
+		return false, nil
+	}
+
+	var err error
+
+	if kind == KindContact {
+		_, err = s.q.ReviveUndoneContact(ctx, models.ReviveUndoneContactParams{
+			Now: s.now, WorkspaceID: s.ws(), ExternalID: *external,
+		})
+	} else {
+		_, err = s.q.ReviveUndoneCompany(ctx, models.ReviveUndoneCompanyParams{
+			Now: s.now, WorkspaceID: s.ws(), ExternalID: *external,
+		})
+	}
+
+	if errors.Is(err, database.ErrNotFound) {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("bring back %s: %w", kind, err)
+	}
+
+	return true, nil
 }

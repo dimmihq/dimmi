@@ -53,9 +53,9 @@ WHERE migration_id = @migration_id AND kind = @kind AND source_id = @source_id;
 
 -- name: FindMigrationRecords :many
 -- FindMigrationRecords returns the records of the kind with the source
--- ids.
+-- ids, leaving out those an undo removed.
 SELECT * FROM migration_records
-WHERE migration_id = @migration_id AND kind = @kind AND source_id = ANY (@source_ids::text[]);
+WHERE migration_id = @migration_id AND kind = @kind AND source_id = ANY (@source_ids::text[]) AND undone_at IS NULL;
 
 -- name: SaveMigrationRecord :one
 -- SaveMigrationRecord keeps what a record became. A record that was
@@ -90,7 +90,7 @@ LIMIT @row_limit;
 SELECT kind, status, count(*)::integer AS records, count(*) FILTER (WHERE created)::integer AS created,
     count(*) FILTER (WHERE jsonb_array_length(conflicts) > 0)::integer AS conflicted
 FROM migration_records
-WHERE migration_id = @migration_id
+WHERE migration_id = @migration_id AND undone_at IS NULL
 GROUP BY kind, status
 ORDER BY kind, status;
 
@@ -107,12 +107,38 @@ LIMIT @row_limit;
 -- ListCreatedMigrationRecords returns a page of the records of the kind
 -- the migration created, newest first, for an undo.
 SELECT * FROM migration_records
-WHERE migration_id = @migration_id AND kind = @kind AND created AND record_id IS NOT NULL
+WHERE migration_id = @migration_id AND kind = @kind AND created AND record_id IS NOT NULL AND undone_at IS NULL
 ORDER BY id DESC
 LIMIT @row_limit;
 
--- name: DeleteMigrationRecord :exec
-DELETE FROM migration_records WHERE migration_id = @migration_id AND id = @id;
+-- name: UndoMigrationRecord :exec
+-- UndoMigrationRecord marks a record the undo removed. The row stays, so
+-- a later migration of the account can bring back what the undo trashed.
+UPDATE migration_records SET undone_at = @now::timestamptz, updated_at = @now::timestamptz WHERE migration_id = @migration_id AND id = @id;
+
+-- name: ReviveUndoneContact :one
+-- ReviveUndoneContact restores the trashed contact with the external id
+-- when an undone migration created it, so running again finds it.
+UPDATE contacts c SET deleted_at = NULL, updated_at = @now::timestamptz
+WHERE c.workspace_id = @workspace_id AND c.external_id = @external_id::text AND c.deleted_at IS NOT NULL
+  AND EXISTS (
+    SELECT 1 FROM migration_records r
+    WHERE r.workspace_id = c.workspace_id AND r.record_id = c.id AND r.kind = 'contact' AND r.created
+      AND r.undone_at IS NOT NULL
+  )
+RETURNING c.id;
+
+-- name: ReviveUndoneCompany :one
+-- ReviveUndoneCompany restores the trashed company with the external id
+-- when an undone migration created it, so running again finds it.
+UPDATE companies c SET deleted_at = NULL, updated_at = @now::timestamptz
+WHERE c.workspace_id = @workspace_id AND c.external_id = @external_id::text AND c.deleted_at IS NOT NULL
+  AND EXISTS (
+    SELECT 1 FROM migration_records r
+    WHERE r.workspace_id = c.workspace_id AND r.record_id = c.id AND r.kind = 'company' AND r.created
+      AND r.undone_at IS NOT NULL
+  )
+RETURNING c.id;
 
 -- name: MigrationFileByAttachment :one
 -- MigrationFileByAttachment returns the migration file record of the
@@ -213,7 +239,8 @@ SET score = EXCLUDED.score, comment = EXCLUDED.comment, rated_at = EXCLUDED.rate
 -- name: RemoveMigratedRecord :execrows
 -- RemoveMigratedRecord undoes one record a migration created, by its
 -- ledger kind: trashing what can be trashed, archiving fields and ticket
--- setup, and deleting the rest. Records others now use are kept: a
+-- setup, and deleting the rest. A trashed ticket gives up its external
+-- id, which is the migration's own, so running again makes it anew. Records others now use are kept: a
 -- contact with conversations the migration did not bring, a tag, team or
 -- company still in use, a help center with other articles, a schedule
 -- an inbox follows.
@@ -224,7 +251,7 @@ conv AS (
     RETURNING c.id
 ),
 tick AS (
-    UPDATE tickets k SET deleted_at = t.now, updated_at = t.now FROM target t
+    UPDATE tickets k SET deleted_at = t.now, external_id = NULL, updated_at = t.now FROM target t
     WHERE t.kind = 'ticket' AND k.workspace_id = t.ws AND k.id = t.id AND k.deleted_at IS NULL
     RETURNING k.id
 ),
@@ -284,9 +311,16 @@ team AS (
 tag AS (
     DELETE FROM tags g USING target t
     WHERE t.kind = 'tag' AND g.workspace_id = t.ws AND g.id = t.id
-      AND NOT EXISTS (SELECT 1 FROM conversation_tag x WHERE x.tag_id = g.id)
-      AND NOT EXISTS (SELECT 1 FROM contact_tag x WHERE x.tag_id = g.id)
-      AND NOT EXISTS (SELECT 1 FROM company_tag x WHERE x.tag_id = g.id)
+      AND NOT EXISTS (
+        SELECT 1 FROM conversation_tag x JOIN conversations v ON v.id = x.conversation_id
+        WHERE x.tag_id = g.id AND v.deleted_at IS NULL
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM contact_tag x JOIN contacts k ON k.id = x.contact_id WHERE x.tag_id = g.id AND k.deleted_at IS NULL
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM company_tag x JOIN companies k ON k.id = x.company_id WHERE x.tag_id = g.id AND k.deleted_at IS NULL
+      )
     RETURNING g.id
 ),
 attr AS (

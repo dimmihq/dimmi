@@ -232,10 +232,10 @@ func (s *Migrations) undoPage(ctx context.Context, row models.Migration, kind st
 
 			removed += int(n)
 
-			if err := q.DeleteMigrationRecord(ctx, models.DeleteMigrationRecordParams{
-				MigrationID: row.ID, ID: rec.ID,
+			if err := q.UndoMigrationRecord(ctx, models.UndoMigrationRecordParams{
+				Now: s.Clock.Now(), MigrationID: row.ID, ID: rec.ID,
 			}); err != nil {
-				return fmt.Errorf("drop ledger row: %w", err)
+				return fmt.Errorf("mark ledger row undone: %w", err)
 			}
 		}
 

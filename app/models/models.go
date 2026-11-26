@@ -2126,6 +2126,7 @@ type MigrationRecord struct {
 	Conflicts       json.RawMessage `json:"conflicts"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+	UndoneAt        *time.Time      `json:"undone_at"`
 }
 
 type Notification struct {
