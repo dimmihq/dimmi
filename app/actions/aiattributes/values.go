@@ -136,7 +136,7 @@ func (a *Attributes) Values(ctx context.Context, m authz.Membership, ref convers
 			return err
 		}
 
-		out, err = found(ctx, q, m.Workspace.ID, c.ID)
+		out, err = foundFor(ctx, q, m, c.ID)
 
 		return err
 	})
@@ -175,12 +175,33 @@ func (a *Attributes) Set(ctx context.Context, in SetInput) (Found, error) {
 			return err
 		}
 
-		out, err = found(ctx, q, m.Workspace.ID, c.ID)
+		out, err = foundFor(ctx, q, m, c.ID)
 
 		return err
 	})
 
 	return out, err
+}
+
+/*
+foundFor reads a conversation's attributes the member's teams see.
+*/
+func foundFor(ctx context.Context, q *models.Queries, m authz.Membership, conversationID ids.UUID) (Found, error) {
+	out, err := found(ctx, q, m.Workspace.ID, conversationID)
+	if err != nil {
+		return out, err
+	}
+
+	teams, err := conversations.MemberTeamIDs(ctx, q, m.Workspace.ID, m.Member.ID)
+	if err != nil {
+		return out, err
+	}
+
+	out.Values = slices.DeleteFunc(out.Values, func(v Value) bool {
+		return !conversations.SeesAttribute(v.Attribute.TeamIds, teams)
+	})
+
+	return out, nil
 }
 
 /*
@@ -223,7 +244,8 @@ func found(ctx context.Context, q *models.Queries, workspaceID, conversationID i
 /*
 Write applies values to a conversation in the writer's transaction, as
 the one named by: each must fit its active attribute, a nil clears it.
-A teammate may not set what only the AI fills, and the AI never
+A teammate may not set what only the AI fills, nor what only teams they
+are not in see, and the AI never
 replaces what someone else set. Each change joins the timeline and
 dispatches the change events, then the changes come back in key order.
 */
@@ -237,6 +259,17 @@ func Write(
 	defs, err := w.Q.ListAIConversationAttributes(ctx, c.WorkspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("list conversation attributes: %w", err)
+	}
+
+	if by == SetByMember {
+		teams, err := conversations.MemberTeamIDs(ctx, w.Q, c.WorkspaceID, w.Actor.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		defs = slices.DeleteFunc(defs, func(d models.AiConversationAttribute) bool {
+			return !conversations.SeesAttribute(d.TeamIds, teams)
+		})
 	}
 
 	row, err := w.Q.LockConversationAIValues(ctx, models.LockConversationAIValuesParams{

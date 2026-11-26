@@ -6,8 +6,12 @@
 | A workspace may require some conversation attributes before a
 | teammate closes a conversation, such as why the customer wrote. A
 | teammate's close, alone or in bulk, is refused while one is empty,
-| naming each one missing. The AI, workflows, the customer and imports
-| still close conversations as before.
+| naming each one missing; one shown only to teams the teammate is not
+| in does not hold them back. The AI, workflows, the customer and
+| imports still close conversations as before.
+|
+| An attribute shown only to some teams is seen, read and written only
+| by their members, in the inbox and through the API alike.
 |
 */
 
@@ -18,9 +22,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/fault"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
@@ -58,10 +64,15 @@ func (w *Writer) checkRequiredToClose(ctx context.Context, c models.Conversation
 	values := map[string]any{}
 	_ = json.Unmarshal(row.Values, &values)
 
+	teams, err := MemberTeamIDs(ctx, w.Q, c.WorkspaceID, w.Actor.ID)
+	if err != nil {
+		return err
+	}
+
 	var missing []map[string]string
 
 	for _, a := range required {
-		if fieldvalues.Empty(values[a.Key]) {
+		if SeesAttribute(a.TeamIds, teams) && fieldvalues.Empty(values[a.Key]) {
 			missing = append(missing, map[string]string{"key": a.Key, "label": a.Label})
 		}
 	}
@@ -79,4 +90,41 @@ func wrapRequired(err error) error {
 	}
 
 	return nil
+}
+
+/*
+MemberTeamIDs returns the live teams a member is in.
+*/
+func MemberTeamIDs(ctx context.Context, q *models.Queries, workspaceID, memberID ids.UUID) ([]ids.UUID, error) {
+	rows, err := q.ListMemberTeams(ctx, models.ListMemberTeamsParams{
+		WorkspaceID: workspaceID, MemberIds: []ids.UUID{memberID},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list member teams: %w", err)
+	}
+
+	out := make([]ids.UUID, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, r.Team.ID)
+	}
+
+	return out, nil
+}
+
+/*
+SeesAttribute reports whether a member of the teams sees an attribute
+shown to the attribute's teams, every team when it names none.
+*/
+func SeesAttribute(attributeTeams, memberTeams []ids.UUID) bool {
+	if len(attributeTeams) == 0 {
+		return true
+	}
+
+	for _, t := range attributeTeams {
+		if slices.Contains(memberTeams, t) {
+			return true
+		}
+	}
+
+	return false
 }

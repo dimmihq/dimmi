@@ -246,6 +246,37 @@ func TestConversationAttributesRequiredToClose(t *testing.T) {
 	})
 }
 
+func TestConversationAttributeTeams(t *testing.T) {
+	t.Parallel()
+
+	t.Run("an attribute shown only to other teams is hidden, refused and never required", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+
+		var team struct {
+			Data struct {
+				ID string `json:"id"`
+			} `json:"data"`
+		}
+		d.owner.PostJSON("/api/v1/teams", testkit.JSON{"name": "Billing"}).AssertCreated().Decode(&team)
+
+		d.attribute(t, testkit.JSON{
+			"key": "invoice", "label": "Invoice", "data_type": "text", "required_to_close": true,
+			"team_ids": []string{team.Data.ID},
+		})
+		d.attribute(t, testkit.JSON{"key": "notes", "label": "Notes", "data_type": "text"})
+
+		conv := d.customer(t, "ann", "Refund", "Please")
+		path := "/api/v1/conversations/" + conv + "/attributes"
+
+		d.owner.GetJSON(path).AssertOK().AssertJSONPath("data.values.#", 1).
+			AssertJSONPath("data.values.0.attribute.key", "notes")
+		d.owner.PatchJSON(path, testkit.JSON{"values": testkit.JSON{"invoice": "INV-1"}}).AssertStatus(422).
+			AssertJSONPath("problems.invoice", "unknown_attribute")
+		d.owner.PatchJSON("/api/v1/conversations/"+conv, testkit.JSON{"status": "closed"}).AssertOK()
+	})
+}
+
 func TestConversationAttributeSettings(t *testing.T) {
 	t.Parallel()
 
