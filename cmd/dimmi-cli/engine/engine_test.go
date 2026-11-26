@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -145,6 +146,10 @@ func (d *fakeDest) Upsert(_ context.Context, _ string, kind format.Kind, recs []
 			continue
 		}
 
+		if raw, _ := json.Marshal(r.Data); strings.Contains(string(raw), "file_") {
+			return nil, fmt.Errorf("record %s still names source files: %s", r.SourceID, raw)
+		}
+
 		for _, f := range r.Files {
 			if !d.files[f.SourceID] {
 				return nil, fmt.Errorf("record %s sent before its file was uploaded", r.SourceID)
@@ -178,7 +183,7 @@ func (d *fakeDest) Upload(_ context.Context, _ string, u Upload) (string, error)
 	}
 	d.files[u.SourceID] = true
 
-	return fmt.Sprintf("file_%d", d.uploads), nil
+	return fmt.Sprintf("att_%d", d.uploads), nil
 }
 
 func (d *fakeDest) Lookup(_ context.Context, _ string, kind format.Kind, ids []string) (map[string]bool, error) {

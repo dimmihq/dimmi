@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -296,6 +297,12 @@ func (e *Engine) page(ctx context.Context, st *State, kind format.Kind, records 
 		into := counts
 		if k != kind {
 			into = map[string]int{}
+		}
+
+		for i := range todo[k] {
+			if err := linkFiles(&todo[k][i].rec, st.Files); err != nil {
+				return err
+			}
 		}
 
 		if err := e.send(ctx, st, k, todo[k], into); err != nil {
@@ -735,4 +742,85 @@ func (e *Engine) Rollback(ctx context.Context) (Migration, error) {
 	}
 
 	return mig, e.Store.Reset()
+}
+
+/*
+linkFiles points a record at the files dimmi holds: every file source id
+the translator wrote becomes the id dimmi gave the upload, inside lists
+and inside Markdown such as dimmi-file:<id>. A file that couldn't be
+uploaded is dropped from lists, so the record still goes.
+*/
+func linkFiles(rec *format.Record, uploaded map[string]string) error {
+	if len(rec.Files) == 0 {
+		return nil
+	}
+
+	ids := map[string]string{}
+	for _, f := range rec.Files {
+		if f != nil && f.SourceID != "" {
+			ids[f.SourceID] = uploaded[f.SourceID]
+		}
+	}
+
+	raw, err := json.Marshal(rec.Data)
+	if err != nil {
+		return err
+	}
+
+	var v any
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return err
+	}
+
+	out, err := json.Marshal(swapFiles(v, ids))
+	if err != nil {
+		return err
+	}
+
+	rec.Data = json.RawMessage(out)
+
+	return nil
+}
+
+func swapFiles(v any, ids map[string]string) any {
+	switch x := v.(type) {
+	case map[string]any:
+		for k, child := range x {
+			x[k] = swapFiles(child, ids)
+		}
+
+		return x
+	case []any:
+		out := x[:0]
+
+		for _, child := range x {
+			if s, ok := child.(string); ok {
+				if id, known := ids[s]; known {
+					if id != "" {
+						out = append(out, id)
+					}
+
+					continue
+				}
+			}
+
+			out = append(out, swapFiles(child, ids))
+		}
+
+		return out
+	case string:
+		if id, known := ids[x]; known {
+			return id
+		}
+
+		for src, id := range ids {
+			if id != "" && strings.Contains(x, src) {
+				x = strings.ReplaceAll(x, src, id)
+			}
+		}
+
+		return x
+	}
+
+	return v
 }

@@ -32,10 +32,10 @@ var page = template.Must(template.ParseFS(pages, "page.html"))
 
 /*
 CallbackPath is where dimmi's sign-in returns. The dimmi CLI's OAuth
-client registers http://127.0.0.1/oauth/callback, which matches on any
+client registers http://127.0.0.1/callback, which matches on any
 port.
 */
-const CallbackPath = "/oauth/callback"
+const CallbackPath = "/callback"
 
 /*
 Option is a choice in the source form, such as a region.

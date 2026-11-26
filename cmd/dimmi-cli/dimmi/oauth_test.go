@@ -23,7 +23,7 @@ func TestFlowSendsPKCEAndChecksState(t *testing.T) {
 
 	meta := Metadata{Issuer: srv.URL, AuthorizationEndpoint: srv.URL + "/oauth/authorize", TokenEndpoint: srv.URL + "/oauth/token"}
 
-	f, err := NewFlow(meta, ClientID, "http://127.0.0.1:5555/oauth/callback")
+	f, err := NewFlow(meta, ClientID, "http://127.0.0.1:5555/callback")
 	if err != nil {
 		t.Fatal(err)
 	}
