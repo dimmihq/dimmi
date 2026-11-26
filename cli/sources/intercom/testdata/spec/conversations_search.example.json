@@ -1,0 +1,82 @@
+{
+  "type": "conversation.list",
+  "pages": {
+    "type": "pages",
+    "page": 1,
+    "per_page": 5,
+    "total_pages": 1
+  },
+  "total_count": 1,
+  "conversations": [
+    {
+      "type": "conversation",
+      "id": "515",
+      "created_at": 1734537546,
+      "updated_at": 1734537546,
+      "waiting_since": null,
+      "snoozed_until": null,
+      "source": {
+        "type": "conversation",
+        "id": "403918346",
+        "delivered_as": "admin_initiated",
+        "subject": "",
+        "body": "<p>this is the message body</p>",
+        "author": {
+          "type": "admin",
+          "id": "991267691",
+          "name": "Ciaran210 Lee",
+          "email": "admin210@email.com"
+        },
+        "attachments": [],
+        "url": null,
+        "redacted": false
+      },
+      "contacts": {
+        "type": "contact.list",
+        "contacts": [
+          {
+            "type": "contact",
+            "id": "6762f14a1bb69f9f2193bbb3",
+            "email": "joe@example.com",
+            "external_id": "70"
+          }
+        ]
+      },
+      "first_contact_reply": null,
+      "admin_assignee_id": 991267715,
+      "team_assignee_id": 5017691,
+      "open": false,
+      "state": "closed",
+      "read": false,
+      "tags": {
+        "type": "tag.list",
+        "tags": []
+      },
+      "priority": "none",
+      "sla_applied": null,
+      "statistics": null,
+      "conversation_rating": null,
+      "teammates": null,
+      "title": null,
+      "custom_attributes": {},
+      "topics": {},
+      "ticket": null,
+      "linked_objects": {
+        "type": "list",
+        "data": [],
+        "total_count": 0,
+        "has_more": false
+      },
+      "ai_agent": null,
+      "ai_agent_participated": false,
+      "sales_agent_participated": false,
+      "sales_agent": null,
+      "company": null,
+      "external_references": [],
+      "channel": {
+        "initial": "messenger",
+        "current": "messenger"
+      }
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "company",
+      "id": "193",
+      "name": "text name",
+      "app_id": "194",
+      "plan": {
+        "type": "text type",
+        "id": "195",
+        "name": "text name"
+      },
+      "company_id": "196",
+      "remote_created_at": 1700000197,
+      "created_at": 1700000198,
+      "updated_at": 1700000199,
+      "last_request_at": 1700000200,
+      "size": 1700000201,
+      "website": "text website",
+      "industry": "text industry",
+      "monthly_spend": 1700000202,
+      "session_count": 1700000203,
+      "user_count": 1700000204,
+      "custom_attributes": {},
+      "tags": {
+        "type": "tag.list",
+        "tags": [
+          {
+            "type": "text type",
+            "id": "205",
+            "name": "text name"
+          }
+        ]
+      },
+      "segments": {
+        "type": "segment.list",
+        "segments": [
+          {
+            "type": "segment",
+            "id": "206",
+            "name": "text name",
+            "created_at": 1700000207,
+            "updated_at": 1700000208,
+            "person_type": "contact",
+            "count": 1700000209
+          }
+        ]
+      },
+      "notes": {
+        "type": "note.list",
+        "data": [
+          {
+            "type": "text type",
+            "id": "210",
+            "url": "text url",
+            "body": "text body"
+          }
+        ],
+        "url": "text url",
+        "total_count": 1700000211,
+        "has_more": true
+      }
+    }
+  ],
+  "total_count": 1700000212,
+  "pages": {
+    "type": "pages",
+    "page": 1700000213,
+    "next": "https://example.com/x",
+    "prev": "https://example.com/x",
+    "per_page": 1700000214,
+    "total_pages": 1700000215
+  }
+}

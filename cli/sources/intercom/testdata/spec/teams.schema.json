@@ -1,0 +1,23 @@
+{
+  "type": "team.list",
+  "teams": [
+    {
+      "type": "text type",
+      "id": "7",
+      "name": "text name",
+      "admin_ids": [
+        1700000008
+      ],
+      "admin_priority_level": {
+        "primary_admin_ids": [
+          1700000009
+        ],
+        "secondary_admin_ids": [
+          1700000010
+        ]
+      },
+      "assignment_limit": 1700000011,
+      "distribution_method": "text distribution_method"
+    }
+  ]
+}

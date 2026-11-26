@@ -61,6 +61,12 @@ func fakeIntercom(t *testing.T, limited *atomic.Int32) *httptest.Server {
 	mux.HandleFunc("GET /admins", guard(func(w http.ResponseWriter, _ *http.Request) {
 		write(w, `{"admins":[{"type":"admin","id":"1","name":"A","email":"a@x"}]}`)
 	}))
+	mux.HandleFunc("GET /teams", guard(func(w http.ResponseWriter, _ *http.Request) {
+		write(w, `{"type":"team.list","teams":[]}`)
+	}))
+	mux.HandleFunc("GET /tags", guard(func(w http.ResponseWriter, _ *http.Request) {
+		write(w, `{"type":"list","data":[]}`)
+	}))
 	mux.HandleFunc("POST /conversations/search", guard(fakeSearch))
 	mux.HandleFunc("GET /conversations/{id}", guard(func(w http.ResponseWriter, r *http.Request) {
 		fakeConversation(t, w, r)

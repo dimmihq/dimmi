@@ -1,0 +1,28 @@
+{
+  "export_version": "text export_version",
+  "exported_at": "2026-01-02T03:04:05Z",
+  "app_id": 1700000897,
+  "workflow": {
+    "id": "898",
+    "title": "text title",
+    "description": "text description",
+    "trigger_type": "text trigger_type",
+    "state": "live",
+    "target_channels": [
+      "text target_channels"
+    ],
+    "preferred_devices": [
+      "text preferred_devices"
+    ],
+    "created_at": "2026-01-02T03:04:05Z",
+    "updated_at": "2026-01-02T03:04:05Z",
+    "targeting": {},
+    "snapshot": {},
+    "attributes": [
+      {}
+    ],
+    "embedded_rules": [
+      {}
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "type": "text type",
+  "data": [
+    {
+      "type": "text type",
+      "id": "162",
+      "created_at": 1700000163,
+      "contact": {
+        "type": "text type",
+        "id": "164"
+      },
+      "company": {
+        "type": "text type",
+        "id": "165"
+      },
+      "author": {
+        "type": "text type",
+        "id": "166",
+        "name": "text name",
+        "email": "text email",
+        "job_title": "text job_title",
+        "away_mode_enabled": true,
+        "away_mode_reassign": true,
+        "away_status_reason_id": 1700000167,
+        "has_inbox_seat": true,
+        "team_ids": [
+          1700000168
+        ],
+        "avatar": {
+          "type": "text type",
+          "image_url": "https://example.com/x"
+        },
+        "team_priority_level": {
+          "primary_team_ids": [
+            1700000169
+          ],
+          "secondary_team_ids": [
+            1700000170
+          ]
+        },
+        "role": {
+          "type": "text type",
+          "id": "171",
+          "name": "text name"
+        }
+      },
+      "body": "text body"
+    }
+  ],
+  "total_count": 1700000172,
+  "pages": {
+    "type": "pages",
+    "page": 1700000173,
+    "next": "https://example.com/x",
+    "prev": "https://example.com/x",
+    "per_page": 1700000174,
+    "total_pages": 1700000175
+  }
+}
