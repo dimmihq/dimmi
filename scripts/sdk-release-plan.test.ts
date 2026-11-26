@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { bump, type PackageInput, plan, previousRelease } from "./sdk-release-plan.ts";
+import { bump, lastPublished, type PackageInput, plan, previousRelease } from "./sdk-release-plan.ts";
 
 const sdk = (over: Partial<PackageInput> & { name: string }): PackageInput => ({
   dir: over.name.replace("@dimmi/", ""),
@@ -103,5 +103,30 @@ describe("previousRelease", () => {
 
   it("is the newest release for a commit that is not one", () => {
     assert.equal(previousRelease("HEAD", tags), "v0.10.0");
+  });
+});
+
+describe("lastPublished", () => {
+  const releases = [
+    { tag: "v0.2.0", commit: "aaa" },
+    { tag: "v0.2.1", commit: "bbb" },
+    { tag: "v0.2.2", commit: "ccc" },
+    { tag: "v0.2.3", commit: "ddd" },
+    { tag: "v0.3.0-rc.1", commit: "eee" },
+  ];
+
+  it("is the newest earlier release a published SDK was built from", () => {
+    assert.equal(lastPublished("v0.2.4", releases, ["aaa"]), "v0.2.0");
+    assert.equal(lastPublished("v0.2.4", releases, ["aaa", "ccc"]), "v0.2.2");
+    assert.equal(lastPublished("v0.2.2", releases, ["aaa", "ccc"]), "v0.2.0");
+  });
+
+  it("skips releases whose SDKs never went out, so their changes ship next", () => {
+    assert.equal(lastPublished("HEAD", releases, ["bbb"]), "v0.2.1");
+  });
+
+  it("is the earliest release when nothing records a publish, and none before the first", () => {
+    assert.equal(lastPublished("v0.2.4", releases, []), "v0.2.0");
+    assert.equal(lastPublished("v0.2.0", releases, ["aaa"]), null);
   });
 });

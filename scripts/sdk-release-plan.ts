@@ -1,7 +1,9 @@
 /*
  * Decides which SDKs a platform release ships, and at which version.
  * sdk-release.yml runs it for each vX.Y.Z tag, comparing that tag with
- * the previous platform release:
+ * the last platform release that published SDKs. A release whose SDKs
+ * never went out, because nothing changed or because publishing failed,
+ * is not that release: what it would have shipped ships with the next one.
  *
  *   never published                         → first release, at its manifest version
  *   API contract and its source unchanged   → not released
@@ -149,6 +151,26 @@ export function previousRelease(tag: string, tags: string[]): string | null {
   );
 }
 
+/*
+ * lastPublished is the newest platform release before the tag that
+ * published SDKs: one whose commit a registry or an SDK tag names as the
+ * source of a published version. With no such record it is the earliest
+ * release, the one that first shipped every SDK, so nothing changed
+ * since is missed.
+ */
+export function lastPublished(
+  tag: string,
+  releases: { tag: string; commit: string }[],
+  publishedCommits: string[],
+): string | null {
+  const earlier = releases
+    .filter((r) => release.test(r.tag) && (!release.test(tag) || newer(r.tag, tag) < 0))
+    .sort((a, b) => newer(a.tag, b.tag));
+  const published = earlier.filter((r) => publishedCommits.includes(r.commit));
+
+  return (published.at(-1) ?? earlier.at(0))?.tag ?? null;
+}
+
 /* latest picks the newest X.Y.Z version from a list. */
 function latest(versions: string[]): string | null {
   return (
@@ -178,6 +200,35 @@ function publishedVersion(dir: string, name: string): string | null {
   }
   const versions: string | string[] = JSON.parse(res);
   return latest(Array.isArray(versions) ? versions : [versions]);
+}
+
+/*
+ * publishedCommits are the commits published SDKs were built from: the
+ * one npm recorded for each package's latest version, and the ones the
+ * release workflow's sdk/<dir>/v<version> tags sit on.
+ */
+function publishedCommits(names: string[]): string[] {
+  const fromNpm = names.map((name) => (out("npm", ["view", name, "gitHead"]) ?? "").trim());
+  const fromTags = git("for-each-ref", "--format=%(*objectname) %(objectname)", "refs/tags/sdk")
+    .split("\n")
+    .map((line) => line.trim().split(" ")[0] ?? "");
+
+  return [...new Set([...fromNpm, ...fromTags].filter((c) => c !== ""))];
+}
+
+/* baseline is the release the tag's SDKs are compared with. */
+function baseline(tag: string, target: string): string | null {
+  const releases = git("tag", "--list", "v*")
+    .split("\n")
+    .filter((t) => release.test(t))
+    .map((t) => ({ tag: t, commit: git("rev-parse", `${t}^{commit}`).trim() }));
+  const names = git("ls-tree", "-d", "--name-only", target, "sdk/")
+    .split("\n")
+    .filter((d) => d && git("cat-file", "-t", `${target}:${d}/package.json`).trim() === "blob")
+    .map((d) => JSON.parse(git("show", `${target}:${d}/package.json`)).name as string)
+    .filter((name) => name.startsWith("@") && !/-sdk$/.test(name));
+
+  return lastPublished(tag, releases, publishedCommits(names));
 }
 
 const ignoredSource = /(^|\/)(tests?\/|api-report\/|README\.md$|CHANGELOG\.md$)|\.test\.ts$/;
@@ -262,7 +313,7 @@ function main() {
     }
     return;
   }
-  const from = flag("--from") ?? previousRelease(tag, git("tag", "--list", "v*").split("\n"));
+  const from = flag("--from") ?? baseline(tag, target);
   const api = apiChange(from, target);
   const entries = plan(inputs(from, target), api);
 

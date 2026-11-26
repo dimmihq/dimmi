@@ -82,9 +82,9 @@ Only with a new API version, or, rarely, a reviewed exception:
 
 SDKs ship with the platform. Pushing a `vX.Y.Z` tag runs `release.yml` and `.github/workflows/sdk-release.yml`. A prerelease tag (`v0.2.0-rc.1`) releases no SDK. There is no approval step.
 
-`scripts/sdk-release-plan.ts` decides each SDK's release by comparing the tag with the previous platform release:
+`scripts/sdk-release-plan.ts` decides each SDK's release by comparing the tag with the last platform release that published SDKs. A release whose SDKs never went out, because nothing changed or publishing failed, is skipped, so its changes ship with the next one:
 
-| Change since the previous release | SDK release |
+| Change since that release | SDK release |
 | --- | --- |
 | Never published | First release, at its manifest version |
 | API contract and the SDK's source unchanged | None |
@@ -92,9 +92,9 @@ SDKs ship with the platform. Pushing a `vX.Y.Z` tag runs `release.yml` and `.git
 | API changed additively (no oasdiff break) | Minor, for the SDKs that expose the API: `@dimmi/api`, Go, PHP, Laravel, Python |
 | API changed with an approved break | Major, for the SDKs that expose the API |
 | An SDK it depends on is released | At least patch, so its range follows |
-| A changeset added since the previous release | At least the level it names |
+| A changeset added since that release | At least the level it names |
 
-`make sdk-release-plan` (or `TAG=v0.2.0`) prints the plan. Each SDK's previous version is what users already have: the latest on npm, on PyPI (`dimmi-sdk`), or tagged on its mirror.
+`make sdk-release-plan` (or `TAG=v0.2.0`) prints the plan. Each SDK's previous version is what users already have: the latest on npm, on PyPI (`dimmi-sdk`), or tagged on its mirror. The release that published it is the one npm recorded as the source of a package's latest version, or one carrying an `sdk/<name>/v<version>` tag; with neither, the earliest release.
 
 The run then applies the versions, generates, builds and tests every SDK (`make sdk-check`), checks each against its last published release (`make sdk-compat`; a break fails unless the plan makes it major), and publishes:
 
