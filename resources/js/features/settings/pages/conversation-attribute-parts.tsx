@@ -79,7 +79,7 @@ export function Movable({
   children: ReactNode;
 }) {
   if (!movable) {
-    return <li>{children}</li>;
+    return <li className="border-b border-separator-border pe-1 last:border-b-0">{children}</li>;
   }
 
   return (
