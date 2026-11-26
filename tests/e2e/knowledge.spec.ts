@@ -100,11 +100,12 @@ it.describe("knowledge sources", () => {
 
     await expect(modal.getByRole("listitem").filter({ hasText: "Content" })).toHaveAttribute("aria-current", "step");
     await expect(modal.getByRole("treegrid", { name: "Items to read" })).toBeVisible();
+    await expect(modal.getByText("3 pages will be read, of 100 at most.")).toBeVisible();
     await modal.getByRole("button", { name: "Continue" }).click();
     await expect(modal.getByRole("listitem").filter({ hasText: "Use" })).toHaveAttribute("aria-current", "step");
     await expect(modal.getByRole("checkbox", { name: /Agent/ })).toBeChecked();
     await modal.getByRole("button", { name: "Continue" }).click();
-    await expect(modal.getByText("Everything it can read")).toBeVisible();
+    await expect(modal.getByText("3 ticked items, 100 pages at most")).toBeVisible();
     await modal.getByRole("button", { name: "Add and sync" }).click();
 
     await expect(page).toHaveURL(/\/settings\/knowledge\/[^/]+$/);
