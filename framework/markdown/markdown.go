@@ -54,12 +54,12 @@ Footnotes adds GFM footnotes. Alerts renders GitHub alerts such as
 "> [!NOTE]" as aside elements. HeadingIDs gives every heading a unique
 id, keeping letters of every script. Highlight colors fenced code
 blocks of a known language with CSS classes; StyleSheet returns the
-matching CSS. Blocks adds the article blocks: embeds, buttons and
-collapsible details written as directives, and captioned pictures as
-figures. HardWraps keeps every line break inside a paragraph, as a
-person typing into a message box expects. ImageLayout reads a picture's
-width and alignment from its address's fragment and renders them as
-classes.
+matching CSS. Blocks adds the article blocks: embeds, buttons,
+collapsible details and centered text written as directives, and
+captioned pictures as figures. HardWraps keeps every line break inside a
+paragraph, as a person typing into a message box expects. ImageLayout
+reads a picture's width and alignment from its address's fragment and
+renders them as classes.
 
 RewriteLink, when set, sees every link and image and returns what to
 render instead. Sanitize is the policy the HTML passes through; nil

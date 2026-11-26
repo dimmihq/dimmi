@@ -159,6 +159,16 @@ func TestBlocks(t *testing.T) {
 			"<pre><code>:::\n</code></pre>\n</details>\n<p>After.</p>\n</details>\n<p>Outside.</p>\n", res.HTML)
 	})
 
+	t.Run("centers the blocks a center block holds", func(t *testing.T) {
+		t.Parallel()
+
+		res := render(t, articleFeatures(), ":::center\n## Welcome\n\nGlad to see you.\n:::\n\nLeft.")
+
+		assert.Equal(t, `<div class="align-center">`+"\n"+`<h2 id="welcome">Welcome</h2>`+"\n"+
+			"<p>Glad to see you.</p>\n</div>\n<p>Left.</p>\n", res.HTML)
+		assert.Equal(t, "Welcome", res.TOC[0].Title)
+	})
+
 	t.Run("closes a details block left open at the end", func(t *testing.T) {
 		t.Parallel()
 
@@ -340,11 +350,13 @@ func TestFlattenBlocks(t *testing.T) {
 		"::embed{src=\"https://vimeo.com/76979871\"}\n\n" +
 		"::button[Start a trial]{href=\"https://example.com/start\"}\n\n" +
 		"::::details[Refunds]\nFive days.\n\n:::details[Partial]\nTwo.\n:::\n::::\n\n" +
+		":::center\nMiddle.\n:::\n\n" +
 		"```\n::embed{src=\"https://youtu.be/dQw4w9WgXcQ\"}\n```\n"
 
 	assert.Equal(t, "Intro\n\n[Set up \\[fast\\]](<https://youtu.be/dQw4w9WgXcQ>)\n\n"+
 		"[Video](<https://vimeo.com/76979871>)\n\n"+
 		"[Start a trial](<https://example.com/start>)\n\n"+
 		"**Refunds**\nFive days.\n\n**Partial**\nTwo.\n\n\n\n"+
+		"\nMiddle.\n\n\n"+
 		"```\n::embed{src=\"https://youtu.be/dQw4w9WgXcQ\"}\n```\n", markdown.FlattenBlocks([]byte(src)))
 }

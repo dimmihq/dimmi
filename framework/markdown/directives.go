@@ -15,6 +15,9 @@
 |   :::details[How long do refunds take?]
 |   Five working days.
 |   :::
+|   :::center
+|   Centered words.
+|   :::
 |
 */
 
@@ -38,6 +41,7 @@ const (
 	DirectiveEmbed   = "embed"
 	DirectiveButton  = "button"
 	DirectiveDetails = "details"
+	DirectiveCenter  = "center"
 )
 
 /*
@@ -101,7 +105,7 @@ func isLeafName(name string) bool {
 }
 
 func isContainerName(name string) bool {
-	return name == DirectiveDetails
+	return name == DirectiveDetails || name == DirectiveCenter
 }
 
 /*

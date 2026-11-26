@@ -6,7 +6,7 @@
 | The article blocks rewritten as plain Markdown, for readers that see
 | only text, such as a language model: an embed and a button become a
 | link to where they go, and a details block becomes its summary in bold
-| followed by what it holds. Everything else stays exactly as written.
+| followed by what it holds. Centered text is just text. Everything else stays exactly as written.
 |
 */
 
@@ -72,7 +72,11 @@ func flatEdits(d *directiveNode) []edit {
 	if summary == "" {
 		summary = "Details"
 	}
-	edits := []edit{{at: d.open, with: "**" + escapeInline(summary) + "**"}}
+	opening := "**" + escapeInline(summary) + "**"
+	if d.name == DirectiveCenter {
+		opening = ""
+	}
+	edits := []edit{{at: d.open, with: opening}}
 	if d.close.Stop > d.close.Start {
 		edits = append(edits, edit{at: d.close, with: ""})
 	}

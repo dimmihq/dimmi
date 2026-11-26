@@ -10,7 +10,7 @@
 | alerts and footnotes carry, lazy image loading, and the disabled
 | checkboxes of task lists, and the article blocks: frames only from the
 | allowed embed providers' players with their fixed attributes, details
-| and summaries, and figures with captions. Anything else in the output is removed.
+| and summaries, centered text, and figures with captions. Anything else in the output is removed.
 |
 */
 
@@ -27,7 +27,7 @@ Patterns for the attribute values this package writes.
 */
 const (
 	headingIDPattern = `^[\p{L}\p{N}_-]+$`
-	classWord        = `(?:alert|button|chroma|details|embed|footnote|image)[\w-]*`
+	classWord        = `(?:align|alert|button|chroma|details|embed|footnote|image)[\w-]*`
 	classPattern     = `^` + classWord + `(?:\s+` + classWord + `)*$`
 	rolePattern      = `^(?:note|doc-noteref|doc-endnotes|doc-backlink)$`
 )

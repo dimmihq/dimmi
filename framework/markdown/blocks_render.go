@@ -8,8 +8,8 @@
 | and sent no more than the page's origin; an address that is no embed
 | is a link instead. A button is a link drawn as a button. A details
 | block is the browser's own disclosure, so it opens with the keyboard
-| and reads correctly with no script. A figure is a picture with its
-| caption.
+| and reads correctly with no script. A center block centers the text
+| it holds. A figure is a picture with its caption.
 |
 */
 
@@ -53,6 +53,10 @@ func (r *nodeRenderer) renderDirective(
 		openDetails(w, n)
 	case n.name == DirectiveDetails:
 		_, _ = w.WriteString("</details>\n")
+	case n.name == DirectiveCenter && entering:
+		_, _ = w.WriteString(`<div class="align-center">` + "\n")
+	case n.name == DirectiveCenter:
+		_, _ = w.WriteString("</div>\n")
 	}
 	return ast.WalkContinue, nil
 }

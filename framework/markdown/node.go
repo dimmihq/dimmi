@@ -105,8 +105,9 @@ func Parse(src []byte) *Node {
 
 /*
 ParseArticle reads Markdown in the article dialect: Parse's, plus
-embeds, buttons, details and captioned pictures. A caption becomes the
-Title of its picture.
+embeds, buttons, details, centered text and captioned pictures. Centered
+blocks are plain blocks here, and a caption becomes the Title of its
+picture.
 */
 func ParseArticle(src []byte) *Node {
 	root := &Node{Kind: KindDocument}
@@ -176,6 +177,9 @@ func convertBlock(n ast.Node, src []byte) (*Node, bool) {
 	case *ast.ThematicBreak:
 		return &Node{Kind: KindThematicBreak}, true
 	case *directiveNode:
+		if n.name == DirectiveCenter {
+			return nil, false
+		}
 		return convertDirective(n, src), true
 	case *figureNode:
 		return convertFigure(n, src), true

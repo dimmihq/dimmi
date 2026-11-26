@@ -90,6 +90,7 @@ func TestArticleRoundTrip(t *testing.T) {
 		"::button[Start a trial]{href=\"https://example.com/start\" align=\"center\"}\n\n" +
 		"> [!TIP]\n> Keep it short.\n\n" +
 		"::::details[Refunds]\nFive days.\n\n:::details[Partial]\nTwo.\n:::\n::::\n\n" +
+		":::center\n## Welcome\n\nCentered words.\n:::\n\n" +
 		"![Plans](/plans.png#width=60&align=center \"The plans page\")"
 
 	first, err := r.HTML([]byte(src))
@@ -126,4 +127,16 @@ func TestArticleMarkdownHostile(t *testing.T) {
 		assert.NotContains(t, res.HTML, "<script", html)
 		assert.NotContains(t, res.HTML, "evil.example\"", html)
 	}
+}
+
+func TestArticleCenteredText(t *testing.T) {
+	t.Parallel()
+
+	got, err := dom.ToArticleMarkdown(`<h2 class="intercom-align-center">Welcome</h2>` +
+		`<p class="intercom-align-center">Two lines</p><p>Left</p>` +
+		`<details><summary>Q</summary><p class="intercom-align-center">Mid</p></details>`)
+	require.NoError(t, err)
+
+	assert.Equal(t, ":::center\n## Welcome\n\nTwo lines\n:::\n\nLeft\n\n"+
+		"::::details[Q]\n:::center\nMid\n:::\n::::", got)
 }

@@ -16,6 +16,8 @@
 |   - a collapsible section, <details> with a <summary>, becomes
 |     :::details
 |   - a <figure> keeps its <figcaption> as the picture's caption
+|   - a paragraph or heading with class "intercom-align-center" goes into
+|     a :::center block with its centered neighbors
 |
 | dimmi's own article HTML converts back the same way, so an article
 | survives a round trip: its button rows, alert asides, embed frames and
@@ -124,6 +126,8 @@ func renderArticleBlock(ctx converter.Context, w converter.Writer, n *html.Node)
 		writeEmbed(w, n)
 	case n.Data == "details":
 		writeDetails(ctx, w, n)
+	case n.Data == "div" && hasClass(n, "align-center"):
+		writeCenter(ctx, w, n)
 	case n.Data == "div" && hasClass(n, intercomCallout):
 		writeCallout(ctx, w, n, calloutKind(styleOf(n)))
 	case n.Data == "aside" && ownAlert(n) != "":
@@ -211,7 +215,7 @@ func writeDetails(ctx converter.Context, w converter.Writer, n *html.Node) {
 		}
 		ctx.RenderNodes(ctx, &buf, c)
 	}
-	fence := strings.Repeat(":", 3+detailsDepth(n))
+	fence := strings.Repeat(":", 3+containerDepth(n))
 	content := bytes.TrimSpace(buf.Bytes())
 	out := fence + "details[" + escapeLabel(summary) + "]\n"
 	if len(content) > 0 {
@@ -221,18 +225,40 @@ func writeDetails(ctx converter.Context, w converter.Writer, n *html.Node) {
 }
 
 /*
-detailsDepth counts how deeply sections nest inside a section.
+writeCenter writes centered blocks as a center block.
 */
-func detailsDepth(n *html.Node) int {
+func writeCenter(ctx converter.Context, w converter.Writer, n *html.Node) {
+	var buf bytes.Buffer
+	ctx.RenderChildNodes(ctx, &buf, n)
+	content := bytes.TrimSpace(buf.Bytes())
+	if len(content) == 0 {
+		return
+	}
+	fence := strings.Repeat(":", 3+containerDepth(n))
+	block(w, fence+"center\n"+string(content)+"\n"+fence)
+}
+
+/*
+containerDepth counts how deeply sections and center blocks nest inside
+an element, so its fence can hold them all.
+*/
+func containerDepth(n *html.Node) int {
 	deepest := 0
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		d := detailsDepth(c)
-		if c.Type == html.ElementNode && c.Data == "details" {
+		d := containerDepth(c)
+		if isContainer(c) {
 			d++
 		}
 		deepest = max(deepest, d)
 	}
 	return deepest
+}
+
+/*
+isContainer reports whether an element converts to a container block.
+*/
+func isContainer(n *html.Node) bool {
+	return n.Type == html.ElementNode && (n.Data == "details" || (n.Data == "div" && hasClass(n, "align-center")))
 }
 
 /*
@@ -367,6 +393,52 @@ func preparePictures(_ converter.Context, doc *html.Node) {
 		}
 	}
 	walk(doc)
+	gatherCentered(doc)
+}
+
+/*
+gatherCentered wraps each run of paragraphs and headings Intercom
+centered in one center block, the way dimmi writes centered text.
+*/
+func gatherCentered(n *html.Node) {
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		gatherCentered(c)
+	}
+	var wrapper *html.Node
+	for c := n.FirstChild; c != nil; {
+		next := c.NextSibling
+		switch {
+		case isCenteredText(c):
+			if wrapper == nil {
+				wrapper = &html.Node{
+					Type: html.ElementNode, Data: "div",
+					Attr: []html.Attribute{{Key: "class", Val: "align-center"}},
+				}
+				n.InsertBefore(wrapper, c)
+			}
+			n.RemoveChild(c)
+			wrapper.AppendChild(c)
+		case c.Type == html.TextNode && strings.TrimSpace(c.Data) == "":
+		default:
+			wrapper = nil
+		}
+		c = next
+	}
+}
+
+/*
+isCenteredText reports whether an element is a paragraph or heading
+Intercom centered.
+*/
+func isCenteredText(n *html.Node) bool {
+	if n.Type != html.ElementNode || !hasClass(n, intercomCenter) {
+		return false
+	}
+	switch n.Data {
+	case "p", "h1", "h2", "h3", "h4", "h5", "h6":
+		return true
+	}
+	return false
 }
 
 /*
