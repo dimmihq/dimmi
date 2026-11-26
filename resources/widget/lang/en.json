@@ -44,6 +44,8 @@
   "office_hours_text": "",
   "offline_message": "We're away. Leave a message and we'll email you.",
   "open_in_help_center": "Open in help center",
+  "written_by": "Written by {name}",
+  "updated_ago": "Updated {time}",
   "popular": "Popular articles",
   "privacy_notice": "We handle your data as described in our privacy policy.",
   "rated_thanks": "Thanks for your feedback!",

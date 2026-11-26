@@ -988,6 +988,9 @@
       "HelpArticle": {
         "additionalProperties": false,
         "properties": {
+          "author": {
+            "$ref": "#/components/schemas/HelpAuthor"
+          },
           "body": {
             "description": "The article's content as blocks to draw in order, so the messenger can open it without another request.",
             "items": {
@@ -1021,7 +1024,27 @@
           "title",
           "summary",
           "updated",
+          "author",
           "body"
+        ],
+        "type": "object"
+      },
+      "HelpAuthor": {
+        "additionalProperties": false,
+        "properties": {
+          "avatar_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "avatar_url"
         ],
         "type": "object"
       },

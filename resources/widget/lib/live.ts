@@ -21,7 +21,7 @@ import { Session, type SessionData, type Storage } from "../client/session";
 import { type Conversation as ApiConversation, type Message as ApiMessage, Store } from "../client/store";
 import { ConversationRow } from "../components/rows";
 import { Whoami } from "../components/whoami";
-import type { Block, Collection, Content, Message, TicketType, VerifyStep } from "../content";
+import type { Article, Collection, Content, Message, TicketType, VerifyStep } from "../content";
 
 /*
  * HelpIndex is what the server answers for the Help tab.
@@ -30,12 +30,12 @@ interface HelpIndex {
   url: string;
   collections: Collection[];
   popular: string[];
-  articles: { slug: string; title: string; summary: string; updated: string; body: Block[] }[];
+  articles: Article[];
 }
 
 import type { Options, OptionsUpdate, Tab, Texts } from "../options";
 import type { ActionTexts, AiTexts } from "../text";
-import { type Availability, type Config, content, fromConfig, reading } from "./map";
+import { type Availability, type Config, content, fromConfig } from "./map";
 import { patch } from "./patch";
 import { report } from "./report";
 import type { Surface } from "./rules";
@@ -580,13 +580,7 @@ export class Live {
         help_url: res.data.url || undefined,
         collections: res.data.collections,
         popular: res.data.popular,
-        articles: res.data.articles.map((a) => ({
-          slug: a.slug,
-          title: a.title,
-          summary: a.summary,
-          updated: new Date(a.updated).toLocaleDateString(reading.locale),
-          body: a.body,
-        })),
+        articles: res.data.articles,
       };
       this.host.update({});
     } catch {

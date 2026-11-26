@@ -53,6 +53,19 @@
   line-height: 32px;
 }
 
+/*
+ * Under a title: who wrote it, with their photo, and when it changed.
+ */
+.page-meta .face {
+  inline-size: 32px;
+  block-size: 32px;
+}
+
+.page-meta p {
+  display: grid;
+  margin: 0;
+}
+
 .page-meta {
   display: flex;
   align-items: center;

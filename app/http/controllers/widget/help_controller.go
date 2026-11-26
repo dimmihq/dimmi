@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
@@ -36,7 +37,8 @@ maxHelpArticles caps the articles the Help tab carries at once.
 const maxHelpArticles = 200
 
 /*
-HelpController serves the messenger's Help tab. Readers knows who a
+HelpController serves the messenger's Help tab. Disk gives article
+authors' photos an address the messenger can load. Readers knows who a
 visitor reads as and issues passes; Addresses builds the help center's
 address; Ratings keeps what visitors say about articles, and Analytics
 counts the articles they open.
@@ -48,16 +50,19 @@ type HelpController struct {
 	Addresses helpcenters.Addresses
 	Clock     clock.Clock
 	Analytics *helpcenters.Analytics
+	Disk      filesystem.Filesystem
 }
 
 /*
-HelpArticle is an article as the messenger shows it.
+HelpArticle is an article as the messenger shows it, with the teammate
+who wrote it, nil when none did.
 */
 type HelpArticle struct {
 	Slug    string              `json:"slug"`
 	Title   string              `json:"title"`
 	Summary string              `json:"summary"`
 	Updated time.Time           `json:"updated"`
+	Author  *HelpAuthor         `json:"author"`
 	Body    []helpcenters.Block `json:"body"`
 }
 
@@ -145,7 +150,16 @@ func (c *HelpController) answer(ctx context.Context, resolved actions.Resolved, 
 	}
 
 	root := c.Addresses.Root(snap.HelpCenter)
-	out.Body.Data = indexOf(snap, root)
+	out.Body.Data = indexOf(snap, root, func(path string) *string {
+		if c.Disk == nil {
+			return nil
+		}
+		address, err := c.Disk.TemporaryURL(ctx, path, authorPhotoTTL)
+		if err != nil {
+			return nil
+		}
+		return &address
+	})
 	out.Body.Data.URL = root
 
 	return out, nil
@@ -182,10 +196,16 @@ func (c *HelpController) readsAs(ctx context.Context, auth actions.Authenticated
 }
 
 /*
-indexOf shapes a help center for the Help tab, its articles' links on
-the help center's own pages resolved against its root address.
+authorPhotoTTL is how long an article author's photo address works.
 */
-func indexOf(snap helpcenters.Snapshot, root string) HelpIndex {
+const authorPhotoTTL = time.Hour
+
+/*
+indexOf shapes a help center for the Help tab, its articles' links on
+the help center's own pages resolved against its root address, and
+photo the address of an author's photo, nil when it has none.
+*/
+func indexOf(snap helpcenters.Snapshot, root string, photo func(path string) *string) HelpIndex {
 	out := HelpIndex{Collections: []HelpCollection{}, Articles: []HelpArticle{}, Popular: []string{}}
 	slugs := map[string][]string{}
 	for i, a := range snap.Articles {
@@ -194,7 +214,7 @@ func indexOf(snap helpcenters.Snapshot, root string) HelpIndex {
 		}
 		out.Articles = append(out.Articles, HelpArticle{
 			Slug: a.Slug, Title: a.Title, Summary: deref(a.Description), Updated: a.VersionCreatedAt,
-			Body: helpcenters.ArticleBlocks(a.BodyMarkdown, root),
+			Author: authorOf(a, photo), Body: helpcenters.ArticleBlocks(a.BodyMarkdown, root),
 		})
 		if len(out.Popular) < 5 {
 			out.Popular = append(out.Popular, a.Slug)

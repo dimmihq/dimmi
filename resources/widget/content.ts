@@ -96,7 +96,12 @@ export interface Article {
   slug: string;
   title: string;
   summary: string;
+  /*
+   * updated is when the article last changed, as an ISO date, and author
+   * the teammate who wrote it, unset when none did.
+   */
   updated: string;
+  author?: { name: string; avatar_url: string | null };
   body: Block[];
   /*
    * rated is what the visitor answered about the article, unset until
