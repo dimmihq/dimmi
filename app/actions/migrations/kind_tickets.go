@@ -238,10 +238,12 @@ func (t *Ticket) validate() error {
 	}
 
 	if t.Author != nil {
-		return checkAuthor("author", *t.Author)
+		if err := checkAuthor("author", *t.Author); err != nil {
+			return err
+		}
 	}
 
-	return nil
+	return t.checkEntries()
 }
 
 func (t *Ticket) refs() []Ref {
@@ -256,7 +258,9 @@ func (t *Ticket) refs() []Ref {
 	out = append(out, refsOf(KindTeammate, t.AssigneeRef)...)
 	out = append(out, refsOf(KindConversation, t.ConversationRef)...)
 
-	return append(out, authorRefs(t.Author)...)
+	out = append(out, authorRefs(t.Author)...)
+
+	return append(out, t.entryRefs()...)
 }
 
 /*
@@ -272,10 +276,11 @@ func (t *Ticket) stateKey(state string) string {
 
 /*
 ticketState is what a sync of a ticket remembers: the state the
-migration last left it in.
+migration last left it in, and the entries already written.
 */
 type ticketState struct {
 	StateID ids.UUID `json:"state_id"`
+	Entries []string `json:"entries,omitempty"`
 }
 
 func (t *Ticket) apply(ctx context.Context, s *step) (outcome, error) {
@@ -308,16 +313,84 @@ func (t *Ticket) apply(ctx context.Context, s *step) (outcome, error) {
 	}
 
 	if s.prev != nil && s.prev.RecordID != nil {
-		return s.syncTicket(ctx, w, t, out)
+		return s.resyncTicket(ctx, w, t, out)
 	}
 
-	made, created, err := w.Write(ctx, s.tx, s.ticketInput(t))
+	return s.createTicket(ctx, ticketRun{w: w, t: t, kind: tw.Setup.Types[i].Kind}, out)
+}
+
+/*
+ticketRun is a ticket being made: the writer, the record and the kind
+of its type.
+*/
+type ticketRun struct {
+	w    *ticketimports.Writer
+	t    *Ticket
+	kind string
+}
+
+/*
+createTicket makes a ticket of the kind with its entries, opening a
+conversation for a customer ticket's entries when it names none.
+*/
+func (s *step) createTicket(ctx context.Context, run ticketRun, out outcome) (outcome, error) {
+	w, t, kind := run.w, run.t, run.kind
+	in := s.ticketInput(t)
+
+	var r *replay
+
+	if in.ConversationID == nil {
+		var err error
+		if r, err = s.threadFor(ctx, t, kind, &out); err != nil {
+			return out, err
+		}
+
+		if r != nil {
+			in.ConversationID = &r.conv.ID
+		}
+	}
+
+	made, created, err := w.Write(ctx, s.tx, in)
+	if err != nil {
+		return out, err
+	}
+
+	done, err := s.writeEntries(ctx, entryRun{t: t, ticket: made, r: r, out: &out})
 	if err != nil {
 		return out, err
 	}
 
 	out.id, out.created = made.ID, created
-	out.state = mustJSON(ticketState{StateID: made.StateID})
+	out.state = mustJSON(ticketState{StateID: made.StateID, Entries: done})
+
+	return out, nil
+}
+
+/*
+resyncTicket moves a ticket brought in before to the state it is in now
+and writes the entries new since.
+*/
+func (s *step) resyncTicket(ctx context.Context, w *ticketimports.Writer, t *Ticket, out outcome) (outcome, error) {
+	out, err := s.syncTicket(ctx, w, t, out)
+	if err != nil {
+		return out, err
+	}
+
+	current, err := s.q.FindTicket(ctx, models.FindTicketParams{WorkspaceID: s.ws(), ID: out.id})
+	if err != nil {
+		return out, fmt.Errorf("find ticket: %w", err)
+	}
+
+	var last, now ticketState
+	_ = json.Unmarshal(s.prev.State, &last)
+	_ = json.Unmarshal(out.state, &now)
+
+	now.Entries, err = s.writeEntries(ctx, entryRun{t: t, ticket: current, done: last.Entries, out: &out})
+	if err != nil {
+		return out, err
+	}
+
+	out.state = mustJSON(now)
 
 	return out, nil
 }

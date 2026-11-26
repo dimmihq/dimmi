@@ -104,7 +104,7 @@ entryKey returns the key the entry is kept under, once the conversation
 is there.
 */
 func (r *replay) entryKey(e Entry) *string {
-	return r.entryKeyFor(r.s.runner.row.ID.String()+":"+r.s.rec.base.SourceID, e)
+	return r.entryKeyFor(r.external(), e)
 }
 
 /*

@@ -126,7 +126,7 @@ func (s *Migrations) Rollback(ctx context.Context, m authz.Membership, id ids.UU
 undoOrder is the order an undo removes kinds in: the newest first.
 */
 func undoOrder() []string {
-	order := append(Kinds(), kindTicketField, kindTicketState, kindFile)
+	order := append(Kinds(), kindTicketField, kindTicketState, kindTicketConversation, kindFile)
 	slices.Reverse(order)
 
 	out := []string{kindFile}
@@ -249,6 +249,10 @@ func (s *Migrations) undoPage(ctx context.Context, row models.Migration, kind st
 undoKind returns the kind the removal query knows a ledger kind by.
 */
 func undoKind(kind string) string {
+	if kind == kindTicketConversation {
+		return KindConversation
+	}
+
 	return kind
 }
 
