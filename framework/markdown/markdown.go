@@ -54,7 +54,7 @@ Footnotes adds GFM footnotes. Alerts renders GitHub alerts such as
 "> [!NOTE]" as aside elements. HeadingIDs gives every heading a unique
 id, keeping letters of every script. Highlight colors fenced code
 blocks of a known language with CSS classes; StyleSheet returns the
-matching CSS. Blocks adds the article blocks: embeds, buttons,
+matching CSS. Blocks adds the content blocks: embeds, buttons,
 collapsible details and centered text written as directives, and
 captioned pictures as figures. HardWraps keeps every line break inside a
 paragraph, as a person typing into a message box expects. ImageLayout

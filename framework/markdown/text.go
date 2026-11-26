@@ -51,10 +51,10 @@ func parseGFM(src []byte) ast.Node {
 }
 
 /*
-parseArticleDialect reads Markdown in the article dialect: parseGFM's plus the
-article blocks.
+parseBlocksDialect reads Markdown in the blocks dialect: parseGFM's plus the
+content blocks.
 */
-func parseArticleDialect(src []byte) ast.Node {
+func parseBlocksDialect(src []byte) ast.Node {
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.GFM, extension.Footnote),
 		goldmark.WithParserOptions(

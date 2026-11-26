@@ -71,7 +71,7 @@ to its kind are set:
   - Ordered and Start: whether a List is numbered and its first number.
   - Header: whether a TableRow is the header row.
   - Checked: whether a Checkbox of a task list item is ticked.
-  - Embed, Button and Details come only from ParseArticle. An Embed's
+  - Embed, Button and Details come only from ParseBlocks. An Embed's
     URL is the address its author gave, a Button's its link, and Text
     their label; Details holds blocks and Text is its summary.
 */
@@ -104,14 +104,14 @@ func Parse(src []byte) *Node {
 }
 
 /*
-ParseArticle reads Markdown in the article dialect: Parse's, plus
+ParseBlocks reads Markdown in the blocks dialect: Parse's, plus
 embeds, buttons, details, centered text and captioned pictures. Centered
 blocks are plain blocks here, and a caption becomes the Title of its
 picture.
 */
-func ParseArticle(src []byte) *Node {
+func ParseBlocks(src []byte) *Node {
 	root := &Node{Kind: KindDocument}
-	root.Children = convertChildren(parseArticleDialect(src), src)
+	root.Children = convertChildren(parseBlocksDialect(src), src)
 
 	return root
 }

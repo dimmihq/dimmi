@@ -1,32 +1,27 @@
 /*
 |--------------------------------------------------------------------------
-| Article Conversion
+| Block Conversion
 |--------------------------------------------------------------------------
 |
-| Help center articles from other tools turned into dimmi's article
-| Markdown, keeping the blocks plain Markdown has no syntax for. Each
-| block is read from the HTML Intercom's Articles API returns:
+| HTML turned into Markdown that keeps the blocks plain Markdown has no
+| syntax for, written as directives (framework/markdown reads them):
 |
-|   - a button, <a class="intercom-h2b-button">, becomes ::button, centered
-|     when it sits in <div class="intercom-align-center">
-|   - a video, an <iframe>, becomes ::embed with its address
-|   - a picture in <div class="intercom-align-center"> keeps its place
-|   - a callout, <div class="intercom-interblocks-callout">, becomes the
-|     alert its background color is closest to
+|   - a link with the button class becomes ::button, centered when it
+|     sits in an element with the center class
+|   - an <iframe> becomes ::embed with its address
+|   - a picture in an element with the center class keeps its place
+|   - an element with the callout class becomes the alert its background
+|     color is closest to
 |   - a collapsible section, <details> with a <summary>, becomes
 |     :::details
 |   - a <figure> keeps its <figcaption> as the picture's caption
-|   - a paragraph or heading with class "intercom-align-center" goes into
-|     a :::center block with its centered neighbors
+|   - a paragraph or heading with the center class goes into a :::center
+|     block with its centered neighbors
 |
-| dimmi's own article HTML converts back the same way, so an article
-| survives a round trip: its button rows, alert asides, embed frames and
-| picture layout classes are read too.
-|
-| The button, video and alignment shapes are documented by Intercom. The
-| callout's was seen in a live article and the collapsible section's is
-| not documented at all; both stay unverified until a real export is
-| read through this converter.
+| The HTML framework/markdown renders converts back the same way, so a
+| page survives a round trip: its button rows, alert asides, embed frames
+| and picture layout classes are read too. The class names a source tool
+| marks its blocks with come in BlockClasses.
 |
 */
 
@@ -52,21 +47,24 @@ blankLines finds runs of blank lines to fold into one.
 var blankLines = regexp.MustCompile(`\n[ \t]*(?:\n[ \t]*)+\n`)
 
 /*
-Intercom's class names for the blocks it writes.
+BlockClasses are the class names a source tool marks its blocks with:
+a link drawn as a button, an element that centers what it holds, and a
+colored callout. An empty name matches nothing.
 */
-const (
-	intercomButton  = "intercom-h2b-button"
-	intercomCenter  = "intercom-align-center"
-	intercomCallout = "intercom-interblocks-callout"
-)
+type BlockClasses struct {
+	Button  string
+	Center  string
+	Callout string
+}
 
 /*
-ToArticleMarkdown converts an article's HTML to article Markdown: what
-ToMarkdown keeps, plus buttons, embeds, callouts, collapsible sections,
-centered pictures and captions. Like ToMarkdown, the result is as
-untrusted as the HTML; the article renderer checks every address.
+ToBlocksMarkdown converts HTML to Markdown with blocks: what ToMarkdown
+keeps, plus buttons, embeds, callouts, collapsible sections, centered
+pictures and captions, read with the source's class names. Like
+ToMarkdown, the result is as untrusted as the HTML; the renderer checks
+every address.
 */
-func ToArticleMarkdown(body string) (string, error) {
+func ToBlocksMarkdown(body string, classes BlockClasses) (string, error) {
 	convert := converter.NewConverter(converter.WithPlugins(
 		base.NewBasePlugin(),
 		commonmark.NewCommonmarkPlugin(commonmark.WithListEndComment(false)),
@@ -75,60 +73,63 @@ func ToArticleMarkdown(body string) (string, error) {
 			table.WithSkipEmptyRows(true),
 			table.WithHeaderPromotion(true),
 		),
-		articlePlugin{},
+		blocksPlugin{classes: classes},
 	))
 
 	out, err := convert.ConvertString(body)
 	if err != nil {
-		return "", fmt.Errorf("convert article html to markdown: %w", err)
+		return "", fmt.Errorf("convert html with blocks to markdown: %w", err)
 	}
 
 	return out, nil
 }
 
 /*
-articlePlugin adds the article blocks to the converter.
+blocksPlugin adds the blocks to the converter, read with the source's
+class names.
 */
-type articlePlugin struct{}
+type blocksPlugin struct {
+	classes BlockClasses
+}
 
 /*
 Name names the plugin.
 */
-func (articlePlugin) Name() string {
-	return "dimmi-article-blocks"
+func (blocksPlugin) Name() string {
+	return "blocks"
 }
 
 /*
 Init registers the blocks' renderers ahead of the standard ones.
 */
-func (articlePlugin) Init(conv *converter.Converter) error {
-	conv.Register.PreRenderer(preparePictures, converter.PriorityEarly)
+func (b blocksPlugin) Init(conv *converter.Converter) error {
+	conv.Register.PreRenderer(b.preparePictures, converter.PriorityEarly)
 	conv.Register.TagType("iframe", converter.TagTypeBlock, converter.PriorityEarly)
 	conv.Register.TagType("details", converter.TagTypeBlock, converter.PriorityEarly)
-	conv.Register.Renderer(renderArticleBlock, converter.PriorityEarly)
+	conv.Register.Renderer(b.renderBlock, converter.PriorityEarly)
 
 	return nil
 }
 
 /*
-renderArticleBlock writes the blocks the plugin knows and leaves every
+renderBlock writes the blocks the plugin knows and leaves every
 other element to the standard renderers.
 */
-func renderArticleBlock(ctx converter.Context, w converter.Writer, n *html.Node) converter.RenderStatus {
+func (b blocksPlugin) renderBlock(ctx converter.Context, w converter.Writer, n *html.Node) converter.RenderStatus {
 	if n.Type != html.ElementNode {
 		return converter.RenderTryNext
 	}
 
 	switch {
-	case n.Data == "a" && (hasClass(n, intercomButton) || isOwnButton(n)):
-		writeButton(w, n)
+	case n.Data == "a" && (hasClass(n, b.classes.Button) || isOwnButton(n)):
+		b.writeButton(w, n)
 	case n.Data == "iframe":
 		writeEmbed(w, n)
 	case n.Data == "details":
 		writeDetails(ctx, w, n)
 	case n.Data == "div" && hasClass(n, "align-center"):
 		writeCenter(ctx, w, n)
-	case n.Data == "div" && hasClass(n, intercomCallout):
+	case n.Data == "div" && hasClass(n, b.classes.Callout):
 		writeCallout(ctx, w, n, calloutKind(styleOf(n)))
 	case n.Data == "aside" && ownAlert(n) != "":
 		writeCallout(ctx, w, n, ownAlert(n))
@@ -140,15 +141,15 @@ func renderArticleBlock(ctx converter.Context, w converter.Writer, n *html.Node)
 }
 
 /*
-writeButton writes a button, centered when Intercom centered it.
+writeButton writes a button, centered when the source centered it.
 */
-func writeButton(w converter.Writer, n *html.Node) {
+func (b blocksPlugin) writeButton(w converter.Writer, n *html.Node) {
 	href, _ := attr(n, "href")
 	label := collapse(textOf(n))
 	attrs := `href=` + quoteAttr(strings.TrimSpace(href))
 	switch p := n.Parent; {
 	case p == nil:
-	case hasClass(p, intercomCenter) || hasClass(p, "button-align-center"):
+	case hasClass(p, b.classes.Center) || hasClass(p, "button-align-center"):
 		attrs += ` align="center"`
 	case hasClass(p, "button-align-end"):
 		attrs += ` align="end"`
@@ -157,14 +158,14 @@ func writeButton(w converter.Writer, n *html.Node) {
 }
 
 /*
-isOwnButton reports whether a link is a button dimmi drew.
+isOwnButton reports whether a link is a button framework/markdown drew.
 */
 func isOwnButton(n *html.Node) bool {
 	return hasClass(n, "button") && n.Parent != nil && hasClass(n.Parent, "button-row")
 }
 
 /*
-ownAlert is the kind of an alert aside dimmi drew, in capitals.
+ownAlert is the kind of an alert aside framework/markdown drew, in capitals.
 */
 func ownAlert(n *html.Node) string {
 	if !hasClass(n, "alert") {
@@ -185,7 +186,7 @@ func styleOf(n *html.Node) string {
 
 /*
 writeEmbed writes a frame as an embed of its address. An address from a
-provider dimmi does not embed still converts; the renderer shows it as
+provider the renderer does not embed still converts; it shows it as
 a link and warns the editor.
 */
 func writeEmbed(w converter.Writer, n *html.Node) {
@@ -365,11 +366,11 @@ func hexColor(s string) ([3]float64, bool) {
 }
 
 /*
-preparePictures moves what Intercom says about a picture into the
+preparePictures moves what the source says about a picture into the
 picture itself before conversion: its place in the column into its
 address's layout fragment, and a figure's caption into its title.
 */
-func preparePictures(_ converter.Context, doc *html.Node) {
+func (b blocksPlugin) preparePictures(_ converter.Context, doc *html.Node) {
 	var walk func(n *html.Node)
 	walk = func(n *html.Node) {
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
@@ -381,7 +382,7 @@ func preparePictures(_ converter.Context, doc *html.Node) {
 		switch n.Data {
 		case "img":
 			if src, ok := attr(n, "src"); ok && !strings.Contains(src, "#") {
-				setAttr(n, "src", src+layoutFragment(n))
+				setAttr(n, "src", src+b.layoutFragment(n))
 			}
 		case "figure":
 			caption := findChild(n, "figcaption")
@@ -393,22 +394,22 @@ func preparePictures(_ converter.Context, doc *html.Node) {
 		}
 	}
 	walk(doc)
-	gatherCentered(doc)
+	b.gatherCentered(doc)
 }
 
 /*
-gatherCentered wraps each run of paragraphs and headings Intercom
-centered in one center block, the way dimmi writes centered text.
+gatherCentered wraps each run of paragraphs and headings the source
+centered in one center block, the way framework/markdown writes centered text.
 */
-func gatherCentered(n *html.Node) {
+func (b blocksPlugin) gatherCentered(n *html.Node) {
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		gatherCentered(c)
+		b.gatherCentered(c)
 	}
 	var wrapper *html.Node
 	for c := n.FirstChild; c != nil; {
 		next := c.NextSibling
 		switch {
-		case isCenteredText(c):
+		case b.isCenteredText(c):
 			if wrapper == nil {
 				wrapper = &html.Node{
 					Type: html.ElementNode, Data: "div",
@@ -428,10 +429,10 @@ func gatherCentered(n *html.Node) {
 
 /*
 isCenteredText reports whether an element is a paragraph or heading
-Intercom centered.
+the source centered.
 */
-func isCenteredText(n *html.Node) bool {
-	if n.Type != html.ElementNode || !hasClass(n, intercomCenter) {
+func (b blocksPlugin) isCenteredText(n *html.Node) bool {
+	if n.Type != html.ElementNode || !hasClass(n, b.classes.Center) {
 		return false
 	}
 	switch n.Data {
@@ -443,9 +444,9 @@ func isCenteredText(n *html.Node) bool {
 
 /*
 layoutFragment is the layout fragment for a picture's width and place:
-Intercom's centering wrapper, or dimmi's own layout classes.
+the source's centering wrapper, or framework/markdown's layout classes.
 */
-func layoutFragment(n *html.Node) string {
+func (b blocksPlugin) layoutFragment(n *html.Node) string {
 	var parts []string
 	class, _ := attr(n, "class")
 	for c := range strings.FieldsSeq(class) {
@@ -456,7 +457,7 @@ func layoutFragment(n *html.Node) string {
 		}
 	}
 	switch {
-	case hasClass(n, "image-align-center") || insideCenter(n):
+	case hasClass(n, "image-align-center") || b.insideCenter(n):
 		parts = append(parts, "align=center")
 	case hasClass(n, "image-align-end"):
 		parts = append(parts, "align=end")
@@ -468,15 +469,15 @@ func layoutFragment(n *html.Node) string {
 }
 
 /*
-insideCenter reports whether a picture sits in Intercom's centering
+insideCenter reports whether a picture sits in the source's centering
 wrapper, directly or inside a link.
 */
-func insideCenter(n *html.Node) bool {
+func (b blocksPlugin) insideCenter(n *html.Node) bool {
 	p := n.Parent
 	if p != nil && p.Type == html.ElementNode && p.Data == "a" {
 		p = p.Parent
 	}
-	return p != nil && hasClass(p, intercomCenter)
+	return p != nil && hasClass(p, b.classes.Center)
 }
 
 /*

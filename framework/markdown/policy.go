@@ -8,7 +8,7 @@
 | package writes itself. Heading ids in any script, the alert, footnote
 | and highlighting classes, the layout classes of pictures, the roles
 | alerts and footnotes carry, lazy image loading, and the disabled
-| checkboxes of task lists, and the article blocks: frames only from the
+| checkboxes of task lists, and the content blocks: frames only from the
 | allowed embed providers' players with their fixed attributes, details
 | and summaries, centered text, and figures with captions. Anything else in the output is removed.
 |

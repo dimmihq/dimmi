@@ -143,6 +143,7 @@ func TestHelpCenters(t *testing.T) {
 		assert.Contains(t, string(page.Body), "<strong>Settings</strong>")
 		assert.Contains(t, string(page.Body), "Written by "+html.EscapeString(c.d.TC.Owner.Name))
 		assert.Contains(t, string(page.Body), ">today</time>")
+		assert.Contains(t, page.Header.Get("Content-Security-Policy"), "https://www.youtube-nocookie.com")
 		md := c.page("/articles/invite-your-team.md").AssertOK()
 		assert.True(t, strings.HasPrefix(string(md.Body), "# Invite your team"))
 		assert.Contains(t, string(c.page("/search?q=invitations").AssertOK().Body), "Invite your team")

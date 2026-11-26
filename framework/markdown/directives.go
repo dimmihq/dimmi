@@ -10,7 +10,7 @@
 | more colons, as with code fences. Only the names this package knows
 | are read as directives; any other line stays the text it is.
 |
-|   ::embed[Set up your inbox]{src="https://youtu.be/dQw4w9WgXcQ"}
+|   ::embed[Take the tour]{src="https://youtu.be/dQw4w9WgXcQ"}
 |   ::button[Start a trial]{href="https://example.com/start" align="center"}
 |   :::details[How long do refunds take?]
 |   Five working days.

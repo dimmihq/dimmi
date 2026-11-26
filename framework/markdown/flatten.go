@@ -3,7 +3,7 @@
 | Flattened Blocks
 |--------------------------------------------------------------------------
 |
-| The article blocks rewritten as plain Markdown, for readers that see
+| The content blocks rewritten as plain Markdown, for readers that see
 | only text, such as a language model: an embed and a button become a
 | link to where they go, and a details block becomes its summary in bold
 | followed by what it holds. Centered text is just text. Everything else stays exactly as written.
@@ -21,12 +21,12 @@ import (
 )
 
 /*
-FlattenBlocks returns article Markdown with its embeds, buttons and
+FlattenBlocks returns Markdown with its embeds, buttons and
 details blocks written as plain Markdown.
 */
 func FlattenBlocks(src []byte) string {
 	var edits []edit
-	_ = ast.Walk(parseArticleDialect(src), func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+	_ = ast.Walk(parseBlocksDialect(src), func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if d, ok := n.(*directiveNode); ok && entering {
 			edits = append(edits, flatEdits(d)...)
 		}

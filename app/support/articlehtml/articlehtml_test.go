@@ -1,4 +1,4 @@
-package dom_test
+package articlehtml_test
 
 import (
 	"testing"
@@ -6,8 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dimmihq/dimmi/framework/dom"
 	"github.com/dimmihq/dimmi/framework/markdown"
+
+	"github.com/dimmihq/dimmi/app/support/articlehtml"
 )
 
 func TestArticleMarkdown(t *testing.T) {
@@ -72,7 +73,7 @@ func TestArticleMarkdown(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := dom.ToArticleMarkdown(tc.html)
+			got, err := articlehtml.ToMarkdown(tc.html)
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, got)
 		})
@@ -96,7 +97,7 @@ func TestArticleRoundTrip(t *testing.T) {
 	first, err := r.HTML([]byte(src))
 	require.NoError(t, err)
 
-	back, err := dom.ToArticleMarkdown(first.HTML)
+	back, err := articlehtml.ToMarkdown(first.HTML)
 	require.NoError(t, err)
 
 	second, err := r.HTML([]byte(back))
@@ -116,7 +117,7 @@ func TestArticleMarkdownHostile(t *testing.T) {
 		`<details><summary>]{src="javascript:alert(1)"}</summary><script>alert(1)</script></details>`,
 		`<div class="intercom-interblocks-callout" style="background-color:url(javascript:alert(1))"><p>x</p></div>`,
 	} {
-		md, err := dom.ToArticleMarkdown(html)
+		md, err := articlehtml.ToMarkdown(html)
 		require.NoError(t, err)
 
 		res, err := r.HTML([]byte(md))
@@ -132,7 +133,7 @@ func TestArticleMarkdownHostile(t *testing.T) {
 func TestArticleCenteredText(t *testing.T) {
 	t.Parallel()
 
-	got, err := dom.ToArticleMarkdown(`<h2 class="intercom-align-center">Welcome</h2>` +
+	got, err := articlehtml.ToMarkdown(`<h2 class="intercom-align-center">Welcome</h2>` +
 		`<p class="intercom-align-center">Two lines</p><p>Left</p>` +
 		`<details><summary>Q</summary><p class="intercom-align-center">Mid</p></details>`)
 	require.NoError(t, err)

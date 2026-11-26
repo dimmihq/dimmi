@@ -206,9 +206,9 @@ func messengerSources(a *app.App) []string {
 /*
 pageSources returns the extra sources of the pages a csp middleware
 covers: every page may load the captcha provider when one is on and the
-messenger from wherever it is served, and article embeds frame the
-allowed video and demo players; the dashboard also shows pictures Meta
-serves.
+messenger from wherever it is served. Pages that show articles, the help
+center ("embeds") and the dashboard's writer, frame the allowed video and
+demo players; the dashboard also shows pictures Meta serves.
 */
 func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources {
 	extra := captchaSources(p.App)
@@ -220,7 +220,9 @@ func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources
 	extra.Scripts = append(extra.Scripts, messenger...)
 	extra.Connect = append(extra.Connect, messenger...)
 	extra.Images = append(extra.Images, messenger...)
-	extra.Frames = append(extra.Frames, markdown.EmbedOrigins()...)
+	if slices.Contains(params, "embeds") || slices.Contains(params, "dashboard") {
+		extra.Frames = append(extra.Frames, markdown.EmbedOrigins()...)
+	}
 	if !slices.Contains(params, "dashboard") {
 		return extra
 	}

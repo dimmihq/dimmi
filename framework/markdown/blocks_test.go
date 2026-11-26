@@ -14,9 +14,9 @@ import (
 )
 
 /*
-articleFeatures is the dialect help center articles render with.
+blockFeatures is the dialect pages with blocks render with.
 */
-func articleFeatures() markdown.Options {
+func blockFeatures() markdown.Options {
 	opts := allFeatures()
 	opts.ImageLayout = true
 	opts.Blocks = true
@@ -90,10 +90,10 @@ func TestBlocks(t *testing.T) {
 	t.Run("embeds a video lazily from its share address", func(t *testing.T) {
 		t.Parallel()
 
-		res := render(t, articleFeatures(), `::embed[Setting up the inbox]{src="https://youtu.be/dQw4w9WgXcQ?t=42"}`)
+		res := render(t, blockFeatures(), `::embed[Taking the tour]{src="https://youtu.be/dQw4w9WgXcQ?t=42"}`)
 
 		assert.Equal(t, `<figure class="embed embed-youtube"><iframe `+
-			`src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=42" title="Setting up the inbox" `+
+			`src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=42" title="Taking the tour" `+
 			`loading="lazy" allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write" `+
 			`allowfullscreen="" sandbox="allow-scripts allow-same-origin allow-popups allow-presentation allow-forms" `+
 			`referrerpolicy="strict-origin-when-cross-origin"></iframe></figure>`+"\n", res.HTML)
@@ -103,7 +103,7 @@ func TestBlocks(t *testing.T) {
 	t.Run("links an address no provider allows and warns", func(t *testing.T) {
 		t.Parallel()
 
-		res := render(t, articleFeatures(), `::embed[Our tour]{src="https://videos.example.com/tour"}`)
+		res := render(t, blockFeatures(), `::embed[Our tour]{src="https://videos.example.com/tour"}`)
 
 		assert.Equal(t,
 			`<p><a href="https://videos.example.com/tour" rel="nofollow noopener ugc">Our tour</a></p>`+"\n", res.HTML)
@@ -114,7 +114,7 @@ func TestBlocks(t *testing.T) {
 	t.Run("draws a button as a link in a row", func(t *testing.T) {
 		t.Parallel()
 
-		res := render(t, articleFeatures(),
+		res := render(t, blockFeatures(),
 			"::button[Start a trial]{href=\"https://example.com/start\" align=\"center\"}\n\n"+
 				"::button[Billing]{href=\"/billing\"}")
 
@@ -127,7 +127,7 @@ func TestBlocks(t *testing.T) {
 	t.Run("passes a button's link through the rewrite hook", func(t *testing.T) {
 		t.Parallel()
 
-		opts := articleFeatures()
+		opts := blockFeatures()
 		opts.RewriteLink = func(l markdown.Link) markdown.Link {
 			l.URL = "/hc/acme" + l.URL
 			return l
@@ -140,7 +140,7 @@ func TestBlocks(t *testing.T) {
 	t.Run("shows a button with a bad link as its label and warns", func(t *testing.T) {
 		t.Parallel()
 
-		res := render(t, articleFeatures(), `::button[Run]{href="javascript:alert(1)"}`)
+		res := render(t, blockFeatures(), `::button[Run]{href="javascript:alert(1)"}`)
 
 		assert.Equal(t, "<p>Run</p>\n", res.HTML)
 		assert.Equal(t, []markdown.Warning{{Code: markdown.WarnButtonLink, Detail: "javascript:alert(1)"}},
@@ -150,7 +150,7 @@ func TestBlocks(t *testing.T) {
 	t.Run("nests details and keeps fenced colons as code", func(t *testing.T) {
 		t.Parallel()
 
-		res := render(t, articleFeatures(),
+		res := render(t, blockFeatures(),
 			"::::details[How do refunds work?]\nFive *working* days.\n\n:::details[And partial ones?]\n"+
 				"```\n:::\n```\n:::\n\nAfter.\n::::\n\nOutside.")
 
@@ -163,7 +163,7 @@ func TestBlocks(t *testing.T) {
 	t.Run("centers the blocks a center block holds", func(t *testing.T) {
 		t.Parallel()
 
-		res := render(t, articleFeatures(), ":::center\n## Welcome\n\nGlad to see you.\n:::\n\nLeft.")
+		res := render(t, blockFeatures(), ":::center\n## Welcome\n\nGlad to see you.\n:::\n\nLeft.")
 
 		assert.Equal(t, `<div class="align-center">`+"\n"+`<h2 id="welcome">Welcome</h2>`+"\n"+
 			"<p>Glad to see you.</p>\n</div>\n<p>Left.</p>\n", res.HTML)
@@ -173,7 +173,7 @@ func TestBlocks(t *testing.T) {
 	t.Run("closes a details block left open at the end", func(t *testing.T) {
 		t.Parallel()
 
-		res := render(t, articleFeatures(), ":::details[Open]\nStill inside")
+		res := render(t, blockFeatures(), ":::details[Open]\nStill inside")
 
 		assert.Equal(t, `<details class="details"><summary>Open</summary>`+"\n<p>Still inside</p>\n</details>\n",
 			res.HTML)
@@ -182,7 +182,7 @@ func TestBlocks(t *testing.T) {
 	t.Run("captions a titled picture and keeps its link and place", func(t *testing.T) {
 		t.Parallel()
 
-		res := render(t, articleFeatures(),
+		res := render(t, blockFeatures(),
 			"![Plans](/plans.png#align=center \"The plans page\")\n\n"+
 				"[![Plans](/plans.png \"Click to open\")](https://example.com)\n\n"+
 				"![No caption](/a.png)")
@@ -198,7 +198,7 @@ func TestBlocks(t *testing.T) {
 	t.Run("leaves unknown and malformed directives as text", func(t *testing.T) {
 		t.Parallel()
 
-		res := render(t, articleFeatures(), "::video[x]{src=\"https://youtu.be/dQw4w9WgXcQ\"}\n\n"+
+		res := render(t, blockFeatures(), "::video[x]{src=\"https://youtu.be/dQw4w9WgXcQ\"}\n\n"+
 			"::embed[unclosed{src=x}\n\n:::embed[leaf as container]\n\n    ::embed{src=\"https://youtu.be/dQw4w9WgXcQ\"}")
 
 		assert.NotContains(t, res.HTML, "<iframe")
@@ -219,7 +219,7 @@ func TestBlocks(t *testing.T) {
 		t.Parallel()
 
 		corpus := string(fixture(t, "xss-blocks.md"))
-		r := markdown.New(articleFeatures())
+		r := markdown.New(blockFeatures())
 
 		for _, payload := range append(strings.Split(corpus, "\n\n"), corpus) {
 			res, err := r.HTML([]byte(payload))
@@ -245,7 +245,7 @@ func TestBlocks(t *testing.T) {
 	t.Run("survives deeply nested details", func(t *testing.T) {
 		t.Parallel()
 
-		r := markdown.New(articleFeatures())
+		r := markdown.New(blockFeatures())
 		var src strings.Builder
 		for i := 2000; i >= 3; i-- {
 			src.WriteString(strings.Repeat(":", i) + "details[x]\n")
@@ -293,10 +293,10 @@ func TestEmbedOrigins(t *testing.T) {
 	}
 }
 
-func TestParseArticle(t *testing.T) {
+func TestParseBlocks(t *testing.T) {
 	t.Parallel()
 
-	doc := markdown.ParseArticle([]byte("::embed[Tour]{src=\"https://youtu.be/dQw4w9WgXcQ\"}\n\n" +
+	doc := markdown.ParseBlocks([]byte("::embed[Tour]{src=\"https://youtu.be/dQw4w9WgXcQ\"}\n\n" +
 		"::button[Start]{href=\"/start\"}\n\n:::details[Why?]\nBecause.\n:::\n\n![Plans](/p.png \"Caption\")"))
 
 	require.Len(t, doc.Children, 4)

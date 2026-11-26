@@ -82,7 +82,7 @@ pages, such as "/billing", resolve against base, the help center's
 address.
 */
 func ArticleBlocks(body, base string) []Block {
-	return absolute(blocksOf(markdown.ParseArticle([]byte(body)).Children), base)
+	return absolute(blocksOf(markdown.ParseBlocks([]byte(body)).Children), base)
 }
 
 /*

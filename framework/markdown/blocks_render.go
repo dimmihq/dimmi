@@ -3,7 +3,7 @@
 | Block Output
 |--------------------------------------------------------------------------
 |
-| The HTML of the article blocks. An embed is a frame from an allowed
+| The HTML of the content blocks. An embed is a frame from an allowed
 | provider's player, loaded lazily, titled for screen readers, sandboxed
 | and sent no more than the page's origin; an address that is no embed
 | is a link instead. A button is a link drawn as a button. A details
