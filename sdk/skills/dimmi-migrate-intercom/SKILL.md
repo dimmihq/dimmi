@@ -106,7 +106,7 @@ Walk the person through these, in order, and check each off with them:
 3. **Email**: point the support address's forwarding at the dimmi inbox address (Settings → Channels → Email), and add dimmi's sending domain records.
 4. **Help center**: move the custom domain's DNS record to dimmi. Old article links redirect to the new ones.
 5. **Last sync**: stop `sync --watch`, run `./dimmi migrate sync --json` once more, then `verify`.
-6. **Intercom**: once they're happy, delete the private app in Intercom's Developer Hub. The token stops working, and `./dimmi migrate disconnect && ./dimmi logout` forgets the saved keys.
+6. **Intercom**: once they're happy, delete the app in Intercom's Developer Hub. The token stops working, and `./dimmi migrate disconnect && ./dimmi logout` forgets the saved keys.
 
 ## Undo
 

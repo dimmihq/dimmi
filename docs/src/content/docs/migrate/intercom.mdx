@@ -5,7 +5,7 @@ description: "Bring teammates, customers, conversations, tickets, articles and m
 
 import { Callout } from "~docs/components/mdx";
 
-`dimmi migrate` copies your Intercom workspace into dimmi. It runs on your own computer, reads Intercom with a token from a private app you create in your Intercom workspace, and writes into dimmi. Your customers' data goes straight from Intercom to dimmi and stays out of any AI chat.
+`dimmi migrate` copies your Intercom workspace into dimmi. It runs on your own computer, reads Intercom with a token from an app you create in your own Intercom workspace, and writes into dimmi. Your customers' data goes straight from Intercom to dimmi and stays out of any AI chat.
 
 You can run it yourself in a terminal, or hand the job to an AI coding agent such as Claude Code, Cursor or Codex with the [migration skill](https://raw.githubusercontent.com/dimmihq/dimmi/main/sdk/skills/dimmi-migrate-intercom/SKILL.md). The agent drives the commands; you paste the keys into a page in your browser, never into the chat.
 
@@ -20,7 +20,7 @@ Download `dimmi-cli_<os>_<arch>` for your system from the [latest release](https
 ./dimmi migrate verify    # compare Intercom and dimmi, kind by kind
 ```
 
-`connect` opens a page on your computer. Sign in to dimmi there and pick the workspace to move into; if you already ran `dimmi login`, the page skips that step. The page then shows how to make a private app in Intercom's Developer Hub with read permissions only, and where to copy its access token. Both keys go into your system keychain (Keychain on macOS, Credential Manager on Windows, the Secret Service on Linux); on a machine without one, into a file only you can read.
+`connect` opens a page on your computer. Sign in to dimmi there and pick the workspace to move into; if you already ran `dimmi login`, the page skips that step. The page then shows where to get your Intercom token: in **Settings → Integrations → Developer Hub**, click **New app**, name it and copy the access token it shows. `dimmi migrate` only reads with it. Both keys go into your system keychain (Keychain on macOS, Credential Manager on Windows, the Secret Service on Linux); on a machine without one, into a file only you can read.
 
 `run` can take hours on a big workspace. Stop it whenever you like and run it again: it carries on from where it stopped, and a record never arrives twice.
 
@@ -86,7 +86,7 @@ It repeats every 15 minutes until you stop it. Changes your team made in dimmi i
 3. Point your support address's forwarding at your dimmi inbox, and add dimmi's records for your sending domain.
 4. Move your help center's custom domain to dimmi.
 5. Stop `sync --watch`, run `./dimmi migrate sync` once more, then `./dimmi migrate verify`.
-6. Delete the private app in Intercom's Developer Hub. Its token stops working, and `./dimmi migrate disconnect && ./dimmi logout` forgets the saved keys.
+6. Delete the app in Intercom's Developer Hub. Its token stops working, and `./dimmi migrate disconnect && ./dimmi logout` forgets the saved keys.
 
 ## Undo a migration
 
@@ -105,6 +105,10 @@ It asks you to type `yes`, then removes everything the migration created in dimm
 | Files | Attachments up to 100 MB each are downloaded once and uploaded once, however many records share them |
 | Output | Short lines by default; `--json` prints one JSON object a line for AI agents. Neither ever prints customer content or keys. |
 | Progress | Kept in your user config folder, under `dimmi/<profile>/`. `--profile` keeps separate keys and progress, for example per workspace. |
+
+## Anonymous visitors
+
+Intercom gives each anonymous visitor an id, kept in the `intercom-id-<app id>` cookie, and stores it as the lead's external id. `dimmi migrate` brings it across as the contact's external id.
 
 ## Moving from another tool
 

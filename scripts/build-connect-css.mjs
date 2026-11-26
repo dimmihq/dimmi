@@ -1,7 +1,7 @@
 // Builds the stylesheet of the dimmi CLI's local connect page from the
 // app's own BoardUI theme (resources/js/styles/globals.css), so the page
 // uses the same tokens, type scale and component recipes as dimmi. The
-// result is committed as cmd/dimmi-cli/connect/page.css and embedded in
+// result is committed as cli/connect/page.css and embedded in
 // the binary. Run it after changing page.html or the theme:
 //
 //   node scripts/build-connect-css.mjs
@@ -12,9 +12,9 @@ import { fileURLToPath } from "node:url";
 import { compile } from "tailwindcss";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const page = path.join(root, "cmd/dimmi-cli/connect/page.html");
-const help = path.join(root, "cmd/dimmi-cli/sources/intercom/setup.go");
-const out = path.join(root, "cmd/dimmi-cli/connect/page.css");
+const page = path.join(root, "cli/connect/page.html");
+const help = path.join(root, "cli/sources/intercom/setup.go");
+const out = path.join(root, "cli/connect/page.css");
 const stylesDir = path.join(root, "resources/js/styles");
 
 // Every class the page's templates write.
