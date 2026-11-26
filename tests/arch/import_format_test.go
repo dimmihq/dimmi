@@ -1,4 +1,4 @@
-package migrations_test
+package arch_test
 
 import (
 	"encoding/json"
@@ -18,12 +18,12 @@ import (
 /*
 schemaFile is the published JSON Schema of the import format.
 */
-const schemaFile = "../../../docs/public/migrations/import-format-v1.schema.json"
+const schemaFile = "../../docs/public/migrations/import-format-v1.schema.json"
 
 /*
-schema is the part of the JSON Schema the test reads.
+formatSchema is the part of the JSON Schema the test reads.
 */
-type schema struct {
+type formatSchema struct {
 	Properties struct {
 		Kind struct {
 			Enum []string `json:"enum"`
@@ -35,16 +35,15 @@ type schema struct {
 }
 
 /*
-fields returns the JSON names of a struct's fields, its embedded
+jsonFields returns the JSON names of a struct's fields, its embedded
 structs' included.
 */
-func fields(t reflect.Type) []string {
+func jsonFields(t reflect.Type) []string {
 	var out []string
 
-	for i := range t.NumField() {
-		f := t.Field(i)
+	for f := range t.Fields() {
 		if f.Anonymous {
-			out = append(out, fields(f.Type)...)
+			out = append(out, jsonFields(f.Type)...)
 
 			continue
 		}
@@ -66,7 +65,7 @@ func TestImportFormatSchema(t *testing.T) {
 	raw, err := os.ReadFile(schemaFile)
 	require.NoError(t, err)
 
-	var s schema
+	var s formatSchema
 	require.NoError(t, json.Unmarshal(raw, &s))
 
 	t.Run("lists every kind the server reads", func(t *testing.T) {
@@ -100,7 +99,7 @@ func TestImportFormatSchema(t *testing.T) {
 			}
 
 			slices.Sort(described)
-			assert.Equal(t, fields(reflect.TypeOf(v)), described, "fields of %s", name)
+			assert.Equal(t, jsonFields(reflect.TypeOf(v)), described, "fields of %s", name)
 		}
 	})
 }

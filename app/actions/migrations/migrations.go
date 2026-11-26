@@ -183,33 +183,16 @@ func (s *Migrations) Start(ctx context.Context, in StartInput) (Migration, bool,
 		created bool
 	)
 
+	params := models.CreateMigrationParams{
+		WorkspaceID: ws, Source: source, SourceAccount: account, Name: name,
+		CreatedByMemberID: &in.Membership.Member.ID, Now: s.Clock.Now(),
+	}
+
 	err := s.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		q := models.New(tx)
-		found, err := q.FindLiveMigration(ctx, models.FindLiveMigrationParams{
-			WorkspaceID: ws, Source: source, SourceAccount: account,
-		})
+		var err error
+		row, created, err = s.findOrCreate(ctx, models.New(tx), params)
 
-		switch {
-		case err == nil:
-			row = found
-			if name != nil && (found.Name == nil || *found.Name != *name) {
-				row, err = q.RenameMigration(ctx, models.RenameMigrationParams{
-					Name: name, Now: s.Clock.Now(), WorkspaceID: ws, ID: found.ID,
-				})
-			}
-
-			return wrap("rename migration", err)
-		case !errors.Is(err, database.ErrNotFound):
-			return fmt.Errorf("find migration: %w", err)
-		}
-
-		created = true
-		row, err = q.CreateMigration(ctx, models.CreateMigrationParams{
-			WorkspaceID: ws, Source: source, SourceAccount: account, Name: name,
-			CreatedByMemberID: &in.Membership.Member.ID, Now: s.Clock.Now(),
-		})
-
-		return wrap("create migration", err)
+		return err
 	})
 	if err != nil {
 		return Migration{}, false, err
@@ -218,6 +201,36 @@ func (s *Migrations) Start(ctx context.Context, in StartInput) (Migration, bool,
 	out, err := s.progress(ctx, row)
 
 	return out, created, err
+}
+
+/*
+findOrCreate returns the live migration of the account, renamed when a
+new name came, or a new one, and reports whether it made one.
+*/
+func (s *Migrations) findOrCreate(ctx context.Context, q *models.Queries, p models.CreateMigrationParams,
+) (models.Migration, bool, error) {
+	found, err := q.FindLiveMigration(ctx, models.FindLiveMigrationParams{
+		WorkspaceID: p.WorkspaceID, Source: p.Source, SourceAccount: p.SourceAccount,
+	})
+
+	switch {
+	case err == nil:
+		if p.Name == nil || (found.Name != nil && *found.Name == *p.Name) {
+			return found, false, nil
+		}
+
+		renamed, err := q.RenameMigration(ctx, models.RenameMigrationParams{
+			Name: p.Name, Now: p.Now, WorkspaceID: p.WorkspaceID, ID: found.ID,
+		})
+
+		return renamed, false, wrap("rename migration", err)
+	case !errors.Is(err, database.ErrNotFound):
+		return found, false, fmt.Errorf("find migration: %w", err)
+	}
+
+	row, err := q.CreateMigration(ctx, p)
+
+	return row, true, wrap("create migration", err)
 }
 
 /*

@@ -21,8 +21,8 @@ StoreMigrationRequest is the input of POST /migrations.
 */
 type StoreMigrationRequest struct {
 	Body struct {
-		Source        string  `json:"source"         validate:"required,max=40"  doc:"Short lowercase name of the tool the history comes from, such as intercom."`
-		SourceAccount string  `json:"source_account" validate:"required,max=255" doc:"Id of the account in that tool. Starting again for the same account resumes its migration."`
+		Source        string  `json:"source"         validate:"required,max=40"  doc:"Short lowercase name of the tool the history comes from, such as intercom."`                 //nolint:lll // a struct tag cannot wrap
+		SourceAccount string  `json:"source_account" validate:"required,max=255" doc:"Id of the account in that tool. Starting again for the same account resumes its migration."` //nolint:lll // a struct tag cannot wrap
 		Name          *string `json:"name,omitempty" validate:"omitempty,max=120"`
 	}
 }
@@ -41,7 +41,7 @@ up to 100 records of one kind.
 type MigrationRecordsRequest struct {
 	Migration string `path:"migration"`
 	Body      struct {
-		Kind    string            `json:"kind"    validate:"required" enum:"teammate,team,tag,attribute_definition,company,contact,contact_note,ticket_type,help_center,collection,article,snippet,saved_reply,schedule,conversation,ticket"`
-		Records []json.RawMessage `json:"records" validate:"required,min=1,max=100" maxItems:"100" minItems:"1" doc:"Records of the kind in the import format, version 1."`
+		Kind    string            `json:"kind"    validate:"required" enum:"teammate,team,tag,attribute_definition,company,contact,contact_note,ticket_type,help_center,collection,article,snippet,saved_reply,schedule,conversation,ticket"` //nolint:lll // a struct tag cannot wrap
+		Records []json.RawMessage `json:"records" validate:"required,min=1,max=100" maxItems:"100" minItems:"1" doc:"Records of the kind in the import format, version 1."`                                                                   //nolint:lll // a struct tag cannot wrap
 	}
 }

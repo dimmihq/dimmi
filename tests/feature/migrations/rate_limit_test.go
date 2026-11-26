@@ -11,7 +11,9 @@ func TestMigrationRateLimit(t *testing.T) {
 
 	t.Run("migrations count against a minute of their own", func(t *testing.T) {
 		t.Parallel()
-		d := open(t, tests.WithEnv("DIMMI_API__LIMITS__MIGRATION_PER_MINUTE=3", "DIMMI_API__LIMITS__TOKEN_PER_MINUTE=60"))
+		d := open(t, tests.WithEnv(
+			"DIMMI_API__LIMITS__MIGRATION_PER_MINUTE=3", "DIMMI_API__LIMITS__TOKEN_PER_MINUTE=60",
+		))
 
 		d.client.GetJSON(d.path("")).AssertOK().AssertHeader("X-RateLimit-Scope", "migration").
 			AssertHeader("X-RateLimit-Limit", "3")

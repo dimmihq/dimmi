@@ -11,23 +11,17 @@
 | received yet waits, kept whole in the ledger, and is applied as soon
 | as a later batch brings what it named. A record naming one that came
 | but could not be applied still lands where it can: an author becomes
-| a labelled system author, a missing assignee is left out.
+| a labeled system author, a missing assignee is left out.
 |
 */
 
 package migrations
 
 import (
-	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"slices"
-	"strings"
-	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/fault"
@@ -79,43 +73,6 @@ but could not be applied.
 */
 var ErrReferenceUnavailable = fault.New(fault.Invalid, "migration_reference_unavailable",
 	"A record this one needs was sent but could not be applied.")
-
-/*
-Ref names another record of the migration by its kind and source id.
-*/
-type Ref struct {
-	Kind     string `json:"kind"`
-	SourceID string `json:"source_id"`
-}
-
-/*
-Notice is a warning about a field: what was left out and why.
-*/
-type Notice struct {
-	Field   string `json:"field"`
-	Code    string `json:"code"`
-	Message string `json:"message"`
-}
-
-/*
-Conflict is a field a teammate changed here after the migration wrote
-it, which a later sync leaves as the teammate set it: the value here,
-and the one the other tool sent.
-*/
-type Conflict struct {
-	Field  string `json:"field"`
-	Dimmi  any    `json:"dimmi"`
-	Source any    `json:"source"`
-}
-
-/*
-Problem is why a record could not be applied.
-*/
-type Problem struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Field   string `json:"field,omitempty"`
-}
 
 /*
 Result is what one record of a batch came to.
@@ -170,7 +127,7 @@ func (s *Migrations) Apply(ctx context.Context, in BatchInput) (Batch, error) {
 		return Batch{}, err
 	}
 
-	spec, ok := kinds()[in.Kind]
+	spec, ok := specs()[in.Kind]
 	if !ok {
 		return Batch{}, ErrUnknownKind
 	}
@@ -200,7 +157,7 @@ func (s *Migrations) Apply(ctx context.Context, in BatchInput) (Batch, error) {
 	applied := false
 
 	for _, raw := range in.Records {
-		res := r.one(ctx, in.Kind, spec, raw, nil)
+		res := r.one(ctx, arrival{kind: in.Kind, spec: spec, raw: raw})
 		applied = applied || res.Outcome == ResultCreated || res.Outcome == ResultUpdated
 		out.Results = append(out.Results, res)
 	}
@@ -228,11 +185,21 @@ type runner struct {
 }
 
 /*
-one applies one record in its own transaction and returns its result.
-A record read from the ledger, waiting, passes its row as prev.
+arrival is a record as it arrives: its kind and how it is read, its
+JSON, and its ledger row when it was waiting there.
 */
-func (r *runner) one(ctx context.Context, kind string, spec kindSpec, raw json.RawMessage, prev *models.MigrationRecord,
-) Result {
+type arrival struct {
+	kind string
+	spec kindSpec
+	raw  json.RawMessage
+	prev *models.MigrationRecord
+}
+
+/*
+one applies one record in its own transaction and returns its result.
+*/
+func (r *runner) one(ctx context.Context, a arrival) Result {
+	kind, spec, raw, prev := a.kind, a.spec, a.raw, a.prev
 	res := Result{Kind: kind}
 
 	it, base, err := spec.decode(raw)
@@ -242,7 +209,7 @@ func (r *runner) one(ctx context.Context, kind string, spec kindSpec, raw json.R
 		res.Outcome, res.Problem = ResultFailed, problemOf(err)
 
 		if base.SourceID != "" {
-			r.saveFailure(ctx, kind, base, raw, res.Problem)
+			r.saveFailure(ctx, record{kind: kind, base: base, raw: raw}, res.Problem)
 		}
 
 		return res
@@ -258,7 +225,7 @@ func (r *runner) one(ctx context.Context, kind string, spec kindSpec, raw json.R
 			log.String("kind", kind), log.Err(err))
 
 		res.Outcome, res.Problem = ResultFailed, problemOf(err)
-		r.saveFailure(ctx, kind, base, raw, res.Problem)
+		r.saveFailure(ctx, record{kind: kind, base: base, raw: raw}, res.Problem)
 	}
 
 	return res
@@ -326,15 +293,26 @@ func (r *runner) inTx(ctx context.Context, tx *database.Tx, rec record, res *Res
 		return err
 	})
 
-	return r.settle(ctx, q, rec, prev, out, applyErr, res)
+	return r.settle(ctx, q, settled{rec: rec, prev: prev, out: out, err: applyErr}, res)
+}
+
+/*
+settled is a record once applied: the record, its earlier ledger row,
+what applying it made, and why it failed, nil when it did not.
+*/
+type settled struct {
+	rec  record
+	prev *models.MigrationRecord
+	out  outcome
+	err  error
 }
 
 /*
 settle keeps what the record came to and fills in its result.
 */
-func (r *runner) settle(ctx context.Context, q *models.Queries, rec record, prev *models.MigrationRecord,
-	out outcome, applyErr error, res *Result,
-) error {
+func (r *runner) settle(ctx context.Context, q *models.Queries, done settled, res *Result) error {
+	rec, prev, out, applyErr := done.rec, done.prev, done.out, done.err
+
 	if applyErr != nil {
 		if _, ok := errors.AsType[*fault.Error](applyErr); !ok {
 			return applyErr
@@ -362,445 +340,4 @@ func (r *runner) settle(ctx context.Context, q *models.Queries, rec record, prev
 		status: statusApplied, id: &out.id, created: out.created, label: out.label, state: out.state,
 		warnings: out.warnings, conflicts: out.conflicts,
 	})
-}
-
-/*
-ledgerRow returns the record's row in the ledger, nil when there is none.
-*/
-func (r *runner) ledgerRow(ctx context.Context, q *models.Queries, kind, sourceID string,
-) (*models.MigrationRecord, error) {
-	row, err := q.FindMigrationRecord(ctx, models.FindMigrationRecordParams{
-		MigrationID: r.row.ID, Kind: kind, SourceID: sourceID,
-	})
-	if errors.Is(err, database.ErrNotFound) {
-		return nil, nil
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("find migration record: %w", err)
-	}
-
-	return &row, nil
-}
-
-/*
-ledgerEntry is what a record came to, for the ledger. Keep holds the
-record's JSON, for a record that waits or failed.
-*/
-type ledgerEntry struct {
-	status    string
-	id        *ids.UUID
-	created   bool
-	label     string
-	state     json.RawMessage
-	waiting   []Ref
-	problem   *Problem
-	warnings  []Notice
-	conflicts []Conflict
-	keep      bool
-}
-
-/*
-save writes the record's row in the ledger.
-*/
-func (r *runner) save(ctx context.Context, q *models.Queries, rec record, e ledgerEntry) error {
-	params := models.SaveMigrationRecordParams{
-		WorkspaceID: r.row.WorkspaceID, MigrationID: r.row.ID, Kind: rec.kind, SourceID: rec.base.SourceID,
-		Status: e.status, RecordID: e.id, Created: e.created, Label: orNil(cut(e.label, 200)),
-		ContentHash: rec.hash, SourceUpdatedAt: rec.base.SourceUpdatedAt, State: e.state,
-		WaitingFor: mustJSON(nonNilRefs(e.waiting)), Warnings: mustJSON(nonNil(e.warnings)),
-		Conflicts: mustJSON(nonNil(e.conflicts)), Now: r.svc.Clock.Now(),
-	}
-
-	if e.state == nil {
-		params.State = json.RawMessage(`{}`)
-		if rec.prev != nil {
-			params.State = rec.prev.State
-		}
-	}
-
-	if e.keep {
-		params.Payload = rec.raw
-	}
-
-	if e.problem != nil {
-		params.Error = mustJSON(e.problem)
-	}
-
-	if _, err := q.SaveMigrationRecord(ctx, params); err != nil {
-		return fmt.Errorf("save migration record: %w", err)
-	}
-
-	return nil
-}
-
-/*
-saveFailure keeps a record that could not be read or applied, in a
-transaction of its own.
-*/
-func (r *runner) saveFailure(ctx context.Context, kind string, base Base, raw json.RawMessage, p *Problem) {
-	err := r.svc.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		q := models.New(tx)
-
-		prev, err := r.ledgerRow(ctx, q, kind, base.SourceID)
-		if err != nil {
-			return err
-		}
-
-		if prev != nil && prev.Status == statusApplied {
-			return nil
-		}
-
-		rec := record{kind: kind, base: base, raw: compactJSON(raw), hash: contentHash(raw), prev: prev}
-
-		return r.save(ctx, q, rec, ledgerEntry{status: statusFailed, problem: p, keep: true})
-	})
-	if err != nil {
-		log.From(ctx).ErrorContext(ctx, "keep failed migration record", log.Err(err))
-	}
-}
-
-/*
-resolveDeferred applies the waiting records whose references have all
-arrived, until a pass lets none through.
-*/
-func (r *runner) resolveDeferred(ctx context.Context) []Result {
-	var out []Result
-
-	tried := map[ids.UUID]bool{}
-
-	for range 5 {
-		rows, err := r.deferred(ctx)
-		if err != nil {
-			log.From(ctx).ErrorContext(ctx, "list waiting migration records", log.Err(err))
-
-			return out
-		}
-
-		progressed := false
-
-		for _, row := range rows {
-			if tried[row.ID] || row.Payload == nil {
-				continue
-			}
-
-			spec, ok := kinds()[row.Kind]
-			if !ok || !r.ready(ctx, row) {
-				continue
-			}
-
-			tried[row.ID] = true
-			res := r.one(ctx, row.Kind, spec, row.Payload, &row)
-			out = append(out, res)
-			progressed = progressed || res.Outcome != ResultDeferred
-		}
-
-		if !progressed {
-			return out
-		}
-	}
-
-	return out
-}
-
-/*
-deferred lists the migration's waiting records.
-*/
-func (r *runner) deferred(ctx context.Context) ([]models.MigrationRecord, error) {
-	var rows []models.MigrationRecord
-
-	err := r.svc.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		var err error
-		rows, err = models.New(tx).ListDeferredMigrationRecords(ctx, models.ListDeferredMigrationRecordsParams{
-			MigrationID: r.row.ID, RowLimit: deferredPass,
-		})
-
-		return err
-	})
-
-	return rows, err
-}
-
-/*
-ready reports whether every reference the waiting record named has
-arrived.
-*/
-func (r *runner) ready(ctx context.Context, row models.MigrationRecord) bool {
-	var waiting []Ref
-	if err := json.Unmarshal(row.WaitingFor, &waiting); err != nil {
-		return true
-	}
-
-	ok := true
-
-	err := r.svc.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		found, err := r.resolve(ctx, models.New(tx), waiting)
-		ok = err == nil && len(found.missing()) == 0
-
-		return err
-	})
-
-	return err == nil && ok
-}
-
-/*
-problemOf returns the refusal as a record's problem, a generic one for
-an error that is not a refusal.
-*/
-func problemOf(err error) *Problem {
-	if f, ok := errors.AsType[*fault.Error](err); ok {
-		return &Problem{Code: f.Code(), Message: f.Message(), Field: f.Field()}
-	}
-
-	return &Problem{Code: "migration_record_error", Message: "dimmi could not apply this record. Send it again."}
-}
-
-/*
-contentHash is the hash of the record's JSON with its keys sorted, so
-the same record sent with its keys in another order is still the same.
-*/
-func contentHash(raw json.RawMessage) string {
-	sum := sha256.Sum256(canonical(raw))
-
-	return hex.EncodeToString(sum[:])
-}
-
-/*
-canonical returns the JSON with its object keys sorted.
-*/
-func canonical(raw json.RawMessage) []byte {
-	var v any
-
-	d := json.NewDecoder(bytes.NewReader(raw))
-	d.UseNumber()
-
-	if err := d.Decode(&v); err != nil {
-		return raw
-	}
-
-	out, err := json.Marshal(v)
-	if err != nil {
-		return raw
-	}
-
-	return out
-}
-
-/*
-compactJSON returns the JSON compacted, or a JSON string of it when it
-is not JSON.
-*/
-func compactJSON(raw json.RawMessage) json.RawMessage {
-	var buf bytes.Buffer
-	if err := json.Compact(&buf, raw); err != nil {
-		return mustJSON(string(raw))
-	}
-
-	return buf.Bytes()
-}
-
-/*
-mustJSON encodes the value, which is always encodable.
-*/
-func mustJSON(v any) json.RawMessage {
-	out, err := json.Marshal(v)
-	if err != nil {
-		return json.RawMessage(`null`)
-	}
-
-	return out
-}
-
-/*
-nonNil returns the list, empty instead of nil.
-*/
-func nonNil[T any](list []T) []T {
-	if list == nil {
-		return []T{}
-	}
-
-	return list
-}
-
-/*
-nonNilRefs returns the references, empty instead of nil.
-*/
-func nonNilRefs(list []Ref) []Ref {
-	return nonNil(list)
-}
-
-/*
-notices reads the warnings a ledger row keeps.
-*/
-func notices(raw json.RawMessage) []Notice {
-	var out []Notice
-	_ = json.Unmarshal(raw, &out)
-
-	return out
-}
-
-/*
-conflicts reads the conflicts a ledger row keeps.
-*/
-func conflicts(raw json.RawMessage) []Conflict {
-	var out []Conflict
-	_ = json.Unmarshal(raw, &out)
-
-	return out
-}
-
-/*
-step is one record being applied: its transaction, the references it
-named, its earlier ledger row and the server's time.
-*/
-type step struct {
-	runner *runner
-	tx     *database.Tx
-	q      *models.Queries
-	refs   resolved
-	prev   *models.MigrationRecord
-	rec    record
-	now    time.Time
-	ledger *ticketLedger
-}
-
-/*
-ws returns the workspace the step writes in.
-*/
-func (s *step) ws() ids.UUID {
-	return s.runner.row.WorkspaceID
-}
-
-/*
-outcome is what applying a record made: the row it became, whether the
-migration created it, a label for records that name it, what a later
-sync needs to remember, and the warnings and conflicts.
-*/
-type outcome struct {
-	id        ids.UUID
-	created   bool
-	label     string
-	state     json.RawMessage
-	warnings  []Notice
-	conflicts []Conflict
-}
-
-/*
-warn adds a warning to the outcome.
-*/
-func (o *outcome) warn(field, code, message string) {
-	o.warnings = append(o.warnings, Notice{Field: field, Code: code, Message: message})
-}
-
-/*
-unsupported warns that a field is not applied yet.
-*/
-func (o *outcome) unsupported(field string) {
-	o.warn(field, "not_supported_yet", "dimmi does not apply this field yet; it was left out.")
-}
-
-/*
-item is a decoded record of any kind: the records it names, and how it
-is applied.
-*/
-type item interface {
-	refs() []Ref
-	apply(ctx context.Context, s *step) (outcome, error)
-}
-
-/*
-kindSpec reads a record of one kind.
-*/
-type kindSpec struct {
-	decode func(raw json.RawMessage) (item, Base, error)
-}
-
-/*
-validator is a record that checks itself once decoded.
-*/
-type validator interface {
-	validate() error
-}
-
-/*
-decoder returns the reader of records of the type: decoded, its source
-id checked, then checked itself.
-*/
-func decoder[T any, P interface {
-	*T
-	item
-	validator
-	base() Base
-}]() kindSpec {
-	return kindSpec{decode: func(raw json.RawMessage) (item, Base, error) {
-		var v T
-
-		p := P(&v)
-
-		d := json.NewDecoder(bytes.NewReader(raw))
-		if err := d.Decode(p); err != nil {
-			var peek Base
-			_ = json.Unmarshal(raw, &peek)
-
-			return nil, peek, invalid("", "The record could not be read: "+jsonProblem(err))
-		}
-
-		b := p.base()
-		b.SourceID = strings.TrimSpace(b.SourceID)
-
-		if b.SourceID == "" || len(b.SourceID) > 255 {
-			return nil, b, invalid("source_id", "Every record has a source_id of 1 to 255 characters.")
-		}
-
-		if err := p.validate(); err != nil {
-			return nil, b, err
-		}
-
-		return p, b, nil
-	}}
-}
-
-/*
-jsonProblem says what was wrong with the JSON.
-*/
-func jsonProblem(err error) string {
-	if te, ok := errors.AsType[*json.UnmarshalTypeError](err); ok {
-		return fmt.Sprintf("%s has the wrong type.", te.Field)
-	}
-
-	return "it is not valid JSON."
-}
-
-/*
-invalid returns a record's refusal of the field.
-*/
-func invalid(field, message string) error {
-	f := fault.New(fault.Invalid, "migration_record_invalid", message)
-	if field != "" {
-		f = f.OnField(field)
-	}
-
-	return f
-}
-
-/*
-required refuses an empty text field.
-*/
-func required(field, value string) error {
-	if strings.TrimSpace(value) == "" {
-		return invalid(field, field+" is required.")
-	}
-
-	return nil
-}
-
-/*
-oneOf refuses a value outside the choices, empty allowed.
-*/
-func oneOf(field, value string, choices ...string) error {
-	if value == "" || slices.Contains(choices, value) {
-		return nil
-	}
-
-	return invalid(field, field+" is one of "+strings.Join(choices, ", ")+".")
 }

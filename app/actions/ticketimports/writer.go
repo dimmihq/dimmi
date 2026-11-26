@@ -61,6 +61,16 @@ type Writer struct {
 	ActorID     *ids.UUID
 	Ledger      Ledger
 	Mapping     Mapping
+	added       counts
+}
+
+/*
+add adds what another step added.
+*/
+func (c *counts) add(o counts) {
+	c.types += o.types
+	c.fields += o.fields
+	c.states += o.states
 }
 
 /*

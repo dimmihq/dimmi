@@ -77,29 +77,15 @@ func at(minutes int) string {
 }
 
 /*
-result returns the batch result of the record at the index.
+rows returns how many rows of the table the workspace has that match the
+condition.
 */
-func result(res *testkit.Response, i int) (status, id string) {
-	prefix := "data.results." + itoa(i)
-
-	return res.String(prefix + ".status"), res.String(prefix + ".id")
-}
-
-/*
-itoa writes a small number.
-*/
-func itoa(i int) string {
-	return string(rune('0' + i))
-}
-
-/*
-count returns how many rows of the table the workspace has.
-*/
-func (d desk) count(t *testing.T, sql string) int {
+func (d desk) rows(t *testing.T, table, where string) int {
 	t.Helper()
 
 	var n int
 
+	sql := "SELECT count(*) FROM " + table + " WHERE workspace_id = $1 AND " + where
 	err := d.TC.Operator().QueryRow(t.Context(), sql, d.TC.Workspace.Workspace.ID).Scan(&n)
 	require.NoError(t, err)
 
@@ -114,18 +100,21 @@ func contact(id, email string) testkit.JSON {
 }
 
 /*
-conversation is a conversation record of the contact with the entries.
+conversation is the conversation cv-1 of the customer c-1 with the
+entries.
 */
-func conversation(id, contactRef string, entries ...testkit.JSON) testkit.JSON {
+func conversation(entries ...testkit.JSON) testkit.JSON {
 	return testkit.JSON{
-		"source_id": id, "contact_ref": contactRef, "subject": "Refund", "created_at": at(0), "entries": entries,
+		"source_id": "cv-1", "contact_ref": "c-1", "subject": "Refund", "created_at": at(0), "entries": entries,
 	}
 }
 
 /*
-message is a customer's message entry.
+message is a message entry by the customer c-1.
 */
-func message(id string, minute int, body, contactRef string) testkit.JSON {
+func message(id string, minute int, body string) testkit.JSON {
+	const contactRef = "c-1"
+
 	return testkit.JSON{
 		"source_id": id, "type": "message", "created_at": at(minute), "body": body,
 		"author": testkit.JSON{"type": "contact", "ref": contactRef},
@@ -143,9 +132,11 @@ func reply(id string, minute int, body, teammateRef string) testkit.JSON {
 }
 
 /*
-event is an event entry by the teammate.
+event is an event entry by the teammate adm-1.
 */
-func event(id string, minute int, teammateRef string, ev testkit.JSON) testkit.JSON {
+func event(id string, minute int, ev testkit.JSON) testkit.JSON {
+	const teammateRef = "adm-1"
+
 	return testkit.JSON{
 		"source_id": id, "type": "event", "created_at": at(minute),
 		"author": testkit.JSON{"type": "teammate", "ref": teammateRef}, "event": ev,

@@ -105,7 +105,7 @@ func (s *Migrations) Upload(ctx context.Context, in FileInput) (models.Attachmen
 	err = s.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		st := &step{runner: r, now: s.Clock.Now()}
 
-		return st.keepRow(ctx, models.New(tx), kindFile, sourceID, file.ID, true)
+		return st.keepRow(ctx, models.New(tx), kept{kind: kindFile, sourceID: sourceID, id: file.ID, created: true})
 	})
 
 	return file, false, err

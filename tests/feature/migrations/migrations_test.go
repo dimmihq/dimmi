@@ -58,7 +58,9 @@ func TestMigrations(t *testing.T) {
 			AssertJSONPath("data.results.0.status", "created")
 		d.send(t, "attribute_definition",
 			testkit.JSON{"source_id": "plan", "object": "contact", "key": "plan", "label": "Plan", "type": "string"},
-			testkit.JSON{"source_id": "issue", "object": "conversation", "key": "issue", "label": "Issue", "type": "string"},
+			testkit.JSON{
+				"source_id": "issue", "object": "conversation", "key": "issue", "label": "Issue", "type": "string",
+			},
 		).AssertJSONPath("data.results.0.status", "created").AssertJSONPath("data.results.1.status", "unsupported")
 		d.send(t, "company", testkit.JSON{
 			"source_id": "co-1", "external_id": "acme", "name": "Acme", "tag_refs": []string{"tag-1"},
@@ -114,11 +116,11 @@ func TestMigrations(t *testing.T) {
 		}).AssertJSONPath("data.results.0.status", "created")
 
 		file := d.upload(t, "invoice.pdf", "att-1", []byte("%PDF-1.4 invoice"))
-		conv := conversation("cv-1", "c-1",
-			message("p1", 0, "Where is my refund?", "c-1"),
-			event("p2", 1, "adm-1", testkit.JSON{"type": "assignment", "assignee_ref": "adm-1"}),
-			event("p3", 2, "adm-1", testkit.JSON{"type": "priority", "priority": "high"}),
-			event("p4", 3, "adm-1", testkit.JSON{"type": "tag", "added_tag_refs": []string{"tag-1"}}),
+		conv := conversation(
+			message("p1", 0, "Where is my refund?"),
+			event("p2", 1, testkit.JSON{"type": "assignment", "assignee_ref": "adm-1"}),
+			event("p3", 2, testkit.JSON{"type": "priority", "priority": "high"}),
+			event("p4", 3, testkit.JSON{"type": "tag", "added_tag_refs": []string{"tag-1"}}),
 			testkit.JSON{
 				"source_id": "p5", "type": "reply", "created_at": at(4), "body": "Here is the invoice.",
 				"author": testkit.JSON{"type": "teammate", "ref": "adm-1"}, "attachments": []string{file},
@@ -128,8 +130,8 @@ func TestMigrations(t *testing.T) {
 				"source_id": "p6", "type": "reply", "created_at": at(5), "body": "Anything else?",
 				"author": testkit.JSON{"type": "ai_agent", "label": "Fin (imported)"},
 			},
-			event("p7", 6, "adm-1", testkit.JSON{"type": "custom", "raw_type": "sla_applied", "text": "SLA applied"}),
-			event("p8", 7, "adm-1", testkit.JSON{"type": "status", "status": "closed"}),
+			event("p7", 6, testkit.JSON{"type": "custom", "raw_type": "sla_applied", "text": "SLA applied"}),
+			event("p8", 7, testkit.JSON{"type": "status", "status": "closed"}),
 		)
 		conv["rating"] = testkit.JSON{"score": 5, "remark": "Great", "created_at": at(8)}
 		convID := d.send(t, "conversation", conv).AssertJSONPath("data.results.0.status", "created").
@@ -138,11 +140,11 @@ func TestMigrations(t *testing.T) {
 		shown := d.Owner.GetJSON("/api/v1/conversations/" + convID).AssertOK()
 		shown.AssertJSONPath("data.status", "closed").AssertJSONPath("data.priority", "high").
 			AssertJSONPath("data.message_count", 3)
-		assert.Equal(t, 1, d.count(t, `SELECT count(*) FROM attachments WHERE workspace_id = $1 AND message_id IS NOT NULL`))
-		assert.Equal(t, 1, d.count(t, `SELECT count(*) FROM conversation_ratings WHERE workspace_id = $1 AND score = 5`))
-		assert.Equal(t, 2, d.count(t, `SELECT count(*) FROM email_message_refs WHERE workspace_id = $1`))
-		assert.Equal(t, 1, d.count(t, `SELECT count(*) FROM messages WHERE workspace_id = $1 AND author_type = 'agent'`))
-		assert.Equal(t, 1, d.count(t, `SELECT count(*) FROM conversation_tag WHERE workspace_id = $1`))
+		assert.Equal(t, 1, d.rows(t, "attachments", `message_id IS NOT NULL`))
+		assert.Equal(t, 1, d.rows(t, "conversation_ratings", `score = 5`))
+		assert.Equal(t, 2, d.rows(t, "email_message_refs", "true"))
+		assert.Equal(t, 1, d.rows(t, "messages", `author_type = 'agent'`))
+		assert.Equal(t, 1, d.rows(t, "conversation_tag", "true"))
 
 		d.send(t, "ticket", testkit.JSON{
 			"source_id": "tk-1", "ticket_type_ref": "tt-1", "state_ref": "done", "title": "Checkout breaks",
@@ -159,14 +161,14 @@ func TestMigrations(t *testing.T) {
 		t.Parallel()
 		d := open(t)
 		d.send(t, "contact", contact("c-1", "ada@example.com"))
-		conv := conversation("cv-1", "c-1", message("p1", 0, "Hello?", "c-1"))
+		conv := conversation(message("p1", 0, "Hello?"))
 		d.send(t, "conversation", conv)
 
 		d.send(t, "contact", contact("c-1", "ada@example.com")).AssertJSONPath("data.results.0.status", "unchanged")
 		d.send(t, "conversation", conv).AssertJSONPath("data.results.0.status", "unchanged")
 
-		assert.Equal(t, 1, d.count(t, `SELECT count(*) FROM conversations WHERE workspace_id = $1`))
-		assert.Equal(t, 1, d.count(t, `SELECT count(*) FROM contacts WHERE workspace_id = $1 AND email = 'ada@example.com'`))
+		assert.Equal(t, 1, d.rows(t, "conversations", "true"))
+		assert.Equal(t, 1, d.rows(t, "contacts", `email = 'ada@example.com'`))
 	})
 
 	t.Run("a sync appends new entries in order", func(t *testing.T) {
@@ -174,22 +176,22 @@ func TestMigrations(t *testing.T) {
 		d := open(t)
 		d.send(t, "teammate", testkit.JSON{"source_id": "adm-1", "email": d.TC.Owner.Email})
 		d.send(t, "contact", contact("c-1", "ada@example.com"))
-		first := conversation("cv-1", "c-1", message("p1", 0, "Hello?", "c-1"))
+		first := conversation(message("p1", 0, "Hello?"))
 		id := d.send(t, "conversation", first).String("data.results.0.id")
 
-		later := conversation("cv-1", "c-1", message("p1", 0, "Hello?", "c-1"), reply("p2", 5, "Hi!", "adm-1"),
-			message("p3", 9, "Thanks", "c-1"))
+		later := conversation(message("p1", 0, "Hello?"), reply("p2", 5, "Hi!", "adm-1"),
+			message("p3", 9, "Thanks"))
 		d.send(t, "conversation", later).AssertJSONPath("data.results.0.status", "updated")
 
 		d.Owner.GetJSON("/api/v1/conversations/"+id).AssertOK().AssertJSONPath("data.message_count", 3)
-		assert.Equal(t, 3, d.count(t, `SELECT count(*) FROM messages WHERE workspace_id = $1 AND type = 'message'`))
+		assert.Equal(t, 3, d.rows(t, "messages", `type = 'message'`))
 	})
 
 	t.Run("a field a teammate changed is left alone and reported", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
 		d.send(t, "contact", contact("c-1", "ada@example.com"))
-		first := conversation("cv-1", "c-1", message("p1", 0, "Hello?", "c-1"))
+		first := conversation(message("p1", 0, "Hello?"))
 		first["status"] = "open"
 		id := d.send(t, "conversation", first).String("data.results.0.id")
 
@@ -219,7 +221,7 @@ func TestMigrations(t *testing.T) {
 
 		res := d.send(t, "contact", contact("c-9", "late@example.com"))
 		res.AssertJSONPath("data.resolved.0.source_id", "n-1").AssertJSONPath("data.resolved.0.status", "created")
-		assert.Equal(t, 1, d.count(t, `SELECT count(*) FROM customer_notes WHERE workspace_id = $1`))
+		assert.Equal(t, 1, d.rows(t, "customer_notes", "true"))
 	})
 
 	t.Run("a bad record fails alone", func(t *testing.T) {
@@ -235,19 +237,18 @@ func TestMigrations(t *testing.T) {
 	t.Run("an undo removes what the migration created and nothing else", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
-		d.Desk.Customer(t, "kept", "Live one")
+		d.Customer(t, "kept", "Live one")
 		d.send(t, "tag", testkit.JSON{"source_id": "tag-1", "name": "migrated"})
 		d.send(t, "contact", contact("c-1", "ada@example.com"))
-		d.send(t, "conversation", conversation("cv-1", "c-1", message("p1", 0, "Hello?", "c-1")))
+		d.send(t, "conversation", conversation(message("p1", 0, "Hello?")))
 
 		d.client.PostJSON(d.path("/rollbacks"), nil).AssertStatus(202).AssertJSONPath("data.status", "rolling_back")
 		d.TC.Drain()
 
 		d.client.GetJSON(d.path("")).AssertOK().AssertJSONPath("data.status", "rolled_back")
-		assert.Equal(t, 1, d.count(t, `SELECT count(*) FROM conversations WHERE workspace_id = $1 AND deleted_at IS NULL`))
-		assert.Equal(t, 0, d.count(t, `SELECT count(*) FROM tags WHERE workspace_id = $1 AND name = 'migrated'`))
-		assert.Equal(t, 0, d.count(t, `SELECT count(*) FROM contacts WHERE workspace_id = $1 AND email = 'ada@example.com'
-			AND deleted_at IS NULL`))
+		assert.Equal(t, 1, d.rows(t, "conversations", `deleted_at IS NULL`))
+		assert.Equal(t, 0, d.rows(t, "tags", `name = 'migrated'`))
+		assert.Equal(t, 0, d.rows(t, "contacts", `email = 'ada@example.com' AND deleted_at IS NULL`))
 
 		d.client.PostJSON(d.path("/records"), testkit.JSON{"kind": "tag", "records": []testkit.JSON{{
 			"source_id": "t", "name": "x",
@@ -265,11 +266,11 @@ func TestMigrations(t *testing.T) {
 		d.send(t, "team", testkit.JSON{"source_id": "team-1", "name": "Support", "member_refs": []string{"adm-1"}})
 		d.send(t, "tag", testkit.JSON{"source_id": "tag-1", "name": "vip"})
 		d.send(t, "contact", contact("c-1", "ada@example.com"))
-		d.send(t, "conversation", conversation("cv-1", "c-1",
-			message("p1", 0, "Hello?", "c-1"),
-			event("p2", 1, "adm-1", testkit.JSON{"type": "assignment", "assignee_ref": "adm-1"}),
+		d.send(t, "conversation", conversation(
+			message("p1", 0, "Hello?"),
+			event("p2", 1, testkit.JSON{"type": "assignment", "assignee_ref": "adm-1"}),
 			reply("p3", 2, "Hi!", "adm-1"),
-			event("p4", 3, "adm-1", testkit.JSON{"type": "status", "status": "closed"}),
+			event("p4", 3, testkit.JSON{"type": "status", "status": "closed"}),
 		))
 		d.TC.Drain()
 
@@ -290,7 +291,7 @@ func TestMigrations(t *testing.T) {
 	t.Run("only callers who may run imports reach migrations", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
-		member, _ := d.Desk.Join(t, enums.RoleMember)
+		member, _ := d.Join(t, enums.RoleMember)
 
 		member.GetJSON("/api/v1/migrations").AssertForbidden()
 		d.TC.ActingAsToken(d.TC.Workspace.Owner, "contacts:write").GetJSON("/api/v1/migrations").AssertForbidden()

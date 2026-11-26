@@ -58,17 +58,15 @@ type setupStep struct {
 mapSetup maps the catalog in one transaction.
 */
 func (r *run) mapSetup(ctx context.Context, catalog Catalog) error {
-	var added counts
-
 	err := r.importer.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		var err error
-		added, err = r.w.MapSetup(ctx, tx, catalog)
-
-		return err
+		return r.w.MapSetup(ctx, tx, catalog)
 	})
 	if err != nil {
 		return err
 	}
+
+	added := r.w.added
+	r.w.added = counts{}
 
 	return r.progress(ctx, added)
 }
@@ -77,26 +75,28 @@ func (r *run) mapSetup(ctx context.Context, catalog Catalog) error {
 MapSetup maps the catalog inside the transaction, adding to the
 writer's mapping, and counts what it added.
 */
-func (w *Writer) MapSetup(ctx context.Context, tx *database.Tx, catalog Catalog) (counts, error) {
+func (w *Writer) MapSetup(ctx context.Context, tx *database.Tx, catalog Catalog) error {
 	w.ensureMapping()
 
 	tw, err := w.TicketWriter(ctx, tx, w.Clock.Now())
 	if err != nil {
-		return counts{}, err
+		return err
 	}
 
 	s := &setupStep{w: w, q: tw.Q, setup: tw.Setup}
+	defer func() { w.added.add(s.added) }()
+
 	if err := s.states(ctx, catalog.States); err != nil {
-		return s.added, err
+		return err
 	}
 
 	for _, t := range catalog.Types {
 		if err := s.kind(ctx, t, catalog.States); err != nil {
-			return s.added, err
+			return err
 		}
 	}
 
-	return s.added, nil
+	return nil
 }
 
 /*

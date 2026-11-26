@@ -128,7 +128,9 @@ func (w *Writer) Write(ctx context.Context, tx *database.Tx, t Ticket) (models.T
 		}
 	}
 
-	return out, created, w.keep(ctx, tw.Q, touched{kind: "ticket", external: t.ExternalID, id: out.ID, created: created})
+	kept := touched{kind: "ticket", external: t.ExternalID, id: out.ID, created: created}
+
+	return out, created, w.keep(ctx, tw.Q, kept)
 }
 
 /*
@@ -194,33 +196,12 @@ people finds the requester, the teammate and the conversation. Ids the
 caller already resolved win over the emails and ids of the other tool.
 */
 func (w *Writer) people(ctx context.Context, tw *tickets.Writer, d *draft) error {
-	ws, t, in := w.WorkspaceID, d.src, &d.in
+	t, in := d.src, &d.in
 
-	in.AssigneeMember = t.AssigneeID
-	if in.AssigneeMember == nil && t.AssigneeEmail != "" {
-		m, err := tw.Q.FindWorkspaceMemberByEmail(ctx, models.FindWorkspaceMemberByEmailParams{
-			WorkspaceID: ws, Email: t.AssigneeEmail,
-		})
-		if err == nil {
-			in.AssigneeMember = &m.ID
-		}
-	}
+	in.AssigneeMember = w.assignee(ctx, tw, t)
 
-	if t.ConversationID != nil && !w.isTicket(ctx, tw, *t.ConversationID) {
-		in.ConversationID = t.ConversationID
-
+	if in.ConversationID = w.conversation(ctx, tw, t); in.ConversationID != nil {
 		return nil
-	}
-
-	if t.Conversation != "" {
-		c, err := tw.Q.FindConversationByImportExternalID(ctx, models.FindConversationByImportExternalIDParams{
-			WorkspaceID: ws, ExternalID: t.Conversation,
-		})
-		if err == nil && c.DeletedAt == nil && !w.isTicket(ctx, tw, c.ID) {
-			in.ConversationID = &c.ID
-
-			return nil
-		}
 	}
 
 	if t.ContactID != nil {
@@ -245,6 +226,49 @@ func (w *Writer) people(ctx context.Context, tw *tickets.Writer, d *draft) error
 	in.ContactID = &contact
 
 	return nil
+}
+
+/*
+assignee returns the teammate the ticket was with: the one resolved
+already, else the member with the email, nil for none.
+*/
+func (w *Writer) assignee(ctx context.Context, tw *tickets.Writer, t Ticket) *ids.UUID {
+	if t.AssigneeID != nil || t.AssigneeEmail == "" {
+		return t.AssigneeID
+	}
+
+	m, err := tw.Q.FindWorkspaceMemberByEmail(ctx, models.FindWorkspaceMemberByEmailParams{
+		WorkspaceID: w.WorkspaceID, Email: t.AssigneeEmail,
+	})
+	if err != nil {
+		return nil
+	}
+
+	return &m.ID
+}
+
+/*
+conversation returns the conversation the ticket came from, when it was
+brought in and is no ticket yet: the one resolved already, else the one
+imported with its id, nil for none.
+*/
+func (w *Writer) conversation(ctx context.Context, tw *tickets.Writer, t Ticket) *ids.UUID {
+	if t.ConversationID != nil && !w.isTicket(ctx, tw, *t.ConversationID) {
+		return t.ConversationID
+	}
+
+	if t.Conversation == "" {
+		return nil
+	}
+
+	c, err := tw.Q.FindConversationByImportExternalID(ctx, models.FindConversationByImportExternalIDParams{
+		WorkspaceID: w.WorkspaceID, ExternalID: t.Conversation,
+	})
+	if err != nil || c.DeletedAt != nil || w.isTicket(ctx, tw, c.ID) {
+		return nil
+	}
+
+	return &c.ID
 }
 
 /*

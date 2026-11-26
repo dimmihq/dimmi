@@ -102,7 +102,7 @@ func (t *TicketType) apply(ctx context.Context, s *step) (outcome, error) {
 		})
 	}
 
-	if _, err := w.MapSetup(ctx, s.tx, catalog); err != nil {
+	if err := w.MapSetup(ctx, s.tx, catalog); err != nil {
 		return out, err
 	}
 
@@ -161,18 +161,29 @@ func (l *ticketLedger) Keep(ctx context.Context, q *models.Queries, k ticketimpo
 
 		return nil
 	case "state":
-		return l.s.keepRow(ctx, q, kindTicketState, k.External, k.ID, k.Created)
+		return l.s.keepRow(ctx, q, kept{kind: kindTicketState, sourceID: k.External, id: k.ID, created: k.Created})
 	case "field":
-		return l.s.keepRow(ctx, q, kindTicketField, k.External, k.ID, k.Created)
+		return l.s.keepRow(ctx, q, kept{kind: kindTicketField, sourceID: k.External, id: k.ID, created: k.Created})
 	}
 
 	return nil
 }
 
 /*
+kept is a record a step made or found besides its own: its ledger
+kind, source id, row, and whether the step made it.
+*/
+type kept struct {
+	kind, sourceID string
+	id             ids.UUID
+	created        bool
+}
+
+/*
 keepRow keeps a record a step made besides its own, applied.
 */
-func (s *step) keepRow(ctx context.Context, q *models.Queries, kind, sourceID string, id ids.UUID, created bool) error {
+func (s *step) keepRow(ctx context.Context, q *models.Queries, k kept) error {
+	kind, sourceID, id, created := k.kind, k.sourceID, k.id, k.created
 	_, err := q.SaveMigrationRecord(ctx, models.SaveMigrationRecordParams{
 		WorkspaceID: s.ws(), MigrationID: s.runner.row.ID, Kind: kind, SourceID: cut(sourceID, 255),
 		Status: statusApplied, RecordID: &id, Created: created, WaitingFor: json.RawMessage(`[]`),

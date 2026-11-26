@@ -7,7 +7,7 @@
 | records it names are looked up in the ledger. One that never arrived
 | holds the record back until it does. One that arrived but could not be
 | applied is unavailable: an author that names it becomes a system
-| author labelled with its name, and an optional reference is left out.
+| author labeled with its name, and an optional reference is left out.
 |
 */
 

@@ -40,7 +40,7 @@ func migrationRoutes(workspace *routing.Router, a *app.App) {
 	routing.Get(workspace, "/migrations", "migrations.index", c.Index).Ability("settings:write")
 	routing.Get(workspace, one, "migrations.show", c.Get).Ability("settings:write")
 	workspace.Handle(fhttp.MethodPost, one+"/files", "migrations.files.store", fhttp.HandlerFunc(c.Files)).
-		Ability("settings:write").Use(middleware.BodyLimit(migrations.MaxMigrationFileBytes + uploadOverhead)).
+		Ability("settings:write").Use(middleware.BodyLimit(migrations.MaxMigrationFileBytes+uploadOverhead)).
 		Query(
 			routing.QueryParam{Name: "filename", Description: "Name of the uploaded file. Required."},
 			routing.QueryParam{

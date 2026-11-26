@@ -232,7 +232,29 @@ func (a *CreateConversation) replay(ctx context.Context, w *Writer, run importRu
 		return c, err
 	}
 
+	if c, err = o.openImported(ctx, w, c, run); err != nil {
+		return c, err
+	}
+
+	if !in.AssignSet || in.Assignee == nil {
+		return c, nil
+	}
+
+	c, _, err = w.Assign(ctx, c, Assignment{Member: in.Assignee})
+
+	return c, err
+}
+
+/*
+openImported writes the conversation's first message as whoever wrote
+it: the actor the import names, the customer, or the member.
+*/
+func (o opening) openImported(ctx context.Context, w *Writer, c models.Conversation, run importRun,
+) (models.Conversation, error) {
+	in, imp := run.in, run.imp
 	author := w.AsContact(o.contact)
+
+	var err error
 
 	switch {
 	case imp.Opener != nil:
@@ -254,15 +276,7 @@ func (a *CreateConversation) replay(ctx context.Context, w *Writer, run importRu
 		msg.Metadata = imp.OpeningMetadata
 	}
 
-	if _, c, err = author.Append(ctx, c, msg); err != nil {
-		return c, err
-	}
-
-	if !in.AssignSet || in.Assignee == nil {
-		return c, nil
-	}
-
-	c, _, err = w.Assign(ctx, c, Assignment{Member: in.Assignee})
+	_, c, err = author.Append(ctx, c, msg)
 
 	return c, err
 }
