@@ -22,7 +22,6 @@ import (
 	"context"
 	"fmt"
 	"hash/fnv"
-	"strconv"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/console"
@@ -49,16 +48,15 @@ type demoMate struct {
 ticketDemo is one run of the tickets demo and what it found and made.
 */
 type ticketDemo struct {
-	app       *app.App
-	owner     authz.Membership
-	out       *console.Output
-	team      []demoMate
-	companies int
-	types     map[string]ids.UUID
-	states    map[string]ids.UUID
-	policies  []ids.UUID
-	made      []models.Ticket
-	options   map[string][]string
+	app      *app.App
+	owner    authz.Membership
+	out      *console.Output
+	team     []demoMate
+	types    map[string]ids.UUID
+	states   map[string]ids.UUID
+	policies []ids.UUID
+	made     []models.Ticket
+	options  map[string][]string
 }
 
 /*
@@ -102,21 +100,6 @@ func (d *ticketDemo) write(ctx context.Context, at time.Time, by demoMate,
 }
 
 /*
-prepare reads the team, adds the companies and sets the types up.
-*/
-func (d *ticketDemo) prepare(ctx context.Context) error {
-	if err := d.loadTeam(ctx); err != nil {
-		return err
-	}
-
-	if err := d.seedCompanies(ctx); err != nil {
-		return err
-	}
-
-	return d.setUpTypes(ctx)
-}
-
-/*
 loadTeam reads the workspace's active teammates.
 */
 func (d *ticketDemo) loadTeam(ctx context.Context) error {
@@ -139,60 +122,6 @@ func (d *ticketDemo) loadTeam(ctx context.Context) error {
 		}
 
 		return rows.Err()
-	})
-}
-
-/*
-demoCompanyNames are the companies the demo's customers work for.
-*/
-func demoCompanyNames() []string {
-	return []string{
-		"Northwind Traders", "Globex", "Initech", "Umbrella Health", "Stark Logistics", "Wayne Retail",
-		"Hooli", "Pied Piper", "Vandelay Imports", "Soylent Foods", "Cyberdyne Labs", "Wonka Treats",
-		"Tyrell Systems", "Oscorp Media", "Gringotts Finance", "Monarch Travel", "Acme Outdoor", "Dunder Paper",
-		"Bluth Homes", "Prestige Worldwide", "Kramerica", "Sterling Cooper", "Massive Dynamic", "Aperture Studio",
-		"Black Mesa Energy", "Nakatomi Trading", "Weyland Freight", "Ollivander Crafts", "Duff Beverages",
-		"Krusty Kitchens", "Planet Express", "Spacely Sprockets", "Cogswell Cogs", "Rekall Travel",
-		"Virtucon", "Gekko Partners", "Lacuna Labs", "Zorg Industries", "Paper Street Soap", "Ghostbusters Co",
-	}
-}
-
-/*
-seedCompanies adds the companies with a plan and a monthly spend, and
-places most customers without a company in one.
-*/
-func (d *ticketDemo) seedCompanies(ctx context.Context) error {
-	plans := []struct {
-		name  string
-		spend int
-	}{{"Starter", 49}, {"Growth", 399}, {"Business", 1490}, {"Enterprise", 6200}}
-
-	return d.app.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		for i, name := range demoCompanyNames() {
-			plan := plans[roll(len(plans), "plan", i)]
-			spend := plan.spend + roll(plan.spend/2+1, "spend", i)
-
-			_, err := tx.Exec(ctx, `INSERT INTO companies (workspace_id, external_id, name, custom_attributes)
-				VALUES ($1, $2, $3, jsonb_build_object('plan', $4::text, 'monthly_spend', $5::int))
-				ON CONFLICT DO NOTHING`, d.owner.Workspace.ID, "demo:company:"+strconv.Itoa(i), name, plan.name, spend)
-			if err != nil {
-				return fmt.Errorf("add company %s: %w", name, err)
-			}
-		}
-
-		d.companies = len(demoCompanyNames())
-
-		_, err := tx.Exec(ctx, `UPDATE contacts c SET company_id = co.id
-			FROM (SELECT id, row_number() OVER (ORDER BY external_id) - 1 AS n FROM companies
-				WHERE workspace_id = $1 AND external_id LIKE 'demo:company:%') co,
-			(SELECT id, row_number() OVER (ORDER BY id) AS r FROM contacts
-				WHERE workspace_id = $1 AND company_id IS NULL AND deleted_at IS NULL) x
-			WHERE c.id = x.id AND x.r % 7 <> 0 AND co.n = x.r % $2`, d.owner.Workspace.ID, d.companies)
-		if err != nil {
-			return fmt.Errorf("place customers in companies: %w", err)
-		}
-
-		return nil
 	})
 }
 

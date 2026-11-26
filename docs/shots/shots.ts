@@ -5,7 +5,7 @@
  * to key UI elements, and saves the whole window or a crop. Pages show a
  * shot with <Screenshot name="…" alt="…" />.
  *
- * Besides what `marketing:demo` seeds, these shots expect, in the Lumen
+ * Besides what `db:seed` creates, these shots expect, in the Lumen
  * workspace: a webhook endpoint for https://hooks.acme.example/dimmi with a
  * test delivery, a sending domain lumen.example and an identity secret
  * named Production. Create them with the API (see the commands in

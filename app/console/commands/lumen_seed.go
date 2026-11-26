@@ -2,17 +2,15 @@
 
 /*
 |--------------------------------------------------------------------------
-| Marketing Demo
+| Lumen Seed
 |--------------------------------------------------------------------------
 |
-| Fills a development workspace with a small, believable support team for
-| the marketing site's product shots: a handful of named teammates and a
-| queue of conversations written the way real customers write, through
-| the messenger, email and the API. Everything goes through the real
-| actions, so the screens it leaves are the product as it is. Only the
-| channel a conversation came through and its timestamps are set
-| directly, since the demo cannot receive real mail or messenger
-| traffic. It never runs in a release build.
+| Seeds Lumen, the second development workspace produced by `db:seed`: a
+| small, curated support team with believable conversations across
+| messenger, email and the API, plus the billing actions, versioned refund
+| procedure, saved simulations and triage workflow used for demos and
+| marketing/docs screenshots. Everything goes through the real actions, so
+| the screens it leaves are the product as it is.
 |
 */
 
@@ -20,6 +18,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -27,7 +26,6 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/console"
 	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/foundation"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
@@ -39,68 +37,52 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/authz"
+	"github.com/dimmihq/dimmi/app/demo/stowline"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
+const (
+	lumenName         = "Lumen"
+	lumenSlug         = "lumen"
+	lumenDefaultOwner = "maya@lumen.test"
+)
+
 /*
-MarketingDemoCommand seeds the workspace the marketing site is shot in.
+lumenSeeder seeds the Lumen demo workspace.
 */
-type MarketingDemoCommand struct {
-	App *app.App
+type lumenSeeder struct {
+	App        *app.App
+	Reset      bool
+	OwnerEmail string
+	Password   string
+	Out        *console.Output
 }
 
 /*
-Name returns marketing:demo.
+run creates and populates the Lumen workspace.
 */
-func (c MarketingDemoCommand) Name() string {
-	return "marketing:demo"
-}
-
-/*
-Description says what the command does.
-*/
-func (c MarketingDemoCommand) Description() string {
-	return "Seed a development workspace with the team and conversations the marketing site's product shots show"
-}
-
-/*
-Flags names the workspace and the owner the demo acts as.
-*/
-func (c MarketingDemoCommand) Flags(flags *console.Flags) {
-	flags.String("workspace", "", "the workspace's public id, ws_...")
-	flags.String("member", "", "the owner's member public id, mem_...")
-	flags.String(
-		"owner-email", "",
-		"instead of --workspace and --member: create a new Lumen workspace owned by this account",
-	)
-}
-
-/*
-Handle seeds the workspace.
-*/
-func (c MarketingDemoCommand) Handle(
-	ctx context.Context, _ *foundation.Application, in *console.Input, out *console.Output,
-) error {
-	workspace, member := in.String("workspace"), in.String("member")
-
-	if email := in.String("owner-email"); email != "" {
-		var err error
-
-		workspace, member, err = c.createLumen(ctx, email, out)
-		if err != nil {
-			return err
-		}
+func (s lumenSeeder) run(ctx context.Context) error {
+	began := s.App.Clock.Now()
+	if err := stowline.ClearSeeded(ctx, s.App, stowline.ClearOptions{
+		Slug: lumenSlug, Label: lumenName, Reset: s.Reset, Log: s.Out.Line,
+	}); err != nil {
+		return err
 	}
 
-	owner, err := SeriesDemoCommand(c).membership(ctx, workspace, member)
+	ownerEmail := s.OwnerEmail
+	if ownerEmail == "" {
+		ownerEmail = lumenDefaultOwner
+	}
+
+	owner, hash, err := s.createLumen(ctx, ownerEmail)
 	if err != nil {
 		return err
 	}
 
 	ctx = tenancy.With(ctx, owner.Workspace.ID.String())
 
-	stage, err := c.stage(ctx, owner)
+	stage, err := s.stage(ctx, owner, hash)
 	if err != nil {
 		return err
 	}
@@ -108,37 +90,101 @@ func (c MarketingDemoCommand) Handle(
 	stories := marketingStories()
 
 	// The oldest story first, so the newest lands on top of the list.
-	for _, s := range slices.Backward(stories) {
-		if err := c.story(ctx, stage, s); err != nil {
-			return fmt.Errorf("story %q: %w", s.subject, err)
+	for _, st := range slices.Backward(stories) {
+		if err := s.story(ctx, stage, st); err != nil {
+			return fmt.Errorf("story %q: %w", st.subject, err)
 		}
 	}
 
-	if err := c.agentSetup(ctx, owner); err != nil {
+	if err := s.agentSetup(ctx, owner); err != nil {
 		return err
 	}
 
-	out.Line("added %d teammates (password %s) and %d conversations", len(stage.team), demoPassword, len(stories))
+	s.Out.Info("Lumen is ready at /w/%s after %s (%d teammates, %d conversations). Sign in as %s with %q.",
+		owner.Workspace.Slug, s.App.Clock.Now().Sub(began).Round(time.Second), len(stage.team)+1, len(stories),
+		ownerEmail, s.Password)
 
 	return nil
+}
+
+/*
+findOrCreateUser returns the account with email, creating it with name and
+password hash when absent.
+*/
+func (s lumenSeeder) findOrCreateUser(ctx context.Context, name, email, hash string) (models.User, error) {
+	u, err := models.New(s.App.DB).FindUserByEmail(ctx, strings.ToLower(email))
+	if err == nil {
+		return u, nil
+	}
+	if !errors.Is(err, database.ErrNotFound) {
+		return u, fmt.Errorf("find user %s: %w", email, err)
+	}
+	return s.App.Actions.CreateUser.Handle(ctx, users.CreateUserInput{
+		Name: name, Email: email, PasswordHash: &hash, Verified: true, CreatedVia: appauth.CreatedViaRegister,
+	})
+}
+
+/*
+createLumen makes a fresh Lumen workspace owned by email, marks it as seeded
+so --reset can purge only it later, and skips onboarding so the inbox opens
+immediately.
+*/
+func (s lumenSeeder) createLumen(ctx context.Context, email string) (authz.Membership, string, error) {
+	hash, err := s.App.Hash.Make(ctx, s.Password)
+	if err != nil {
+		return authz.Membership{}, "", fmt.Errorf("hash password: %w", err)
+	}
+
+	user, err := s.findOrCreateUser(ctx, "Maya Lin", email, hash)
+	if err != nil {
+		return authz.Membership{}, "", fmt.Errorf("owner %s: %w", email, err)
+	}
+
+	created, err := s.App.Actions.CreateWorkspace.Handle(ctx, workspaces.CreateWorkspaceInput{
+		Owner: user, Name: lumenName, JoinedVia: "cli",
+	})
+	if err != nil {
+		return authz.Membership{}, "", fmt.Errorf("create workspace: %w", err)
+	}
+
+	if _, err := s.App.DB.Exec(ctx, `UPDATE workspaces SET settings = settings || jsonb_build_object('seed', $2::text),
+			onboarding_step = 'done', onboarding_completed_at = now()
+		WHERE id = $1`, created.Workspace.ID, lumenSlug); err != nil {
+		return authz.Membership{}, "", fmt.Errorf("mark workspace: %w", err)
+	}
+
+	scoped := tenancy.With(ctx, created.Workspace.ID.String())
+	q := models.New(s.App.DB)
+	w, err := q.FindWorkspace(scoped, created.Workspace.ID)
+	if err != nil {
+		return authz.Membership{}, "", fmt.Errorf("reload workspace: %w", err)
+	}
+	member, err := q.FindWorkspaceMember(scoped, models.FindWorkspaceMemberParams{
+		WorkspaceID: w.ID, ID: created.Owner.ID,
+	})
+	if err != nil {
+		return authz.Membership{}, "", fmt.Errorf("find owner: %w", err)
+	}
+
+	return authz.NewMembership(w, member, appauth.RolePermissions(enums.RoleOwner)), hash, nil
 }
 
 /*
 stage adds the teammates and finds the inbox and channel connections
 every story plays out against.
 */
-func (c MarketingDemoCommand) stage(ctx context.Context, owner authz.Membership) (marketingStage, error) {
-	team, err := c.team(ctx, owner)
+func (s lumenSeeder) stage(ctx context.Context, owner authz.Membership, hash string) (marketingStage, error) {
+	team, err := s.team(ctx, owner, hash)
 	if err != nil {
 		return marketingStage{}, err
 	}
 
-	inbox, err := models.New(c.App.DB).FindDefaultInbox(ctx, owner.Workspace.ID)
+	inbox, err := models.New(s.App.DB).FindDefaultInbox(ctx, owner.Workspace.ID)
 	if err != nil {
 		return marketingStage{}, fmt.Errorf("find default inbox: %w", err)
 	}
 
-	channels, err := c.channels(ctx, owner.Workspace.ID, inbox.ID)
+	channels, err := s.channels(ctx, owner.Workspace.ID, inbox.ID)
 	if err != nil {
 		return marketingStage{}, err
 	}
@@ -147,65 +193,17 @@ func (c MarketingDemoCommand) stage(ctx context.Context, owner authz.Membership)
 }
 
 /*
-createLumen makes a fresh Lumen workspace owned by the account with this
-email, retiring an earlier one, and returns the public ids of the
-workspace and its owner's membership.
-*/
-func (c MarketingDemoCommand) createLumen(
-	ctx context.Context, email string, out *console.Output,
-) (workspace, member string, err error) {
-	user, err := models.New(c.App.DB).FindUserByEmail(ctx, strings.ToLower(email))
-	if err != nil {
-		return "", "", fmt.Errorf("find --owner-email: %w", err)
-	}
-
-	// Retire an earlier demo so the new one gets the /lumen address again.
-	if _, err := c.App.DB.Exec(ctx, `UPDATE workspaces SET deleted_at = now(),
-			slug = 'lumen-retired-' || extract(epoch FROM now())::bigint
-		WHERE slug = 'lumen' AND created_by_user_id = $1`, user.ID); err != nil {
-		return "", "", fmt.Errorf("retire earlier demo: %w", err)
-	}
-
-	created, err := c.App.Actions.CreateWorkspace.Handle(ctx, workspaces.CreateWorkspaceInput{
-		Owner: user, Name: "Lumen", JoinedVia: "cli",
-	})
-	if err != nil {
-		return "", "", fmt.Errorf("create workspace: %w", err)
-	}
-
-	// The demo workspace skips onboarding, so shots open straight on the inbox.
-	if _, err := c.App.DB.Exec(ctx, `UPDATE workspaces SET onboarding_step = 'done', onboarding_completed_at = now()
-		WHERE id = $1`, created.Workspace.ID); err != nil {
-		return "", "", fmt.Errorf("finish onboarding: %w", err)
-	}
-
-	workspace = models.PublicID(models.PrefixWorkspace, created.Workspace.ID)
-	member = models.PublicID(models.PrefixMember, created.Owner.ID)
-	out.Line("created workspace %s at /w/%s", workspace, created.Workspace.Slug)
-
-	return workspace, member, nil
-}
-
-/*
 team adds the named teammates and returns their memberships, in the
 order of marketingTeammates.
 */
-func (c MarketingDemoCommand) team(ctx context.Context, owner authz.Membership) ([]authz.Membership, error) {
-	hash, err := c.App.Hash.Make(ctx, demoPassword)
-	if err != nil {
-		return nil, fmt.Errorf("hash demo password: %w", err)
-	}
-
-	q := models.New(c.App.DB)
-	stamp := c.App.Clock.Now().Unix()
+func (s lumenSeeder) team(ctx context.Context, owner authz.Membership, hash string) ([]authz.Membership, error) {
+	q := models.New(s.App.DB)
 	names := marketingTeammates()
 	team := make([]authz.Membership, 0, len(names))
 
 	for i, name := range names {
-		user, err := c.App.Actions.CreateUser.Handle(ctx, users.CreateUserInput{
-			Name: name, Email: fmt.Sprintf("%s.%d@lumen.test", strings.ToLower(strings.Fields(name)[0]), stamp),
-			PasswordHash: &hash, Verified: true, CreatedVia: appauth.CreatedViaRegister,
-		})
+		email := fmt.Sprintf("%s@lumen.test", strings.ToLower(strings.Fields(name)[0]))
+		user, err := s.findOrCreateUser(ctx, name, email, hash)
 		if err != nil {
 			return nil, fmt.Errorf("create teammate: %w", err)
 		}
@@ -216,13 +214,11 @@ func (c MarketingDemoCommand) team(ctx context.Context, owner authz.Membership) 
 		}
 
 		var member models.WorkspaceMember
-
-		err = c.App.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		err = s.App.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 			member, err = models.New(tx).CreateWorkspaceMember(ctx, models.CreateWorkspaceMemberParams{
 				WorkspaceID: owner.Workspace.ID, UserID: user.ID, Role: string(role),
-				JoinedVia: new("cli"), Now: c.App.Clock.Now(),
+				JoinedVia: new("cli"), Now: s.App.Clock.Now(),
 			})
-
 			return err
 		})
 		if err != nil {
@@ -247,19 +243,19 @@ channels returns a connection for each channel the stories use, adding
 an email and a messenger connection to the inbox when it has none, so
 each conversation shows the channel it would really have come through.
 */
-func (c MarketingDemoCommand) channels(ctx context.Context, ws, inbox ids.UUID) (map[string]ids.UUID, error) {
+func (s lumenSeeder) channels(ctx context.Context, ws, inbox ids.UUID) (map[string]ids.UUID, error) {
 	found := map[string]ids.UUID{}
 
 	for _, kind := range []string{"email", "widget"} {
 		var id ids.UUID
 
-		err := c.App.DB.QueryRow(ctx, `SELECT id FROM channel_connections
+		err := s.App.DB.QueryRow(ctx, `SELECT id FROM channel_connections
 			WHERE workspace_id = $1 AND inbox_id = $2 AND type = $3 AND deleted_at IS NULL
 			ORDER BY created_at LIMIT 1`, ws, inbox, kind).Scan(&id)
 		if err != nil {
 			name := map[string]string{"email": "support@lumen.test", "widget": "Lumen messenger"}[kind]
 
-			err = c.App.DB.QueryRow(ctx, `INSERT INTO channel_connections (workspace_id, inbox_id, type, name, status)
+			err = s.App.DB.QueryRow(ctx, `INSERT INTO channel_connections (workspace_id, inbox_id, type, name, status)
 				VALUES ($1, $2, $3, $4, 'active') RETURNING id`, ws, inbox, kind, name).Scan(&id)
 			if err != nil {
 				return nil, fmt.Errorf("add %s connection: %w", kind, err)
@@ -296,39 +292,39 @@ type marketingThread struct {
 story plays one conversation out through the real actions, then moves
 it to its channel and back in time.
 */
-func (c MarketingDemoCommand) story(ctx context.Context, stage marketingStage, s marketingStory) error {
+func (s lumenSeeder) story(ctx context.Context, stage marketingStage, st marketingStory) error {
 	owner, inbox := stage.owner, stage.inbox
 
-	email := strings.ToLower(strings.ReplaceAll(s.name, " ", ".")) + "@" +
-		strings.ToLower(strings.NewReplacer(" ", "", "&", "and").Replace(s.company)) + ".test"
+	email := strings.ToLower(strings.ReplaceAll(st.name, " ", ".")) + "@" +
+		strings.ToLower(strings.NewReplacer(" ", "", "&", "and").Replace(st.company)) + ".test"
 
-	loaded, err := c.App.Actions.Inbox.CreateConversation.Handle(ctx, conversations.CreateConversationInput{
+	loaded, err := s.App.Actions.Inbox.CreateConversation.Handle(ctx, conversations.CreateConversationInput{
 		Membership: owner, ByContact: true, InboxID: &inbox,
-		Contact: contacts.Ref{WorkspaceID: owner.Workspace.ID, Email: &email, Name: &s.name},
-		Subject: &s.subject, Body: s.turns[0].body,
+		Contact: contacts.Ref{WorkspaceID: owner.Workspace.ID, Email: &email, Name: &st.name},
+		Subject: &st.subject, Body: st.turns[0].body,
 	})
 	if err != nil {
 		return fmt.Errorf("create: %w", err)
 	}
 
 	thread := marketingThread{owner: owner, agent: owner, ref: conversations.Ref{ID: loaded.Conversation.ID}}
-	if s.teammate >= 0 {
-		thread.agent = stage.team[s.teammate]
+	if st.teammate >= 0 {
+		thread.agent = stage.team[st.teammate]
 	}
 
-	for _, turn := range s.turns[1:] {
-		if err := c.turn(ctx, thread, turn); err != nil {
+	for _, turn := range st.turns[1:] {
+		if err := s.turn(ctx, thread, turn); err != nil {
 			return fmt.Errorf("%s turn: %w", turn.by, err)
 		}
 	}
 
-	if err := c.settle(ctx, thread, s); err != nil {
+	if err := s.settle(ctx, thread, st); err != nil {
 		return err
 	}
 
-	return c.place(ctx, marketingPlacement{
+	return s.place(ctx, marketingPlacement{
 		workspace: owner.Workspace.ID, conversation: loaded.Conversation.ID,
-		channel: stage.channels[s.channel], ago: s.ago,
+		channel: stage.channels[st.channel], ago: st.ago,
 	})
 }
 
@@ -336,8 +332,8 @@ func (c MarketingDemoCommand) story(ctx context.Context, stage marketingStage, s
 turn adds one message after the first: a teammate's reply or note, or
 the customer writing again.
 */
-func (c MarketingDemoCommand) turn(ctx context.Context, t marketingThread, turn marketingTurn) error {
-	acts := c.App.Actions.Inbox
+func (s lumenSeeder) turn(ctx context.Context, t marketingThread, turn marketingTurn) error {
+	acts := s.App.Actions.Inbox
 	owner, agent, ref := t.owner, t.agent, t.ref
 
 	var err error
@@ -360,10 +356,10 @@ func (c MarketingDemoCommand) turn(ctx context.Context, t marketingThread, turn 
 settle leaves the conversation where its story says: closed, snoozed or
 open, and assigned to its teammate.
 */
-func (c MarketingDemoCommand) settle(ctx context.Context, t marketingThread, s marketingStory) error {
+func (s lumenSeeder) settle(ctx context.Context, t marketingThread, st marketingStory) error {
 	ch := conversations.Changes{}
 
-	switch s.status {
+	switch st.status {
 	case "closed":
 		ch.Status = new("closed")
 	case "snoozed":
@@ -374,11 +370,11 @@ func (c MarketingDemoCommand) settle(ctx context.Context, t marketingThread, s m
 	// A teammate's reply already assigns the conversation to them; assigning
 	// again would hand it back, so only stories without a reply assign here.
 	replied := false
-	for _, turn := range s.turns {
+	for _, turn := range st.turns {
 		replied = replied || turn.by == "agent"
 	}
 
-	if s.teammate >= 0 && !replied {
+	if st.teammate >= 0 && !replied {
 		ch.AssignMember = true
 	}
 
@@ -387,7 +383,7 @@ func (c MarketingDemoCommand) settle(ctx context.Context, t marketingThread, s m
 	}
 
 	in := conversations.ApplyChangesInput{Membership: t.agent, Ref: t.ref, Changes: ch}
-	if _, err := c.App.Actions.Inbox.ApplyChanges.Handle(ctx, in); err != nil {
+	if _, err := s.App.Actions.Inbox.ApplyChanges.Handle(ctx, in); err != nil {
 		return fmt.Errorf("settle: %w", err)
 	}
 
@@ -408,10 +404,10 @@ place moves a conversation to the channel its story names and back in
 time, so the list reads like a real morning: the last message p.ago ago
 and each earlier one a few minutes before it.
 */
-func (c MarketingDemoCommand) place(ctx context.Context, p marketingPlacement) error {
+func (s lumenSeeder) place(ctx context.Context, p marketingPlacement) error {
 	ws, id, channel, ago := p.workspace, p.conversation, p.channel, p.ago
 
-	return c.App.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	return s.App.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		if channel != (ids.UUID{}) {
 			if _, err := tx.Exec(ctx, `UPDATE conversations SET channel_connection_id = $3
 				WHERE workspace_id = $1 AND id = $2`, ws, id, channel); err != nil {

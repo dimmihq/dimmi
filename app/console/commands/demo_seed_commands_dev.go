@@ -22,8 +22,8 @@ import (
 
 func demoSeedCommands(a *app.App) []foundation.Command {
 	return []foundation.Command{
-		WorkspaceDemoCommand{App: a},
-		KnowledgeDemoEmbedCommand{App: a},
+		DBSeedCommand{App: a},
+		DBEmbedCommand{App: a},
 		AISimulateCommand{App: a},
 		AIDemoConnectionCommand{App: a},
 	}

@@ -13,7 +13,7 @@ AIR_VERSION := v1.67.4
 FRAMEWORK_PKGS := ./framework/...
 APP_PKGS := ./app/...
 
-.PHONY: test-sweep e2e pseudo-locale tools lint-tools fmt lint lint-go lint-web test test-go test-cloud test-self-host warm-arch test-timing test-web test-dev cover cover-app services gen sqlc views build build-cloud dev dev-server dev-web dev-widget dev-db web-build web-test
+.PHONY: test-sweep e2e pseudo-locale tools lint-tools fmt lint lint-go lint-web test test-go test-cloud test-self-host warm-arch test-timing test-web test-dev cover cover-app services gen seed sqlc views build build-cloud dev dev-server dev-web dev-widget dev-db web-build web-test
 
 APP ?= dimmi
 
@@ -110,6 +110,12 @@ test-sweep:
 # Runs a dev-only command, e.g. make gen ARGS="make:action CloseTicket".
 gen:
 	go run -tags dev ./cmd/$(APP) $(ARGS)
+
+# Seeds the local development database (Stowline and Lumen). Pass flags via
+# SEED_ARGS, e.g. make seed SEED_ARGS="--only stowline --size medium --reset".
+seed: dev-db
+	go run -tags dev ./cmd/$(APP) migrate
+	go run -tags dev ./cmd/$(APP) db:seed $(SEED_ARGS)
 
 cover:
 	$(WITH_ENV) go test -race -count=1 -coverpkg=$(FRAMEWORK_PKGS) -coverprofile=coverage.out ./framework/...

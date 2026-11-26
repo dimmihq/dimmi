@@ -185,52 +185,89 @@ func (r *run) steps(ctx context.Context) error {
 Find returns the live Stowline workspace, if there is one.
 */
 func Find(ctx context.Context, a *app.App) (models.Workspace, bool, error) {
+	return FindSeeded(ctx, a, Slug)
+}
+
+/*
+FindSeeded returns the live seeded workspace marked with slug, if there is one.
+*/
+func FindSeeded(ctx context.Context, a *app.App, slug string) (models.Workspace, bool, error) {
 	var id ids.UUID
 	err := a.DB.QueryRow(ctx, `SELECT id FROM workspaces WHERE settings ->> 'seed' = $1 AND deleted_at IS NULL
-		ORDER BY created_at DESC LIMIT 1`, Slug).Scan(&id)
+		ORDER BY created_at DESC LIMIT 1`, slug).Scan(&id)
 	if errors.Is(err, database.ErrNotFound) {
 		return models.Workspace{}, false, nil
 	}
 	if err != nil {
-		return models.Workspace{}, false, fmt.Errorf("find stowline workspace: %w", err)
+		return models.Workspace{}, false, fmt.Errorf("find %s workspace: %w", slug, err)
 	}
 	w, err := models.New(a.DB).FindWorkspace(tenancy.With(ctx, id.String()), id)
 	if err != nil {
-		return models.Workspace{}, false, fmt.Errorf("load stowline workspace: %w", err)
+		return models.Workspace{}, false, fmt.Errorf("load %s workspace: %w", slug, err)
 	}
 	return w, true, nil
 }
 
 /*
+ClearOptions configures ClearSeeded: the marker slug, display label, whether
+to purge an existing workspace, and an optional log callback.
+*/
+type ClearOptions struct {
+	Slug  string
+	Label string
+	Reset bool
+	Log   func(string, ...any)
+}
+
+/*
 clear refuses an existing Stowline workspace, or purges it when asked
+to reset.
+*/
+func (s *Seeder) clear(ctx context.Context) error {
+	return ClearSeeded(ctx, s.App, ClearOptions{
+		Slug: Slug, Label: Name, Reset: s.Reset, Log: s.Log,
+	})
+}
+
+/*
+ClearSeeded refuses an existing seeded workspace, or purges it when asked
 to reset, along with any earlier one a run that stopped halfway left in
 the trash: a trashed workspace still holds its verified sending domain,
 which the next seed needs. Only workspaces the seed marked are ever
 touched.
 */
-func (s *Seeder) clear(ctx context.Context) error {
-	w, found, err := Find(ctx, s.App)
+func ClearSeeded(ctx context.Context, a *app.App, opts ClearOptions) error {
+	log := opts.Log
+	if log == nil {
+		log = func(string, ...any) {}
+	}
+	w, found, err := FindSeeded(ctx, a, opts.Slug)
 	if err != nil {
 		return err
 	}
-	if found && !s.Reset {
-		return fmt.Errorf("%w (/w/%s)", ErrExists, w.Slug)
+	if found && !opts.Reset {
+		if opts.Slug == Slug {
+			return fmt.Errorf("%w (/w/%s)", ErrExists, w.Slug)
+		}
+		return fmt.Errorf("a %s workspace already exists (/w/%s); run again with --reset to purge it and seed afresh",
+			opts.Label, w.Slug)
 	}
 	if found {
-		s.Log("purging the earlier Stowline workspace /w/%s", w.Slug)
-		due := s.App.Clock.Now().Add(-time.Minute)
-		if _, err := s.App.DB.Exec(ctx, `UPDATE workspaces SET deleted_at = $3, purge_after = $3,
-				slug = left('stowline-old-' || extract(epoch FROM now())::bigint, 40)
-			WHERE id = $1 AND settings ->> 'seed' = $2`, w.ID, Slug, due); err != nil {
-			return fmt.Errorf("trash earlier workspace: %w", err)
+		log("purging the earlier %s workspace /w/%s", opts.Label, w.Slug)
+		due := a.Clock.Now().Add(-time.Minute)
+		prefix := opts.Slug + "-old-"
+		if _, err := a.DB.Exec(ctx, `UPDATE workspaces SET deleted_at = $3, purge_after = $3,
+				slug = left($4 || extract(epoch FROM now())::bigint, 40)
+			WHERE id = $1 AND settings ->> 'seed' = $2`, w.ID, opts.Slug, due, prefix); err != nil {
+			return fmt.Errorf("trash earlier %s workspace: %w", opts.Label, err)
 		}
 	}
-	trashed, err := s.trashed(ctx)
+	trashed, err := trashedSeeded(ctx, a, opts.Slug)
 	if err != nil {
 		return err
 	}
 	for _, id := range trashed {
-		if err := s.purge(ctx, id); err != nil {
+		if err := purgeSeeded(ctx, a, opts.Label, id); err != nil {
 			return err
 		}
 	}
@@ -238,13 +275,13 @@ func (s *Seeder) clear(ctx context.Context) error {
 }
 
 /*
-trashed lists the seeded workspaces waiting in the trash.
+trashedSeeded lists the seeded workspaces for slug waiting in the trash.
 */
-func (s *Seeder) trashed(ctx context.Context) ([]ids.UUID, error) {
-	rows, err := s.App.DB.Query(ctx, `SELECT id FROM workspaces WHERE settings ->> 'seed' = $1
-		AND deleted_at IS NOT NULL ORDER BY created_at`, Slug)
+func trashedSeeded(ctx context.Context, a *app.App, slug string) ([]ids.UUID, error) {
+	rows, err := a.DB.Query(ctx, `SELECT id FROM workspaces WHERE settings ->> 'seed' = $1
+		AND deleted_at IS NOT NULL ORDER BY created_at`, slug)
 	if err != nil {
-		return nil, fmt.Errorf("list trashed stowline workspaces: %w", err)
+		return nil, fmt.Errorf("list trashed %s workspaces: %w", slug, err)
 	}
 	defer rows.Close()
 
@@ -252,7 +289,7 @@ func (s *Seeder) trashed(ctx context.Context) ([]ids.UUID, error) {
 	for rows.Next() {
 		var id ids.UUID
 		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("read trashed stowline workspace: %w", err)
+			return nil, fmt.Errorf("read trashed %s workspace: %w", slug, err)
 		}
 		out = append(out, id)
 	}
@@ -260,12 +297,12 @@ func (s *Seeder) trashed(ctx context.Context) ([]ids.UUID, error) {
 }
 
 /*
-purge deletes one trashed workspace for good.
+purgeSeeded deletes one trashed seeded workspace for good.
 */
-func (s *Seeder) purge(ctx context.Context, id ids.UUID) error {
+func purgeSeeded(ctx context.Context, a *app.App, label string, id ids.UUID) error {
 	// The purge deletes some parents before the rows that point at them,
 	// which their foreign keys refuse, so those rows go first.
-	err := s.App.DB.Transaction(tenancy.With(ctx, id.String()), func(ctx context.Context, tx *database.Tx) error {
+	err := a.DB.Transaction(tenancy.With(ctx, id.String()), func(ctx context.Context, tx *database.Tx) error {
 		for _, t := range []string{
 			"feedback_posts", "ai_action_calls", "ai_actions", "workflow_runs", "series_steps",
 			"series_enrollments",
@@ -279,20 +316,20 @@ func (s *Seeder) purge(ctx context.Context, id ids.UUID) error {
 	if err != nil {
 		return err
 	}
-	disk, err := s.App.Storage.Default()
+	disk, err := a.Storage.Default()
 	if err != nil {
 		return fmt.Errorf("workspace disk: %w", err)
 	}
 	purger := &jobs.PurgeWorkspace{
-		DB: s.App.DB, Clock: s.App.Clock, Disk: disk, Storage: s.App.Storage, Retention: s.App.Retention,
-		Log: s.App.Log, Revoke: s.App.Actions.Integrations.RevokeWorkspace.Handle,
+		DB: a.DB, Clock: a.Clock, Disk: disk, Storage: a.Storage, Retention: a.Retention,
+		Log: a.Log, Revoke: a.Actions.Integrations.RevokeWorkspace.Handle,
 	}
 	purged, err := purger.Purge(ctx, id)
 	if err != nil {
-		return fmt.Errorf("purge earlier workspace: %w", err)
+		return fmt.Errorf("purge earlier %s workspace: %w", label, err)
 	}
 	if !purged {
-		return errors.New("the earlier Stowline workspace is held by a retention rule; purge it by hand")
+		return fmt.Errorf("the earlier %s workspace is held by a retention rule; purge it by hand", label)
 	}
 	return nil
 }

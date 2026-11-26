@@ -30,7 +30,10 @@ import (
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app"
+	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/authz"
+	"github.com/dimmihq/dimmi/app/enums"
+	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
@@ -52,9 +55,10 @@ type DemoExtrasInput struct {
 }
 
 /*
-DemoExtras seeds broadcasts, series, tickets and backlog history in the
-owner's workspace. Without a sending address, which needs inbound mail
-set up, email broadcasts go in without one and the series are skipped.
+DemoExtras seeds broadcasts, series, tickets, backlog history and help center
+analytics in the owner's workspace. Without a sending address, which needs
+inbound mail set up, email broadcasts go in without one and the series are
+skipped.
 */
 func DemoExtras(ctx context.Context, a *app.App, in DemoExtrasInput) error {
 	ctx = tenancy.With(ctx, in.Owner.Workspace.ID.String())
@@ -75,8 +79,7 @@ func DemoExtras(ctx context.Context, a *app.App, in DemoExtrasInput) error {
 		return err
 	}
 	return a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		_, err := tx.Exec(ctx, backlogHistorySQL, in.Owner.Workspace.ID, 365)
-		return err
+		return seedAnalytics(ctx, tx, in.Owner.Workspace.ID)
 	})
 }
 
@@ -84,12 +87,45 @@ func DemoExtras(ctx context.Context, a *app.App, in DemoExtrasInput) error {
 DemoTeam returns the workspace's active teammates, the owner first.
 */
 func DemoTeam(ctx context.Context, a *app.App, owner authz.Membership) ([]authz.Membership, error) {
-	var team []authz.Membership
+	team := []authz.Membership{owner}
 	scoped := tenancy.With(ctx, owner.Workspace.ID.String())
-	err := a.DB.Transaction(scoped, func(ctx context.Context, _ *database.Tx) error {
-		var err error
-		team, err = InboxDemoCommand{App: a}.existingTeam(ctx, owner)
-		return err
+	err := a.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT id, role FROM workspace_members
+			WHERE workspace_id = $1 AND id <> $2 AND status = 'active'`, owner.Workspace.ID, owner.Member.ID)
+		if err != nil {
+			return fmt.Errorf("list teammates: %w", err)
+		}
+
+		type held struct {
+			id   ids.UUID
+			role string
+		}
+		var existing []held
+		for rows.Next() {
+			var h held
+			if err := rows.Scan(&h.id, &h.role); err != nil {
+				rows.Close()
+				return fmt.Errorf("read teammate: %w", err)
+			}
+			existing = append(existing, h)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+
+		q := models.New(tx)
+		for _, h := range existing {
+			member, err := q.FindWorkspaceMember(ctx, models.FindWorkspaceMemberParams{
+				WorkspaceID: owner.Workspace.ID, ID: h.id,
+			})
+			if err != nil {
+				return fmt.Errorf("find teammate: %w", err)
+			}
+			perms := appauth.RolePermissions(enums.Role(h.role))
+			team = append(team, authz.NewMembership(owner.Workspace, member, perms))
+		}
+		return nil
 	})
 	return team, err
 }
@@ -100,7 +136,7 @@ recipients, then counts their results.
 */
 func brandBroadcasts(ctx context.Context, a *app.App, in DemoExtrasInput) error {
 	ws, member := in.Owner.Workspace.ID, in.Owner.Member.ID
-	seed := demoSeed{ws: ws, member: member, now: a.Clock.Now().UTC().Format("2006-01-02 15:04:05")}
+	seed := demoSeed{ws: ws, member: member}
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		if err := seed.topics(ctx, tx); err != nil {
 			return err
@@ -124,7 +160,7 @@ func brandBroadcasts(ctx context.Context, a *app.App, in DemoExtrasInput) error 
 }
 
 /*
-send seeds one broadcast and, when it went out, who it went to.
+send seeds one broadcast and, when it went out, who it went to and its links.
 */
 func (s *demoSeed) send(ctx context.Context, tx *database.Tx, b demoBroadcast) error {
 	id, err := s.broadcast(ctx, tx, b)
@@ -134,6 +170,13 @@ func (s *demoSeed) send(ctx context.Context, tx *database.Tx, b demoBroadcast) e
 	if b.sentShare > 0 {
 		if err := s.recipients(ctx, tx, id, b); err != nil {
 			return err
+		}
+		for i, url := range b.links {
+			if _, err := tx.Exec(ctx, `INSERT INTO broadcast_links (workspace_id, broadcast_id, n, url, clicks)
+				VALUES ($1, $2, $3, $4, (SELECT count(*) * $5::float8 FROM broadcast_recipients
+				WHERE broadcast_id = $2 AND clicked_at IS NOT NULL))`, s.ws, id, i+1, url, 1/float64(i+1)); err != nil {
+				return fmt.Errorf("seed link: %w", err)
+			}
 		}
 	}
 	s.made = append(s.made, id)
@@ -165,7 +208,9 @@ func brandSeries(ctx context.Context, a *app.App, in DemoExtrasInput) error {
 		return fmt.Errorf("find sender address: %w", err)
 	}
 	for _, demo := range demos {
-		if _, err := (SeriesDemoCommand{App: a}).build(ctx, in.Owner, demo, address); err != nil {
+		if _, err := buildDemoSeries(ctx, a, demoSeriesInput{
+			Owner: in.Owner, Demo: demo, Address: address,
+		}); err != nil {
 			return fmt.Errorf("build series %s: %w%s", demo.Name, err, whyNot(err))
 		}
 	}
