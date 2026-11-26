@@ -149,6 +149,7 @@
 .details {
   padding: 10px 14px;
   border-radius: 12px;
+  interpolate-size: allow-keywords;
 }
 
 .details > summary {
@@ -163,7 +164,7 @@
 
 .details .chevron {
   inline-size: 18px;
-  transition: rotate 150ms;
+  transition: rotate 0.2s;
 }
 
 .details[open] .chevron {
@@ -172,6 +173,17 @@
 
 .details > :not(summary) {
   margin: 10px 0 0;
+}
+
+.details::details-content {
+  block-size: 0;
+  overflow: hidden;
+  /* every property, so content-visibility waits for the fold to close */
+  transition: 0.2s allow-discrete;
+}
+
+.details[open]::details-content {
+  block-size: auto;
 }
 
 .figure {

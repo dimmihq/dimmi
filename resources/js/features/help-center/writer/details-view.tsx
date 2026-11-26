@@ -54,7 +54,9 @@ export function DetailsView({ node, updateAttributes, editor, getPos }: NodeView
           className="details-title"
         />
       </div>
-      <NodeViewContent className={cx("details-body", !open && "hidden")} />
+      <div className="details-fold" data-closed={open ? undefined : ""}>
+        <NodeViewContent className="details-body" />
+      </div>
     </NodeViewWrapper>
   );
 }

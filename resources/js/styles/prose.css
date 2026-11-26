@@ -524,6 +524,29 @@ contrast on the code block's surface.
   margin-top: 0.75rem;
 }
 
+/*
+ * The section's body slides open and shut with its chevron, in browsers
+ * that can size what a <details> holds; others open it at once.
+ */
+.prose .details {
+  interpolate-size: allow-keywords;
+}
+
+.prose .details::details-content {
+  block-size: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    block-size 200ms ease,
+    opacity 200ms ease,
+    content-visibility 200ms allow-discrete;
+}
+
+.prose .details[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+}
+
 .prose .details + .details {
   margin-top: 0.5rem;
 }
@@ -620,8 +643,27 @@ contrast on the code block's surface.
   color: var(--color-text-placeholder);
 }
 
-.prose .details-body {
+.prose .details-fold {
+  display: grid;
+  grid-template-rows: 1fr;
   margin-top: 0.75rem;
+  transition:
+    grid-template-rows 200ms ease,
+    margin-top 200ms ease,
+    opacity 200ms ease,
+    visibility 200ms;
+}
+
+.prose .details-fold[data-closed] {
+  grid-template-rows: 0fr;
+  margin-top: 0;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.prose .details-body {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .prose .details-body > * + * {
@@ -711,6 +753,11 @@ contrast on the code block's surface.
   .prose img[data-uploading] {
     animation: none;
     opacity: 0.6;
+  }
+
+  .prose .details::details-content,
+  .prose .details-fold {
+    transition: none;
   }
 }
 
