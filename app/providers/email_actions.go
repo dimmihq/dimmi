@@ -20,9 +20,11 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"time"
 
 	fconfig "github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/foundation"
+	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/mailbox"
 	"github.com/dimmihq/dimmi/framework/queue"
 
@@ -32,6 +34,7 @@ import (
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	inbound "github.com/dimmihq/dimmi/app/integrations/email"
 	"github.com/dimmihq/dimmi/app/jobs"
+	"github.com/dimmihq/dimmi/app/models"
 	appconfig "github.com/dimmihq/dimmi/config"
 )
 
@@ -97,6 +100,7 @@ func bootEmail(a *app.App) error {
 	}
 	acts.SendEmailMessage = &email.SendEmailMessage{
 		DB: a.DB, Clock: a.Clock, Mail: a.Mail, IDs: a.IDs, Config: cfg, Stamps: stamps, Transport: transport,
+		Links: fileLinks{app: a},
 	}
 	a.EmailChannel = &inbound.Channel{Sender: acts.SendEmailMessage, Transport: transport}
 	if err := a.Channels.Register(a.EmailChannel); err != nil {
@@ -208,4 +212,28 @@ func customerTransport(a *app.App) string {
 	}
 
 	return "log"
+}
+
+/*
+fileLinkTTL is how long the download link of a file too large to attach
+to an email keeps working.
+*/
+const fileLinkTTL = 90 * 24 * time.Hour
+
+/*
+fileLinks signs the download links of emailed files with the
+application's URL signer.
+*/
+type fileLinks struct {
+	app *app.App
+}
+
+/*
+FileLink returns the signed link that downloads the file.
+*/
+func (l fileLinks) FileLink(workspaceID, attachmentID ids.UUID) (string, error) {
+	return l.app.URL.SignedRoute("files.download", map[string]string{
+		"workspace":  models.PublicID(models.PrefixWorkspace, workspaceID),
+		"attachment": models.PublicID(models.PrefixAttachment, attachmentID),
+	}, fileLinkTTL)
 }

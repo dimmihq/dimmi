@@ -39,6 +39,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/knowledgesources"
 	"github.com/dimmihq/dimmi/app/actions/memberimports"
 	"github.com/dimmihq/dimmi/app/actions/members"
+	"github.com/dimmihq/dimmi/app/actions/migrations"
 	"github.com/dimmihq/dimmi/app/actions/notifications"
 	"github.com/dimmihq/dimmi/app/actions/procedures"
 	"github.com/dimmihq/dimmi/app/actions/ratings"
@@ -169,6 +170,7 @@ type Actions struct {
 	TicketReports              *ticketreports.Reports
 	TicketIssues               *issues.Issues
 	TicketImports              *ticketimports.Importer
+	Migrations                 *migrations.Migrations
 	SLA                        *sla.SLA
 	Workflows                  *workflows.Workflows
 	Schedules                  *schedules.Schedules

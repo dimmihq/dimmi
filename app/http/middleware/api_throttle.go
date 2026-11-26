@@ -12,7 +12,10 @@
 |
 | The numbers come from entitlements, so a customer who needs more gets
 | an override; a catalog without them leaves the install's configured
-| numbers, as does a lookup that fails. These are fairness limits: when the counters cannot be
+| numbers, as does a lookup that fails. A migration from another tool
+| sends a lot in little time, so its routes count against a minute of
+| the workspace's own and never use up its other integrations' share.
+| These are fairness limits: when the counters cannot be
 | reached, requests go through. The limits run after sign-in and access
 | checks, so a refused call costs nothing.
 |
@@ -22,12 +25,14 @@ package middleware
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/middleware"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/routing"
 
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/contracts"
@@ -81,12 +86,22 @@ func APIThrottle(o APIThrottleOptions) fhttp.Middleware {
 		Limit: o.limit(entitlements.KeyAPIUserRateLimit, o.Limits.UserPerMinute, 1),
 	})
 
+	migration := o.throttle(middleware.ThrottleOptions{
+		Name: "api:migration", Decay: time.Minute, Scope: "migration", Key: migrationKey,
+		Limit: o.limit(entitlements.KeyAPIMigrationRateLimit, o.Limits.MigrationPerMinute, 1),
+	})
+
 	return func(next fhttp.Handler) fhttp.Handler {
 		chain := workspace(burst(token(user(next))))
+		migrating := migration(next)
 
 		return fhttp.HandlerFunc(func(w fhttp.ResponseWriter, r *fhttp.Request) {
 			rec := &statusRecorder{ResponseWriter: w}
-			chain.ServeHTTP(rec, r)
+			if isMigration(r) {
+				migrating.ServeHTTP(rec, r)
+			} else {
+				chain.ServeHTTP(rec, r)
+			}
 
 			if rec.status == fhttp.StatusTooManyRequests && o.Refused != nil {
 				o.Refused(r.Context(), w.Header().Get(middleware.ScopeHeader))
@@ -125,6 +140,34 @@ func (o APIThrottleOptions) limit(key string, configured, parts int64) func(r *f
 
 		return int(max(perMinute/parts, 1))
 	}
+}
+
+/*
+migrationPrefix starts the name of every route of the migrations API.
+*/
+const migrationPrefix = "migrations."
+
+/*
+isMigration reports whether the request is one of the migrations API,
+which has a minute of its own.
+*/
+func isMigration(r *fhttp.Request) bool {
+	route, ok := routing.CurrentRoute(r.Context())
+
+	return ok && strings.HasPrefix(route.Name(), migrationPrefix)
+}
+
+/*
+migrationKey counts a migration request against its workspace, from a
+token, a browser or an app alike.
+*/
+func migrationKey(r *fhttp.Request) string {
+	p, ok := appauth.CurrentPrincipal(r.Context())
+	if !ok {
+		return ""
+	}
+
+	return "mig:" + p.WorkspaceID.String()
 }
 
 /*

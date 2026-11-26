@@ -11766,6 +11766,136 @@
         ],
         "type": "object"
       },
+      "CollectionMigrationLookup": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/MigrationLookup"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionMigrationLookupMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionMigrationLookupMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionMigrationSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/MigrationSummary"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionMigrationSummaryMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionMigrationSummaryMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
       "CollectionNotificationDestination": {
         "additionalProperties": false,
         "properties": {
@@ -16059,6 +16189,27 @@
           "object",
           "method",
           "confirmed_until"
+        ],
+        "type": "object"
+      },
+      "Conflict": {
+        "additionalProperties": false,
+        "properties": {
+          "dimmi": {
+            "description": "The value it holds in dimmi now, which the sync kept."
+          },
+          "field": {
+            "description": "The field a teammate changed in dimmi since the migration wrote it, such as status.",
+            "type": "string"
+          },
+          "source": {
+            "description": "The value the other tool sent, which was not applied."
+          }
+        },
+        "required": [
+          "field",
+          "dimmi",
+          "source"
         ],
         "type": "object"
       },
@@ -25742,6 +25893,567 @@
         ],
         "type": "object"
       },
+      "Migration": {
+        "additionalProperties": false,
+        "properties": {
+          "counts": {
+            "description": "The migration's records per kind, by how they stand.",
+            "items": {
+              "$ref": "#/components/schemas/MigrationKindCount"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "format_version": {
+            "description": "The import format version the migration reads, 1 today.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "last_record_at": {
+            "description": "When the migration last received a record. Null before the first.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "The migration's name, such as Intercom move. Null when none was given.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "problems": {
+            "description": "The latest 50 records that failed, are unsupported or carry conflicts, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/MigrationRecordProblem"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "rollback": {
+            "$ref": "#/components/schemas/MigrationRollback"
+          },
+          "source": {
+            "description": "The short name of the tool the history comes from, such as intercom.",
+            "type": "string"
+          },
+          "source_account": {
+            "description": "The id of the account in that tool. Starting again for it resumes this migration.",
+            "type": "string"
+          },
+          "status": {
+            "description": "active while it takes records, rolling_back while it is undone, rolled_back once undone, or rollback_failed when the undo stopped and can be asked again.",
+            "enum": [
+              "active",
+              "rolling_back",
+              "rolled_back",
+              "rollback_failed"
+            ],
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "When it last changed, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "source",
+          "source_account",
+          "name",
+          "format_version",
+          "status",
+          "counts",
+          "problems",
+          "rollback",
+          "last_record_at",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "MigrationBatch": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "description": "The kind of the records sent.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "resolved": {
+            "description": "Records sent before that waited for this batch and are now applied or failed.",
+            "items": {
+              "$ref": "#/components/schemas/MigrationRecordResult"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "results": {
+            "description": "A result per record, in the order sent.",
+            "items": {
+              "$ref": "#/components/schemas/MigrationRecordResult"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "object",
+          "kind",
+          "results",
+          "resolved"
+        ],
+        "type": "object"
+      },
+      "MigrationError": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "description": "A stable code for why the record failed, such as company_exists.",
+            "type": "string"
+          },
+          "field": {
+            "description": "The record field at fault, such as external_id. Null when no single field is.",
+            "type": "string"
+          },
+          "message": {
+            "description": "What went wrong, in words for a person.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "MigrationKindCount": {
+        "additionalProperties": false,
+        "properties": {
+          "applied": {
+            "description": "Records applied, created or matched to what the workspace had.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "conflicted": {
+            "description": "Records whose last sync left a teammate's change in place.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "created": {
+            "description": "Applied records the migration created, which an undo removes.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "deferred": {
+            "description": "Records waiting for others they name.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "failed": {
+            "description": "Records not applied because of an error.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "kind": {
+            "description": "The record kind counted, such as conversation.",
+            "type": "string"
+          },
+          "unsupported": {
+            "description": "Records dimmi cannot apply yet.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "applied",
+          "created",
+          "deferred",
+          "failed",
+          "unsupported",
+          "conflicted"
+        ],
+        "type": "object"
+      },
+      "MigrationLookup": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_id": {
+            "description": "The record's id in the other tool, as asked.",
+            "type": "string"
+          },
+          "status": {
+            "description": "applied, deferred, failed or unsupported as the ledger has it, or missing when the migration never received it.",
+            "enum": [
+              "applied",
+              "deferred",
+              "failed",
+              "unsupported",
+              "missing"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "status",
+          "id"
+        ],
+        "type": "object"
+      },
+      "MigrationLookupRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "description": "The kind of the records, as the import format names it: contact, conversation, article and so on. Such as contact.",
+            "enum": [
+              "teammate",
+              "team",
+              "tag",
+              "attribute_definition",
+              "company",
+              "contact",
+              "contact_note",
+              "ticket_type",
+              "help_center",
+              "collection",
+              "article",
+              "snippet",
+              "saved_reply",
+              "schedule",
+              "workflow",
+              "conversation",
+              "ticket"
+            ],
+            "type": "string"
+          },
+          "source_ids": {
+            "description": "Up to 100 ids the records had in the other tool. Such as [\"6512ab\",\"6512ac\"].",
+            "items": {
+              "maxLength": 255,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "source_ids"
+        ],
+        "type": "object"
+      },
+      "MigrationRecordProblem": {
+        "additionalProperties": false,
+        "properties": {
+          "conflicts": {
+            "description": "Fields a teammate changed in dimmi, which the last sync left as they are.",
+            "items": {
+              "$ref": "#/components/schemas/Conflict"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "error": {
+            "$ref": "#/components/schemas/MigrationError"
+          },
+          "kind": {
+            "description": "The record's kind.",
+            "type": "string"
+          },
+          "source_id": {
+            "description": "The record's id in the other tool.",
+            "type": "string"
+          },
+          "status": {
+            "description": "failed or unsupported; applied when only conflicts make it a problem.",
+            "enum": [
+              "applied",
+              "deferred",
+              "failed",
+              "unsupported"
+            ],
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "When it last changed, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "source_id",
+          "status",
+          "error",
+          "conflicts",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "MigrationRecordResult": {
+        "additionalProperties": false,
+        "properties": {
+          "conflicts": {
+            "description": "Fields a teammate changed in dimmi, which this sync left as they are.",
+            "items": {
+              "$ref": "#/components/schemas/Conflict"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "error": {
+            "$ref": "#/components/schemas/MigrationError"
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "description": "The record's kind.",
+            "type": "string"
+          },
+          "source_id": {
+            "description": "The record's id in the other tool.",
+            "type": "string"
+          },
+          "status": {
+            "description": "created, updated, unchanged (sent before as it is and skipped), deferred, failed or unsupported.",
+            "enum": [
+              "created",
+              "updated",
+              "unchanged",
+              "deferred",
+              "failed",
+              "unsupported"
+            ],
+            "type": "string"
+          },
+          "waiting_for": {
+            "description": "The records a deferred record waits for. Empty otherwise.",
+            "items": {
+              "$ref": "#/components/schemas/Ref"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "warnings": {
+            "description": "Fields left out of the record, each with a code and why.",
+            "items": {
+              "$ref": "#/components/schemas/Notice"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "source_id",
+          "status",
+          "id",
+          "warnings",
+          "conflicts",
+          "error",
+          "waiting_for"
+        ],
+        "type": "object"
+      },
+      "MigrationRecordsRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "description": "Kind: one of teammate, team, tag, attribute_definition, company, contact, contact_note, ticket_type, help_center, collection, article, snippet, saved_reply, schedule, workflow, conversation, ticket.",
+            "enum": [
+              "teammate",
+              "team",
+              "tag",
+              "attribute_definition",
+              "company",
+              "contact",
+              "contact_note",
+              "ticket_type",
+              "help_center",
+              "collection",
+              "article",
+              "snippet",
+              "saved_reply",
+              "schedule",
+              "workflow",
+              "conversation",
+              "ticket"
+            ],
+            "type": "string"
+          },
+          "records": {
+            "description": "Records of the kind in the import format, version 1.",
+            "items": {},
+            "maxItems": 100,
+            "minItems": 1,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "records"
+        ],
+        "type": "object"
+      },
+      "MigrationRollback": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "description": "Why the undo stopped. Null unless it failed.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "finished_at": {
+            "description": "When the undo finished or stopped. Null while it runs.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "removed": {
+            "description": "How many records the undo removed so far.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "requested_at": {
+            "description": "When the undo was asked for.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "removed",
+          "error",
+          "requested_at",
+          "finished_at"
+        ],
+        "type": "object"
+      },
+      "MigrationSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "last_record_at": {
+            "description": "When the migration last received a record. Null before the first.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "The migration's name, such as Intercom move. Null when none was given.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "source": {
+            "description": "The short name of the tool the history comes from, such as intercom.",
+            "type": "string"
+          },
+          "source_account": {
+            "description": "The id of the account in that tool. Starting again for it resumes this migration.",
+            "type": "string"
+          },
+          "status": {
+            "description": "active while it takes records, rolling_back while it is undone, rolled_back once undone, or rollback_failed when the undo stopped and can be asked again.",
+            "enum": [
+              "active",
+              "rolling_back",
+              "rolled_back",
+              "rollback_failed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "source",
+          "source_account",
+          "name",
+          "status",
+          "last_record_at",
+          "created_at"
+        ],
+        "type": "object"
+      },
       "Named": {
         "additionalProperties": false,
         "properties": {
@@ -25876,6 +26588,29 @@
         },
         "required": [
           "body"
+        ],
+        "type": "object"
+      },
+      "Notice": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "description": "A stable code for the warning, such as not_supported_yet or file_unavailable.",
+            "type": "string"
+          },
+          "field": {
+            "description": "The record field left out, such as custom_attributes.",
+            "type": "string"
+          },
+          "message": {
+            "description": "What was left out and why, in words for a person.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "code",
+          "message"
         ],
         "type": "object"
       },
@@ -30128,6 +30863,24 @@
         ],
         "type": "object"
       },
+      "Ref": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "description": "The kind of the record named, such as contact or teammate.",
+            "type": "string"
+          },
+          "source_id": {
+            "description": "The record's id in the other tool.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "source_id"
+        ],
+        "type": "object"
+      },
       "Remover": {
         "additionalProperties": false,
         "properties": {
@@ -32549,6 +33302,30 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/MessengerAudiences"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceMigration": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Migration"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceMigrationBatch": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MigrationBatch"
           }
         },
         "required": [
@@ -39000,6 +39777,31 @@
         },
         "required": [
           "invitation_token"
+        ],
+        "type": "object"
+      },
+      "StoreMigrationRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "The name of the migration, at most 120 characters.",
+            "maxLength": 120,
+            "type": "string"
+          },
+          "source": {
+            "description": "Short lowercase name of the tool the history comes from, such as intercom.",
+            "maxLength": 40,
+            "type": "string"
+          },
+          "source_account": {
+            "description": "Id of the account in that tool. Starting again for the same account resumes its migration.",
+            "maxLength": 255,
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "source_account"
         ],
         "type": "object"
       },
@@ -69182,6 +69984,270 @@
         },
         "summary": "Mail a two-factor reset link",
         "x-internal": true
+      }
+    },
+    "/migrations": {
+      "get": {
+        "description": "Lists the workspace's migrations from other tools with where each stands. Returns up to 100 migrations, newest first.",
+        "operationId": "migrations.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionMigrationSummary"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List migrations",
+        "x-abilities": [
+          "settings:write"
+        ]
+      },
+      "post": {
+        "description": "Starts a migration of history from another tool for one account there, or returns the one under way for the same source and account. Records are sent by the dimmi CLI. Needs imports:manage. Returns the migration with its progress.",
+        "operationId": "migrations.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreMigrationRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceMigration"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Start or resume a migration",
+        "x-abilities": [
+          "settings:write"
+        ]
+      }
+    },
+    "/migrations/{migration}": {
+      "get": {
+        "description": "Reads one migration: how many records of each kind were applied, wait for another record, failed or are not supported yet, and the latest problems with why. Returns the migration with counts per kind and its latest problems.",
+        "operationId": "migrations.show",
+        "parameters": [
+          {
+            "description": "The migration's id (mig_...), as starting or listing migrations returns it. Such as mig_01jc8q3x7m2n4p5r6s7t8v9w0y.",
+            "in": "path",
+            "name": "migration",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceMigration"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get a migration",
+        "x-abilities": [
+          "settings:write"
+        ]
+      }
+    },
+    "/migrations/{migration}/lookups": {
+      "post": {
+        "description": "Says where each record named by its id in the other tool stands: applied with the dimmi id it became, deferred, failed, unsupported, or missing when the migration never received it. Use it to check a sample after a run. Returns one entry per source id, in the order asked.",
+        "operationId": "migrations.lookups.store",
+        "parameters": [
+          {
+            "description": "The migration (mig_...) the records belong to. Such as mig_01jc8q3x7m2n4p5r6s7t8v9w0y.",
+            "in": "path",
+            "name": "migration",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MigrationLookupRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionMigrationLookup"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Look up records of a migration",
+        "x-abilities": [
+          "settings:write"
+        ]
+      }
+    },
+    "/migrations/{migration}/records": {
+      "post": {
+        "description": "Applies a batch of 1 to 100 records of one kind in dimmi's import format to the migration, as quiet history: nothing is sent and no event goes out. Each record is kept under its source_id, so sending it again updates what it became or skips it when unchanged, and a record naming one not sent yet waits for it. It needs the settings:write ability and the imports:manage permission. Returns a result per record, in the order sent, and the waiting records this batch let through.",
+        "operationId": "migrations.records.store",
+        "parameters": [
+          {
+            "description": "Migration: text.",
+            "in": "path",
+            "name": "migration",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MigrationRecordsRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceMigrationBatch"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Send migration records",
+        "x-abilities": [
+          "settings:write"
+        ]
+      }
+    },
+    "/migrations/{migration}/rollbacks": {
+      "post": {
+        "description": "Undoes everything the migration created, in the background: conversations, contacts, articles and tickets go to the trash, tags, notes and replies are deleted. Records others now use are kept. Needs imports:rollback. Returns the migration with status rolling_back; poll it until rolled_back.",
+        "operationId": "migrations.rollbacks.store",
+        "parameters": [
+          {
+            "description": "The migration (mig_...) to undo, as starting or listing migrations returns it. Such as mig_01jc8q3x7m2n4p5r6s7t8v9w0y.",
+            "in": "path",
+            "name": "migration",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceMigration"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Undo a migration",
+        "x-abilities": [
+          "settings:write"
+        ]
       }
     },
     "/notification-deliveries": {

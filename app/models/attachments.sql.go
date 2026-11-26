@@ -415,6 +415,9 @@ SELECT id, workspace_id, message_id, uploaded_by_type, uploaded_by_id, disk, pat
 WHERE a.workspace_id = $1 AND a.message_id IS NULL AND a.created_at < $2
   AND NOT EXISTS (SELECT 1 FROM conversation_drafts d WHERE d.attachment_ids @> ARRAY[a.id])
   AND NOT EXISTS (SELECT 1 FROM conversation_ai_values v WHERE v.attachment_ids @> ARRAY[a.id])
+  AND NOT EXISTS (
+    SELECT 1 FROM migration_records r WHERE r.workspace_id = a.workspace_id AND r.kind = 'file' AND r.record_id = a.id
+  )
 ORDER BY a.created_at, a.id
 LIMIT $3
 `
@@ -428,7 +431,8 @@ type ListUnattachedAttachmentsParams struct {
 // ListUnattachedAttachments returns uploads of the workspace no message
 // used, created before the cutoff, oldest first, so a purge can remove
 // their files and then their rows. Files a draft or a conversation
-// attribute still holds are kept.
+// attribute still holds are kept, and so are files a migration uploaded,
+// which its records attach later.
 func (q *Queries) ListUnattachedAttachments(ctx context.Context, arg ListUnattachedAttachmentsParams) ([]Attachment, error) {
 	rows, err := q.db.Query(ctx, listUnattachedAttachments, arg.WorkspaceID, arg.Before, arg.RowLimit)
 	if err != nil {

@@ -193,6 +193,17 @@ func (w *Writer) AsSystem() *Writer {
 }
 
 /*
+As returns a writer acting as the actor.
+*/
+func (w *Writer) As(a Actor) *Writer {
+	clone := *w
+	clone.Actor = a
+	clone.Timezone = nil
+
+	return &clone
+}
+
+/*
 AsMember returns a writer acting as the teammate.
 */
 func (w *Writer) AsMember(id ids.UUID, name string) *Writer {

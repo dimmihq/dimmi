@@ -40,6 +40,15 @@ type ConversationImport struct {
 	Backfill
 	Closed   bool
 	ClosedAt *time.Time
+	// Opener, when set, writes the first message as this actor, such as
+	// an AI agent or the system, instead of the customer or AuthorID.
+	Opener *Actor
+	// OpeningKey and OpeningMetadata, when set, are the first message's
+	// dedupe key and metadata.
+	OpeningKey      *string
+	OpeningMetadata json.RawMessage
+	// Source, when set, is kept as the conversation's source.
+	Source json.RawMessage
 }
 
 /*
@@ -218,26 +227,16 @@ func (a *CreateConversation) replay(ctx context.Context, w *Writer, run importRu
 		return models.Conversation{}, err
 	}
 
+	if imp.Source != nil {
+		o.source = imp.Source
+	}
+
 	c, err := o.insert(ctx, w)
 	if err != nil {
 		return c, err
 	}
 
-	author := w.AsContact(o.contact)
-	if !in.ByContact {
-		if author, err = w.AsAuthor(ctx, c.WorkspaceID, imp.AuthorID); err != nil {
-			return c, err
-		}
-	}
-
-	msg, err := ImportedMessage(ImportedEntry{
-		Kind: string(enums.MessageTypeMessage), Body: in.Body, ByMember: !in.ByContact,
-	}, imp.Backfill)
-	if err != nil {
-		return c, err
-	}
-
-	if _, c, err = author.Append(ctx, c, msg); err != nil {
+	if c, err = o.openImported(ctx, w, c, run); err != nil {
 		return c, err
 	}
 
@@ -246,6 +245,42 @@ func (a *CreateConversation) replay(ctx context.Context, w *Writer, run importRu
 	}
 
 	c, _, err = w.Assign(ctx, c, Assignment{Member: in.Assignee})
+
+	return c, err
+}
+
+/*
+openImported writes the conversation's first message as whoever wrote
+it: the actor the import names, the customer, or the member.
+*/
+func (o opening) openImported(ctx context.Context, w *Writer, c models.Conversation, run importRun,
+) (models.Conversation, error) {
+	in, imp := run.in, run.imp
+	author := w.AsContact(o.contact)
+
+	var err error
+
+	switch {
+	case imp.Opener != nil:
+		author = w.As(*imp.Opener)
+	case !in.ByContact:
+		if author, err = w.AsAuthor(ctx, c.WorkspaceID, imp.AuthorID); err != nil {
+			return c, err
+		}
+	}
+
+	msg, err := ImportedMessage(ImportedEntry{
+		Kind: string(enums.MessageTypeMessage), Body: in.Body, ByMember: !in.ByContact, Key: imp.OpeningKey,
+	}, imp.Backfill)
+	if err != nil {
+		return c, err
+	}
+
+	if imp.OpeningMetadata != nil {
+		msg.Metadata = imp.OpeningMetadata
+	}
+
+	_, c, err = author.Append(ctx, c, msg)
 
 	return c, err
 }

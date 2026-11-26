@@ -17,6 +17,8 @@ package ticketimports
 import (
 	"context"
 	"time"
+
+	"github.com/dimmihq/dimmi/framework/ids"
 )
 
 /*
@@ -79,7 +81,9 @@ type State struct {
 /*
 Ticket is one ticket. Values are by field key. History is the states
 it went through, oldest first, the first the one it was created in;
-StateID is the one it is in now.
+StateID is the one it is in now. ContactID, AssigneeID and
+ConversationID are what a caller already resolved, and win over the
+emails and ids of the other tool.
 */
 type Ticket struct {
 	ExternalID     string
@@ -97,4 +101,7 @@ type Ticket struct {
 	History        []Move
 	TrackerID      string
 	Conversation   string
+	ContactID      *ids.UUID
+	AssigneeID     *ids.UUID
+	ConversationID *ids.UUID
 }

@@ -27,6 +27,7 @@ const (
 	KeyAPIRateLimit          = "api.rate_limit_per_minute"
 	KeyAPIUserRateLimit      = "api.user_rate_limit_per_minute"
 	KeyAPIWorkspaceRateLimit = "api.workspace_rate_limit_per_minute"
+	KeyAPIMigrationRateLimit = "api.migration_rate_limit_per_minute"
 )
 
 /*
