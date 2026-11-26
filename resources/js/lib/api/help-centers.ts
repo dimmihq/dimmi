@@ -28,6 +28,7 @@ export interface HelpCenterSettings {
   changelog_subscriptions?: boolean;
   changelog_email?: "full" | "summary";
   changelog_undo_minutes?: 0 | 5 | 15 | 60;
+  untranslated_articles?: "original" | "hide";
 }
 
 /*
@@ -44,6 +45,8 @@ export interface HelpCenter {
   url: string;
   custom_domain: string | null;
   locale: string;
+  default_locale: string;
+  locales: string[];
   is_default: boolean;
   status: "active" | "disabled";
   indexing_enabled: boolean;
@@ -199,7 +202,9 @@ export function restoreArticleVersion(workspace: string, article: string, versio
 export function updateHelpCenter(
   workspace: string,
   id: string,
-  change: Partial<Pick<HelpCenter, "name" | "subdomain" | "indexing_enabled" | "ask_ai_enabled">> & {
+  change: Partial<
+    Pick<HelpCenter, "name" | "subdomain" | "indexing_enabled" | "ask_ai_enabled" | "default_locale" | "locales">
+  > & {
     settings?: HelpCenterSettings;
   },
 ): Promise<HelpCenter> {

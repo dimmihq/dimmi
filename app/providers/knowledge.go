@@ -44,6 +44,7 @@ func bootKnowledge(a *app.App) {
 		Prices: loadPrices(a),
 	}
 	a.Actions.Articles.Index = a.Vectors
+	a.Actions.Translations.Index = a.Vectors
 	a.Actions.HelpCenters.Index = a.Vectors
 	a.Actions.KnowledgeSettings = &knowledge.Settings{Vectors: a.Vectors}
 	a.WorkspaceInitializers.Register(&knowledge.EnsureKnowledgeSettings{Vectors: a.Vectors})

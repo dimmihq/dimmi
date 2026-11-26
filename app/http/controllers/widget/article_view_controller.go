@@ -34,11 +34,8 @@ func (c *HelpController) View(ctx context.Context, in *requests.StoreWidgetArtic
 		return nil, ErrNoHelpCenter
 	}
 
-	for _, a := range snap.Articles {
-		if a.Slug == in.Body.Article {
-			c.Analytics.Viewed(ctx, snap.HelpCenter, a.ID, helpcenters.ViewInMessenger)
-			break
-		}
+	if id, _, found := snap.ArticleAt(in.Body.Article); found {
+		c.Analytics.Viewed(ctx, snap.HelpCenter, id, helpcenters.ViewInMessenger)
 	}
 
 	return &struct{}{}, nil

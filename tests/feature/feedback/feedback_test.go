@@ -116,7 +116,8 @@ func TestFeedbackPortal(t *testing.T) {
 		vote(nil).AssertStatus(fhttp.StatusUnauthorized).AssertJSONPath("sign_in",
 			"/hc/"+b.subdomain+"/sso/sign-in?next=%2Fhc%2F"+b.subdomain+"%2Ffeedback")
 		bob := b.reader(t, "bob@example.org")
-		vote(bob).AssertOK().AssertJSONPath("voted", true).AssertJSONPath("votes", float64(2))
+		vote(bob).AssertOK().AssertJSONPath("voted", true).AssertJSONPath("votes", float64(2)).
+			AssertJSONPath("label", "Vote for {title}, 2 votes")
 		vote(bob).AssertOK().AssertJSONPath("voted", false).AssertJSONPath("votes", float64(1))
 	})
 

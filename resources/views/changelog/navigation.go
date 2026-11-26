@@ -11,12 +11,19 @@
 
 package changelog
 
+import (
+	"time"
+
+	"github.com/dimmihq/dimmi/resources/views/helpcenter"
+)
+
 /*
 Week is a week of the release strip: the month it opens, when it is the
-first week of one, and the entry published in it, if any.
+first week of one, zero otherwise, and the entry published in it, if
+any.
 */
 type Week struct {
-	Month string
+	Month time.Month
 	Title string
 	Path  string
 }
@@ -47,30 +54,30 @@ type Subscription struct {
 	Invalid bool
 }
 
-func subscriptionTitle(s Subscription) string {
+func subscriptionTitle(c helpcenter.Center, s Subscription) string {
 	if s.Purpose == "unsubscribe" {
-		return "Unsubscribe from updates"
+		return c.T("unsubscribe_title")
 	}
-	return "Confirm your subscription"
+	return c.T("confirm_subscription_title")
 }
 
-func subscriptionAsk(s Subscription) string {
+func subscriptionAsk(c helpcenter.Center, s Subscription) string {
 	if s.Purpose == "unsubscribe" {
-		return s.Email + " will stop getting product updates."
+		return c.T("unsubscribe_ask", "email", s.Email)
 	}
-	return "Start getting product updates at " + s.Email + "."
+	return c.T("subscribe_ask", "email", s.Email)
 }
 
-func subscriptionButton(s Subscription) string {
+func subscriptionButton(c helpcenter.Center, s Subscription) string {
 	if s.Purpose == "unsubscribe" {
-		return "Unsubscribe"
+		return c.T("unsubscribe")
 	}
-	return "Confirm subscription"
+	return c.T("confirm_subscription")
 }
 
-func subscriptionDone(s Subscription) string {
+func subscriptionDone(c helpcenter.Center, s Subscription) string {
 	if s.Purpose == "unsubscribe" {
-		return "Done. " + s.Email + " will not get any more updates."
+		return c.T("unsubscribed", "email", s.Email)
 	}
-	return "You're subscribed. New updates will reach " + s.Email + "."
+	return c.T("subscribed", "email", s.Email)
 }

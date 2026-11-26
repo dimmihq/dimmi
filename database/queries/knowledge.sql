@@ -54,12 +54,26 @@ JOIN help_centers h ON h.id = a.help_center_id
 WHERE a.workspace_id = @workspace_id AND a.id = @id AND a.deleted_at IS NULL AND a.status = 'published'
   AND h.deleted_at IS NULL;
 
+-- name: ListLiveTranslationsForIndex :many
+-- ListLiveTranslationsForIndex returns the live versions of an article's
+-- published translations, as the index chunks them, with the source's
+-- visibility.
+SELECT t.locale, v.id AS version_id, v.title, v.body_markdown, a.visibility
+FROM article_translations t
+JOIN articles a ON a.id = t.article_id
+JOIN article_versions v ON v.id = t.published_version_id
+JOIN help_centers h ON h.id = a.help_center_id
+WHERE t.workspace_id = @workspace_id AND t.article_id = @article_id AND t.status = 'published'
+  AND a.deleted_at IS NULL AND a.status <> 'archived' AND h.deleted_at IS NULL
+ORDER BY t.locale;
+
 -- name: DeleteStaleKnowledgeChunks :exec
 -- DeleteStaleKnowledgeChunks removes the article's chunks of every
--- version but the one kept, all of them when none is.
+-- version but those kept, the source's and its translations', all of
+-- them when none is.
 DELETE FROM knowledge_chunks
 WHERE workspace_id = @workspace_id AND article_id = @article_id
-  AND (sqlc.narg(keep_version_id)::uuid IS NULL OR article_version_id <> sqlc.narg(keep_version_id)::uuid);
+  AND NOT (article_version_id = ANY (@keep_version_ids::uuid[]));
 
 -- name: CountKnowledgeChunksForVersion :one
 -- CountKnowledgeChunksForVersion counts the chunks of one version.
@@ -68,19 +82,26 @@ SELECT count(*) FROM knowledge_chunks WHERE workspace_id = @workspace_id AND art
 -- name: InsertKnowledgeChunk :exec
 -- InsertKnowledgeChunk stores one chunk; a chunk already stored stays.
 INSERT INTO knowledge_chunks (id, workspace_id, article_id, article_version_id, help_center_id, ordinal, title,
-    heading_path, body, visibility, embed_hash, created_at)
+    heading_path, body, visibility, embed_hash, locale, created_at)
 VALUES (@id, @workspace_id, @article_id, @article_version_id, @help_center_id, @ordinal, @title,
-    @heading_path, @body, @visibility, @embed_hash, @now)
+    @heading_path, @body, @visibility, @embed_hash, sqlc.narg(locale), @now)
 ON CONFLICT DO NOTHING;
 
 -- name: ListUnindexedArticles :many
--- ListUnindexedArticles lists live published articles whose version has
--- no chunks yet.
+-- ListUnindexedArticles lists live articles whose published version, or
+-- the published version of one of their translations, has no chunks
+-- yet.
 SELECT a.id FROM articles a
 JOIN help_centers h ON h.id = a.help_center_id
-WHERE a.workspace_id = @workspace_id AND a.deleted_at IS NULL AND a.status = 'published'
-  AND h.deleted_at IS NULL AND a.published_version_id IS NOT NULL
-  AND NOT EXISTS (SELECT 1 FROM knowledge_chunks c WHERE c.article_version_id = a.published_version_id)
+WHERE a.workspace_id = @workspace_id AND a.deleted_at IS NULL AND h.deleted_at IS NULL
+  AND (
+    (a.status = 'published' AND a.published_version_id IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM knowledge_chunks c WHERE c.article_version_id = a.published_version_id))
+    OR (a.status <> 'archived' AND EXISTS (
+      SELECT 1 FROM article_translations t
+      WHERE t.article_id = a.id AND t.status = 'published' AND t.published_version_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM knowledge_chunks c WHERE c.article_version_id = t.published_version_id)))
+  )
 ORDER BY a.id
 LIMIT @row_limit;
 
@@ -208,16 +229,27 @@ SELECT (SELECT count(*) FROM knowledge_chunks c WHERE c.workspace_id = @workspac
 -- name: SearchKnowledgeChunksVector :many
 -- SearchKnowledgeChunksVector ranks the live chunks by cosine distance
 -- of their vector of the model to the query vector, nearest first,
--- optionally only those with the given hashes.
+-- optionally only those with the given hashes. An article translated
+-- into one of the reader's languages answers in it; any other answers
+-- in its source.
 SELECT c.id, c.article_id, c.help_center_id, c.title, c.heading_path, c.body, c.visibility, h.subdomain, v.slug,
-    v.created_at, (e.embedding <=> @embedding::halfvec)::float8 AS distance
+    v.created_at, c.locale, (e.embedding <=> @embedding::halfvec)::float8 AS distance
 FROM knowledge_chunks c
-JOIN articles a ON a.id = c.article_id AND a.published_version_id = c.article_version_id
+JOIN articles a ON a.id = c.article_id
 JOIN article_versions v ON v.id = c.article_version_id
 JOIN help_centers h ON h.id = c.help_center_id
 JOIN knowledge_embeddings e
     ON e.workspace_id = c.workspace_id AND e.model_key = @model_key AND e.embed_hash = c.embed_hash
-WHERE c.workspace_id = @workspace_id AND a.status = 'published' AND a.deleted_at IS NULL AND h.deleted_at IS NULL
+WHERE c.workspace_id = @workspace_id AND a.deleted_at IS NULL AND h.deleted_at IS NULL
+  AND (
+    (c.locale IS NULL AND a.status = 'published' AND a.published_version_id = c.article_version_id
+      AND NOT EXISTS (
+        SELECT 1 FROM article_translations rt
+        WHERE rt.article_id = a.id AND rt.status = 'published' AND rt.locale = ANY (@locales::text[])))
+    OR (c.locale = ANY (@locales::text[]) AND a.status <> 'archived' AND EXISTS (
+        SELECT 1 FROM article_translations t
+        WHERE t.article_id = a.id AND t.status = 'published' AND t.published_version_id = c.article_version_id))
+  )
   AND c.visibility = ANY (@visibilities::text[])
   AND (cardinality(@hashes::text[]) = 0 OR c.embed_hash = ANY (@hashes::text[]))
 ORDER BY distance, c.id

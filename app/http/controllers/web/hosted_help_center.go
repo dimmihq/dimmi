@@ -9,7 +9,8 @@
 | page, with every link starting at the host's root, so the same pages
 | serve every address. The app's built files keep their own paths, and
 | the routing probe answers on every host so a domain's check can reach
-| it. A request on the app's own host is never looked up.
+| it. A request on the app's own host is never looked up. Either way a
+| language prefix is then read off the path, as help_locales.go says.
 |
 */
 
@@ -46,6 +47,7 @@ func HostedHelpCenters(addresses helpcenters.Addresses, custom CustomHosts) fhtt
 		appHost = strings.ToLower(u.Hostname())
 	}
 	return func(next fhttp.Handler) fhttp.Handler {
+		next = stripLocale(next)
 		return fhttp.HandlerFunc(func(w fhttp.ResponseWriter, r *fhttp.Request) {
 			if keepsPath(r.URL.Path) {
 				next.ServeHTTP(w, r)

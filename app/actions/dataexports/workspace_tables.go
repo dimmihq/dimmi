@@ -210,6 +210,8 @@ func helpCenterTables() []ArchiveTable {
 			Omit: []string{"title_trgm"},
 		},
 		{Name: "article_versions", About: "Every stored version of each article.", Key: byID()},
+		{Name: "article_translations", About: "Articles' translations into other languages.", Key: byID()},
+		{Name: "collection_translations", About: "Collections' names in other languages.", Key: byID()},
 		{Name: "article_ratings", About: "Readers' ratings of articles.", Key: byID()},
 		{Name: "changelog_entries", About: "Changelog entries.", Key: byID()},
 		{Name: "changelog_labels", About: "Changelog labels.", Key: byID()},

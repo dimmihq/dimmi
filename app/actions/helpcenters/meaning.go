@@ -246,12 +246,14 @@ func (k *Knowledge) vectorChunks(s search, rows []knowledge.VectorChunk) []contr
 			ID: r.ArticleID, HelpCenterID: r.HelpCenterID, Subdomain: r.Subdomain, Title: r.Title, Slug: r.Slug,
 			Visibility: r.Visibility, CreatedAt: r.CreatedAt,
 		})
+		k.inLocale(&doc, r.Subdomain, r.Slug, r.Locale)
 		similarity := v.Similarity
 		chunk := contracts.KnowledgeChunk{
 			ID: r.ID, DocumentID: r.ArticleID, ArticleID: doc.ArticleID, HelpCenterID: doc.HelpCenterID,
 			SourceType: "article", Title: r.Title, HeadingPath: r.HeadingPath, URL: doc.URL, Text: r.Body,
 			Similarity: &similarity, MatchedBy: []string{"vector"},
-			Visibility: contracts.KnowledgeVisibility(r.Visibility), Locale: "en", UpdatedAt: r.CreatedAt,
+			Visibility: contracts.KnowledgeVisibility(r.Visibility), Locale: cmp.Or(doc.Locale, "en"),
+			UpdatedAt: r.CreatedAt,
 		}
 		out = append(out, chunk)
 	}

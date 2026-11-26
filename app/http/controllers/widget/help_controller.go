@@ -79,10 +79,12 @@ type HelpCollection struct {
 
 /*
 HelpIndex is everything the Help tab draws, and the address the help
-center's pages start at, empty without one.
+center's pages start at in the language it is read in, empty without
+one. Locale is that language.
 */
 type HelpIndex struct {
 	URL         string           `json:"url"`
+	Locale      string           `json:"locale,omitempty"`
 	Collections []HelpCollection `json:"collections"`
 	Articles    []HelpArticle    `json:"articles"`
 	Popular     []string         `json:"popular"`
@@ -101,17 +103,17 @@ type HelpOutput struct {
 Show answers the Help tab of the messenger the request names: empty
 when it links to no help center.
 */
-func (c *HelpController) Show(ctx context.Context, _ *requests.NoInput) (*HelpOutput, error) {
+func (c *HelpController) Show(ctx context.Context, in *requests.ShowWidgetHelpRequest) (*HelpOutput, error) {
 	resolved, _ := actions.CurrentResolved(ctx)
 
-	return c.answer(ctx, resolved, nil)
+	return c.answer(ctx, resolved, in, nil)
 }
 
 /*
 Mine answers the Help tab as the visitor reads it: what their audiences
 open when the messenger knows them, what anyone may read otherwise.
 */
-func (c *HelpController) Mine(ctx context.Context, _ *requests.NoInput) (*HelpOutput, error) {
+func (c *HelpController) Mine(ctx context.Context, in *requests.ShowWidgetHelpRequest) (*HelpOutput, error) {
 	auth := authenticated(ctx)
 	var contact *ids.UUID
 	if r, ok := c.known(auth); ok {
@@ -121,13 +123,16 @@ func (c *HelpController) Mine(ctx context.Context, _ *requests.NoInput) (*HelpOu
 		}
 	}
 
-	return c.answer(ctx, auth.Resolved, contact)
+	return c.answer(ctx, auth.Resolved, in, contact)
 }
 
 /*
-answer reads the messenger's help center for the reader, nil for anyone.
+answer reads the messenger's help center for the reader, nil for anyone,
+in the language they asked for or their browser prefers, when the help
+center offers it.
 */
-func (c *HelpController) answer(ctx context.Context, resolved actions.Resolved, contact *ids.UUID,
+func (c *HelpController) answer(ctx context.Context, resolved actions.Resolved, in *requests.ShowWidgetHelpRequest,
+	contact *ids.UUID,
 ) (*HelpOutput, error) {
 	out := &HelpOutput{}
 	out.Body.Data = HelpIndex{Collections: []HelpCollection{}, Articles: []HelpArticle{}, Popular: []string{}}
@@ -137,8 +142,12 @@ func (c *HelpController) answer(ctx context.Context, resolved actions.Resolved, 
 
 	ws, id := resolved.Workspace.ID, *resolved.Widget.HelpCenterID
 	snap, err := c.Public.LoadByID(ctx, ws, id)
+	if locale := helpLocale(snap.HelpCenter, in); err == nil && locale != snap.Locale {
+		snap, err = c.Public.LoadByIDIn(ctx, ws, id, locale)
+	}
 	if err == nil && contact != nil {
-		snap, err = c.Public.LoadByIDFor(ctx, ws, id, *contact)
+		find := models.FindHelpCenterParams{WorkspaceID: ws, ID: id}
+		snap, err = c.Public.LoadByIDForIn(ctx, find, snap.Locale, *contact)
 	}
 
 	if errors.Is(err, helpcenters.ErrNoHelpCenter) {
@@ -150,6 +159,9 @@ func (c *HelpController) answer(ctx context.Context, resolved actions.Resolved, 
 	}
 
 	root := c.Addresses.Root(snap.HelpCenter)
+	if snap.Locale != snap.HelpCenter.Locale {
+		root += "/" + snap.Locale
+	}
 	out.Body.Data = indexOf(snap, root, func(path string) *string {
 		if c.Disk == nil {
 			return nil
@@ -161,8 +173,28 @@ func (c *HelpController) answer(ctx context.Context, resolved actions.Resolved, 
 		return &address
 	})
 	out.Body.Data.URL = root
+	if len(helpcenters.LocalesOf(snap.HelpCenter)) > 1 {
+		out.Body.Data.Locale = snap.Locale
+	}
 
 	return out, nil
+}
+
+/*
+helpLocale is the language the Help tab is read in: the one asked for
+when the help center offers it, else the first of the browser's.
+*/
+func helpLocale(h models.HelpCenter, in *requests.ShowWidgetHelpRequest) string {
+	if in == nil {
+		return h.Locale
+	}
+	if l, ok := helpcenters.NormalizeLocale(in.Locale); ok && helpcenters.OffersLocale(h, l) {
+		return l
+	}
+	if in.Locale != "" {
+		return helpcenters.PickLocale(in.Locale, helpcenters.LocalesOf(h))
+	}
+	return helpcenters.PickLocale(in.AcceptLanguage, helpcenters.LocalesOf(h))
 }
 
 /*

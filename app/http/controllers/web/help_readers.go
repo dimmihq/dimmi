@@ -19,6 +19,7 @@
 package web
 
 import (
+	"cmp"
 	"net/url"
 	"strings"
 	"time"
@@ -43,17 +44,21 @@ signed-in reader's when the cookie names one, anyone's otherwise.
 func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request, snap helpcenters.Snapshot,
 	base string,
 ) (helpcenter.Center, HelpLibrary, bool) {
-	center := centerOf(snap.HelpCenter, base)
+	h, prefix := snap.HelpCenter, prefixOf(snap.HelpCenter, snap.Locale)
+	center := c.centerOf(snap, base+prefix)
 	center.Origin = origin(r)
-	center.Canonical = c.canonical(r, snap.HelpCenter)
+	center.Canonical = c.canonical(r, h)
 	c.withMessenger(&center, snap)
+	at := pageAt{root: c.Addresses.Root(h), base: base}
+	rest := strings.TrimPrefix(r.URL.Path, "/hc/"+r.PathValue("center"))
+	localize(&center, snap, at, unindexed(samePage(cmp.Or(rest, "/"))))
 
-	updates := c.announce(r, snap.HelpCenter, &center)
-	contact, until, signed := c.readerOf(r, snap.HelpCenter)
+	updates := c.announce(r, h, &center)
+	contact, until, signed := c.readerOf(r, h)
 	if !signed {
 		center.SignInURL = signInURL(snap, center, r.URL.Path)
 		s := newSite(r.Context(), c.Public, snap, nil)
-		s.updates = updates
+		s.updates, s.at = updates, at
 		return center, s, true
 	}
 
@@ -61,7 +66,7 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 		c.remember(w, r, base, fresh)
 	}
 
-	mine, err := c.Public.LoadFor(r.Context(), r.PathValue("center"), contact)
+	mine, err := c.Public.LoadForIn(r.Context(), r.PathValue("center"), snap.Locale, contact)
 	if err != nil {
 		c.Errors.Render(w, r, err)
 		return center, nil, false
@@ -74,7 +79,7 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 	})
 
 	s := newSite(r.Context(), c.Public, mine, &contact)
-	s.updates = updates
+	s.updates, s.at = updates, at
 	return center, s, true
 }
 
@@ -88,7 +93,7 @@ func (c *HelpCenterController) announce(r *fhttp.Request, h models.HelpCenter, c
 	if helpcenters.SettingsOf(h).FeedbackBoard {
 		defer func() {
 			center.Sections = append(center.Sections, helpcenter.Section{
-				Key: "feedback", Name: "Feature requests", Icon: "lightbulb", Path: "/feedback",
+				Key: "feedback", Name: center.T("feature_requests"), Icon: "lightbulb", Path: "/feedback",
 			})
 		}()
 	}
@@ -100,7 +105,8 @@ func (c *HelpCenterController) announce(r *fhttp.Request, h models.HelpCenter, c
 		return nil
 	}
 	center.Sections = append(center.Sections, helpcenter.Section{
-		Key: "changelog", Name: helpcenters.ChangelogOf(h).Title, Icon: "megaphone", Path: "/changelog",
+		Key: "changelog", Name: center.ChangelogTitle(helpcenters.ChangelogOf(h).Title), Icon: "megaphone",
+		Path: "/changelog",
 	})
 	out := make([]helpcenter.Update, len(latest))
 	for i, e := range latest {

@@ -52,7 +52,10 @@ type Heading struct {
 /*
 Article is an article's page: its trail, rendered body and contents, who
 wrote it, when it last changed and how long ago that is in Age, and its
-neighbors in the collection.
+neighbors in the collection. Untranslated names, in itself, the language
+the page is read in when the article is not translated into it and is
+shown in OriginalLang, its default language, instead; empty for an
+article read in its own language.
 */
 type Article struct {
 	Summary
@@ -66,6 +69,9 @@ type Article struct {
 	Previous *Summary
 	Next     *Summary
 	Related  []Summary
+
+	Untranslated string
+	OriginalLang string
 }
 
 /*
