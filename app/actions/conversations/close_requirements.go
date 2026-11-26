@@ -4,11 +4,11 @@
 |--------------------------------------------------------------------------
 |
 | A workspace may require some conversation attributes before a
-| teammate closes a conversation, such as why the customer wrote. A
-| teammate's close, alone or in bulk, is refused while one is empty,
-| naming each one missing; one shown only to teams the teammate is not
-| in does not hold them back. The AI, workflows, the customer and
-| imports still close conversations as before.
+| teammate closes a conversation in the dimmi app, such as why the
+| customer wrote. Their close, alone or in bulk, is refused while one is
+| empty, naming each one missing; one shown only to teams the teammate
+| is not in does not hold them back. The API, the AI, workflows, the
+| customer, chat apps and imports still close conversations as before.
 |
 | An attribute shown only to some teams is seen, read and written only
 | by their members, in the inbox and through the API alike.
@@ -29,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/fieldvalues"
@@ -46,7 +47,7 @@ checkRequiredToClose refuses a teammate's close while a required
 attribute is empty.
 */
 func (w *Writer) checkRequiredToClose(ctx context.Context, c models.Conversation) error {
-	if w.Imported || w.Actor.Type != string(enums.AuthorTypeMember) {
+	if w.Imported || w.Actor.Type != string(enums.AuthorTypeMember) || !inApp(ctx) {
 		return nil
 	}
 
@@ -145,4 +146,14 @@ func SeesAttribute(attributeTeams, memberTeams []ids.UUID) bool {
 	}
 
 	return false
+}
+
+/*
+inApp reports whether the request comes from the dimmi app, the
+teammate's own session or app, rather than an API token.
+*/
+func inApp(ctx context.Context) bool {
+	p, ok := appauth.CurrentPrincipal(ctx)
+
+	return ok && p != nil && p.IsFirstParty()
 }

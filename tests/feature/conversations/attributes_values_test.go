@@ -269,6 +269,10 @@ func TestConversationAttributesRequiredToClose(t *testing.T) {
 
 		d.owner.GetJSON("/api/v1/conversations/"+one).AssertOK().AssertJSONPath("data.status", "closed")
 		d.owner.GetJSON("/api/v1/conversations/"+two).AssertOK().AssertJSONPath("data.status", "open")
+
+		d.tc.ActingAsToken(d.tc.Workspace.Owner, "conversations:write").
+			PatchJSON("/api/v1/conversations/"+two, testkit.JSON{"status": "closed"}).AssertOK().
+			AssertJSONPath("data.status", "closed")
 	})
 }
 
@@ -305,6 +309,27 @@ func TestConversationAttributeTeams(t *testing.T) {
 
 func TestConversationAttributeSettings(t *testing.T) {
 	t.Parallel()
+
+	t.Run("lists keep option descriptions, and attributes take an order", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+		first := d.attribute(t, testkit.JSON{
+			"key": "issue", "label": "Issue type", "data_type": "choice", "options": []string{"Billing", "Bug"},
+			"option_descriptions": testkit.JSON{"Billing": "Charges, invoices and refunds"},
+		})
+		second := d.attribute(t, testkit.JSON{"key": "plan", "label": "Plan", "data_type": "text"})
+
+		d.owner.PostJSON("/api/v1/conversation-attributes", testkit.JSON{
+			"key": "other", "label": "Other", "data_type": "choice", "options": []string{"A"},
+			"option_descriptions": testkit.JSON{"B": "Not an option"},
+		}).AssertStatus(422).AssertJSONPath("code", "option_descriptions_invalid")
+
+		d.owner.PatchJSON("/api/v1/conversation-attributes/"+first, testkit.JSON{"options": []string{"Bug"}}).
+			AssertOK().AssertJSONPath("data.option_descriptions", map[string]any{})
+
+		d.owner.PutJSON("/api/v1/conversation-attributes/order", testkit.JSON{"ids": []string{second, first}}).
+			AssertOK().AssertJSONPath("data.0.key", "plan").AssertJSONPath("data.1.key", "issue")
+	})
 
 	t.Run("keeps who fills it, required to close and its teams; old routes still answer", func(t *testing.T) {
 		t.Parallel()

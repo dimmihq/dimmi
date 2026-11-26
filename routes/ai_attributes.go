@@ -71,6 +71,8 @@ func conversationAttributeRoutes(workspace *routing.Router, a *app.App) {
 	routing.Post(workspace, all, "conversation-attributes.store", c.Store).Ability("attributes:write").
 		Status(fhttp.StatusCreated)
 	routing.Patch(workspace, one, "conversation-attributes.update", c.Update).Ability("attributes:write")
+	routing.Put(workspace, "/conversation-attributes/order", "conversation-attributes.order.update", c.Reorder).
+		Ability("attributes:write")
 	routing.Get(workspace, values, "conversations.attributes.index", c.Values).Ability("conversations:read")
 	routing.Patch(workspace, values, "conversations.attributes.update", c.SetValues).
 		Ability("conversations:write")

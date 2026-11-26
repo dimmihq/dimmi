@@ -25,10 +25,11 @@ SELECT count(*) FROM ai_conversation_attributes WHERE workspace_id = @workspace_
 -- CreateAIConversationAttribute stores a new attribute, nothing when
 -- the key is taken.
 INSERT INTO ai_conversation_attributes (
-    workspace_id, key, label, description, data_type, options, filled_by, required_to_close, team_ids, position,
-    created_at, updated_at
+    workspace_id, key, label, description, data_type, options, option_descriptions, filled_by, required_to_close,
+    team_ids, position, created_at, updated_at
 ) VALUES (
-    @workspace_id, @key, @label, @description, @data_type, @options, @filled_by, @required_to_close, @team_ids,
+    @workspace_id, @key, @label, @description, @data_type, @options, @option_descriptions, @filled_by,
+    @required_to_close, @team_ids,
     (SELECT coalesce(max(position) + 1, 0) FROM ai_conversation_attributes WHERE workspace_id = @workspace_id),
     @now, @now
 )
@@ -39,7 +40,8 @@ RETURNING *;
 -- UpdateAIConversationAttribute changes an attribute's words, its
 -- choices and its status.
 UPDATE ai_conversation_attributes
-SET label = @label, description = @description, options = @options, status = @status,
+SET label = @label, description = @description, options = @options, option_descriptions = @option_descriptions,
+    status = @status,
     filled_by = @filled_by, required_to_close = @required_to_close, team_ids = @team_ids, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
@@ -98,3 +100,8 @@ SET "values" = EXCLUDED."values", sources = EXCLUDED.sources, checked_message_id
 SELECT * FROM ai_conversation_attributes
 WHERE workspace_id = @workspace_id AND status = 'active' AND required_to_close
 ORDER BY position, label, key;
+
+-- name: MoveConversationAttribute :exec
+-- MoveConversationAttribute puts an attribute at a place in the list.
+UPDATE ai_conversation_attributes SET position = @position, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id;

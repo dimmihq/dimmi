@@ -25,19 +25,20 @@ it is required to close, the teams that see it, and whether it is
 active.
 */
 type ConversationAttribute struct {
-	ID              string    `json:"id"`
-	Object          string    `json:"object"`
-	Key             string    `json:"key"`
-	Label           string    `json:"label"`
-	Description     string    `json:"description"`
-	DataType        string    `json:"data_type"`
-	Options         []string  `json:"options"`
-	FilledBy        string    `json:"filled_by"`
-	RequiredToClose bool      `json:"required_to_close"`
-	TeamIDs         []string  `json:"team_ids"`
-	Status          string    `json:"status"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID              string            `json:"id"`
+	Object          string            `json:"object"`
+	Key             string            `json:"key"`
+	Label           string            `json:"label"`
+	Description     string            `json:"description"`
+	DataType        string            `json:"data_type"`
+	Options         []string          `json:"options"`
+	Descriptions    map[string]string `json:"option_descriptions"`
+	FilledBy        string            `json:"filled_by"`
+	RequiredToClose bool              `json:"required_to_close"`
+	TeamIDs         []string          `json:"team_ids"`
+	Status          string            `json:"status"`
+	CreatedAt       time.Time         `json:"created_at"`
+	UpdatedAt       time.Time         `json:"updated_at"`
 }
 
 /*
@@ -56,7 +57,8 @@ func NewConversationAttribute(a models.AiConversationAttribute) ConversationAttr
 
 	return ConversationAttribute{
 		ID: models.PublicID(models.PrefixAIAttribute, a.ID), Object: "conversation_attribute", Key: a.Key,
-		Label: a.Label, Description: a.Description, DataType: a.DataType, Options: options, FilledBy: a.FilledBy,
+		Label: a.Label, Description: a.Description, DataType: a.DataType, Options: options,
+		Descriptions: aiattributes.OptionDescriptions(a), FilledBy: a.FilledBy,
 		RequiredToClose: a.RequiredToClose, TeamIDs: teams, Status: a.Status, CreatedAt: a.CreatedAt,
 		UpdatedAt: a.UpdatedAt,
 	}
@@ -66,10 +68,12 @@ func NewConversationAttribute(a models.AiConversationAttribute) ConversationAttr
 ConversationAttributeSource is who set a value and when.
 */
 type ConversationAttributeSource struct {
-	By   string    `json:"by"`
-	ID   *string   `json:"id"`
-	Name *string   `json:"name"`
-	At   time.Time `json:"at"`
+	By       string    `json:"by"`
+	ID       *string   `json:"id"`
+	Name     *string   `json:"name"`
+	At       time.Time `json:"at"`
+	Reason   *string   `json:"reason"`
+	Sureness *float64  `json:"sureness"`
 }
 
 /*
@@ -112,7 +116,10 @@ func NewConversationAttributeValues(f aiattributes.Found) ConversationAttributeV
 			Files: filesOfValue(f, v),
 		}
 		if s := v.Source; s != nil {
-			item.SetBy = &ConversationAttributeSource{By: s.By, ID: orNull(s.ID), Name: orNull(s.Name), At: s.At}
+			item.SetBy = &ConversationAttributeSource{
+				By: s.By, ID: orNull(s.ID), Name: orNull(s.Name), At: s.At, Reason: orNull(s.Reason),
+				Sureness: s.Sureness,
+			}
 		}
 
 		out.Values = append(out.Values, item)

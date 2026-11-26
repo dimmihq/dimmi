@@ -38,6 +38,10 @@ type Writing struct {
 	Conversation models.Conversation
 	Values       map[string]any
 	By           string
+	// Reasons and Sureness are why the AI chose each value and how sure
+	// it was, by key, kept beside who set it.
+	Reasons  map[string]string
+	Sureness map[string]float64
 }
 
 /*
@@ -92,9 +96,8 @@ func Write(ctx context.Context, w *conversations.Writer, in Writing) ([]Change, 
 		return nil, nil
 	}
 
-	source := sourceOf(w, by)
 	for _, ch := range changes {
-		held.sources[ch.Key] = source
+		held.sources[ch.Key] = sourceOf(w, in, ch.Key)
 	}
 
 	params, err := saving(c, next, held.sources)
@@ -233,9 +236,13 @@ func (h stored) apply(fitted map[string]any, by string) (map[string]any, []Chang
 /*
 sourceOf names who the writer sets values as.
 */
-func sourceOf(w *conversations.Writer, by string) Source {
-	s := Source{By: by, At: w.Now}
-	switch by {
+func sourceOf(w *conversations.Writer, in Writing, key string) Source {
+	s := Source{By: in.By, At: w.Now, Reason: in.Reasons[key]}
+	if sure, ok := in.Sureness[key]; ok {
+		s.Sureness = &sure
+	}
+
+	switch in.By {
 	case SetByMember:
 		s.ID, s.Name = models.PublicID(models.PrefixMember, w.Actor.ID), w.Actor.Name
 	case SetByWorkflow:

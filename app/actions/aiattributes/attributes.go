@@ -64,14 +64,14 @@ var (
 	ErrTeams  = fault.New(fault.Invalid, "team_ids_invalid", "An attribute shows to 100 teams at most.").
 			OnField("team_ids")
 	ErrLimit = fault.New(fault.Invalid, "ai_attribute_limit_reached",
-		"A workspace may have 100 active conversation attributes.")
+		"A workspace may have 200 active conversation attributes.")
 )
 
 /*
 Limits of conversation attributes.
 */
 const (
-	maxActive      = 100
+	maxActive      = 200
 	maxLabel       = 80
 	maxDescription = 500
 	maxChoices     = 200
@@ -105,6 +105,7 @@ type CreateInput struct {
 	Description     string
 	DataType        string
 	Options         []string
+	Descriptions    map[string]string
 	FilledBy        string
 	RequiredToClose bool
 	TeamIDs         []ids.UUID
@@ -120,6 +121,7 @@ type UpdateInput struct {
 	Label           *string
 	Description     *string
 	Options         []string
+	Descriptions    *map[string]string
 	Status          *string
 	FilledBy        *string
 	RequiredToClose *bool
@@ -173,9 +175,14 @@ func (a *Attributes) Create(ctx context.Context, in CreateInput) (models.AiConve
 		return models.AiConversationAttribute{}, err
 	}
 
+	described, err := describe(trimmed(in.Options), in.Descriptions, true)
+	if err != nil {
+		return models.AiConversationAttribute{}, err
+	}
+
 	var out models.AiConversationAttribute
 
-	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	err = a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 
 		if err := roomFor(ctx, q, m.Workspace.ID); err != nil {
@@ -186,8 +193,8 @@ func (a *Attributes) Create(ctx context.Context, in CreateInput) (models.AiConve
 		out, err = q.CreateAIConversationAttribute(ctx, models.CreateAIConversationAttributeParams{
 			WorkspaceID: m.Workspace.ID, Key: in.Key, Label: strings.TrimSpace(in.Label),
 			Description: strings.TrimSpace(in.Description), DataType: in.DataType, Options: trimmed(in.Options),
-			FilledBy: in.FilledBy, RequiredToClose: in.RequiredToClose, TeamIds: teams(in.TeamIDs),
-			Now: a.Clock.Now(),
+			OptionDescriptions: described, FilledBy: in.FilledBy, RequiredToClose: in.RequiredToClose,
+			TeamIds: teams(in.TeamIDs), Now: a.Clock.Now(),
 		})
 		if errors.Is(err, database.ErrNotFound) {
 			return ErrExists
@@ -236,7 +243,8 @@ func (a *Attributes) Update(ctx context.Context, in UpdateInput) (models.AiConve
 		}
 
 		out, err = q.UpdateAIConversationAttribute(ctx, models.UpdateAIConversationAttributeParams{
-			Label: next.Label, Description: next.Description, Options: next.Options, Status: next.Status,
+			Label: next.Label, Description: next.Description, Options: next.Options,
+			OptionDescriptions: next.OptionDescriptions, Status: next.Status,
 			FilledBy: next.FilledBy, RequiredToClose: next.RequiredToClose, TeamIds: next.TeamIds,
 			Now: a.Clock.Now(), WorkspaceID: m.Workspace.ID, ID: in.ID,
 		})
@@ -300,6 +308,18 @@ func changed(cur models.AiConversationAttribute, in UpdateInput) (models.AiConve
 		return next, ErrStatus
 	}
 
+	descriptions, strict := OptionDescriptions(cur), in.Descriptions != nil
+	if strict {
+		descriptions = *in.Descriptions
+	}
+
+	described, err := describe(next.Options, descriptions, strict)
+	if err != nil {
+		return next, err
+	}
+
+	next.OptionDescriptions = described
+
 	if err := checkSettings(next.DataType, next.FilledBy, next.TeamIds); err != nil {
 		return next, err
 	}
@@ -321,20 +341,6 @@ func checkSettings(dataType, filledBy string, teamIDs []ids.UUID) error {
 	}
 
 	return nil
-}
-
-/*
-teams lists each team once, an empty list for every team.
-*/
-func teams(list []ids.UUID) []ids.UUID {
-	out := make([]ids.UUID, 0, len(list))
-	for _, id := range list {
-		if !slices.Contains(out, id) {
-			out = append(out, id)
-		}
-	}
-
-	return out
 }
 
 /*
@@ -390,16 +396,4 @@ func checkWords(label, description, dataType string, options []string) error {
 	}
 
 	return nil
-}
-
-/*
-trimmed trims each choice, an empty list for none.
-*/
-func trimmed(options []string) []string {
-	out := make([]string, 0, len(options))
-	for _, o := range options {
-		out = append(out, strings.TrimSpace(o))
-	}
-
-	return out
 }

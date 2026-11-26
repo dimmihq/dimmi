@@ -28,28 +28,30 @@ func (q *Queries) CountActiveAIConversationAttributes(ctx context.Context, works
 
 const createAIConversationAttribute = `-- name: CreateAIConversationAttribute :one
 INSERT INTO ai_conversation_attributes (
-    workspace_id, key, label, description, data_type, options, filled_by, required_to_close, team_ids, position,
-    created_at, updated_at
+    workspace_id, key, label, description, data_type, options, option_descriptions, filled_by, required_to_close,
+    team_ids, position, created_at, updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9,
+    $1, $2, $3, $4, $5, $6, $7, $8,
+    $9, $10,
     (SELECT coalesce(max(position) + 1, 0) FROM ai_conversation_attributes WHERE workspace_id = $1),
-    $10, $10
+    $11, $11
 )
 ON CONFLICT (workspace_id, key) DO NOTHING
-RETURNING id, workspace_id, key, label, description, data_type, options, status, created_at, updated_at, filled_by, required_to_close, team_ids, position
+RETURNING id, workspace_id, key, label, description, data_type, options, status, created_at, updated_at, filled_by, required_to_close, team_ids, position, option_descriptions
 `
 
 type CreateAIConversationAttributeParams struct {
-	WorkspaceID     ids.UUID   `json:"workspace_id"`
-	Key             string     `json:"key"`
-	Label           string     `json:"label"`
-	Description     string     `json:"description"`
-	DataType        string     `json:"data_type"`
-	Options         []string   `json:"options"`
-	FilledBy        string     `json:"filled_by"`
-	RequiredToClose bool       `json:"required_to_close"`
-	TeamIds         []ids.UUID `json:"team_ids"`
-	Now             time.Time  `json:"now"`
+	WorkspaceID        ids.UUID        `json:"workspace_id"`
+	Key                string          `json:"key"`
+	Label              string          `json:"label"`
+	Description        string          `json:"description"`
+	DataType           string          `json:"data_type"`
+	Options            []string        `json:"options"`
+	OptionDescriptions json.RawMessage `json:"option_descriptions"`
+	FilledBy           string          `json:"filled_by"`
+	RequiredToClose    bool            `json:"required_to_close"`
+	TeamIds            []ids.UUID      `json:"team_ids"`
+	Now                time.Time       `json:"now"`
 }
 
 // CreateAIConversationAttribute stores a new attribute, nothing when
@@ -62,6 +64,7 @@ func (q *Queries) CreateAIConversationAttribute(ctx context.Context, arg CreateA
 		arg.Description,
 		arg.DataType,
 		arg.Options,
+		arg.OptionDescriptions,
 		arg.FilledBy,
 		arg.RequiredToClose,
 		arg.TeamIds,
@@ -83,12 +86,13 @@ func (q *Queries) CreateAIConversationAttribute(ctx context.Context, arg CreateA
 		&i.RequiredToClose,
 		&i.TeamIds,
 		&i.Position,
+		&i.OptionDescriptions,
 	)
 	return i, err
 }
 
 const findAIConversationAttribute = `-- name: FindAIConversationAttribute :one
-SELECT id, workspace_id, key, label, description, data_type, options, status, created_at, updated_at, filled_by, required_to_close, team_ids, position FROM ai_conversation_attributes WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, key, label, description, data_type, options, status, created_at, updated_at, filled_by, required_to_close, team_ids, position, option_descriptions FROM ai_conversation_attributes WHERE workspace_id = $1 AND id = $2
 `
 
 type FindAIConversationAttributeParams struct {
@@ -115,6 +119,7 @@ func (q *Queries) FindAIConversationAttribute(ctx context.Context, arg FindAICon
 		&i.RequiredToClose,
 		&i.TeamIds,
 		&i.Position,
+		&i.OptionDescriptions,
 	)
 	return i, err
 }
@@ -147,7 +152,7 @@ func (q *Queries) FindConversationAIValues(ctx context.Context, arg FindConversa
 }
 
 const listAIConversationAttributes = `-- name: ListAIConversationAttributes :many
-SELECT id, workspace_id, key, label, description, data_type, options, status, created_at, updated_at, filled_by, required_to_close, team_ids, position FROM ai_conversation_attributes
+SELECT id, workspace_id, key, label, description, data_type, options, status, created_at, updated_at, filled_by, required_to_close, team_ids, position, option_descriptions FROM ai_conversation_attributes
 WHERE workspace_id = $1
 ORDER BY status = 'archived', position, label, key
 `
@@ -178,6 +183,7 @@ func (q *Queries) ListAIConversationAttributes(ctx context.Context, workspaceID 
 			&i.RequiredToClose,
 			&i.TeamIds,
 			&i.Position,
+			&i.OptionDescriptions,
 		); err != nil {
 			return nil, err
 		}
@@ -190,7 +196,7 @@ func (q *Queries) ListAIConversationAttributes(ctx context.Context, workspaceID 
 }
 
 const listActiveAIConversationAttributes = `-- name: ListActiveAIConversationAttributes :many
-SELECT id, workspace_id, key, label, description, data_type, options, status, created_at, updated_at, filled_by, required_to_close, team_ids, position FROM ai_conversation_attributes
+SELECT id, workspace_id, key, label, description, data_type, options, status, created_at, updated_at, filled_by, required_to_close, team_ids, position, option_descriptions FROM ai_conversation_attributes
 WHERE workspace_id = $1 AND status = 'active'
 ORDER BY key
 `
@@ -221,6 +227,7 @@ func (q *Queries) ListActiveAIConversationAttributes(ctx context.Context, worksp
 			&i.RequiredToClose,
 			&i.TeamIds,
 			&i.Position,
+			&i.OptionDescriptions,
 		); err != nil {
 			return nil, err
 		}
@@ -233,7 +240,7 @@ func (q *Queries) ListActiveAIConversationAttributes(ctx context.Context, worksp
 }
 
 const listRequiredToCloseConversationAttributes = `-- name: ListRequiredToCloseConversationAttributes :many
-SELECT id, workspace_id, key, label, description, data_type, options, status, created_at, updated_at, filled_by, required_to_close, team_ids, position FROM ai_conversation_attributes
+SELECT id, workspace_id, key, label, description, data_type, options, status, created_at, updated_at, filled_by, required_to_close, team_ids, position, option_descriptions FROM ai_conversation_attributes
 WHERE workspace_id = $1 AND status = 'active' AND required_to_close
 ORDER BY position, label, key
 `
@@ -264,6 +271,7 @@ func (q *Queries) ListRequiredToCloseConversationAttributes(ctx context.Context,
 			&i.RequiredToClose,
 			&i.TeamIds,
 			&i.Position,
+			&i.OptionDescriptions,
 		); err != nil {
 			return nil, err
 		}
@@ -303,6 +311,29 @@ func (q *Queries) LockConversationAIValues(ctx context.Context, arg LockConversa
 		&i.AttachmentIds,
 	)
 	return i, err
+}
+
+const moveConversationAttribute = `-- name: MoveConversationAttribute :exec
+UPDATE ai_conversation_attributes SET position = $1, updated_at = $2
+WHERE workspace_id = $3 AND id = $4
+`
+
+type MoveConversationAttributeParams struct {
+	Position    int32     `json:"position"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// MoveConversationAttribute puts an attribute at a place in the list.
+func (q *Queries) MoveConversationAttribute(ctx context.Context, arg MoveConversationAttributeParams) error {
+	_, err := q.db.Exec(ctx, moveConversationAttribute,
+		arg.Position,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	return err
 }
 
 const saveConversationAIValues = `-- name: SaveConversationAIValues :exec
@@ -408,23 +439,25 @@ func (q *Queries) SaveDetectedConversationAttributeValues(ctx context.Context, a
 
 const updateAIConversationAttribute = `-- name: UpdateAIConversationAttribute :one
 UPDATE ai_conversation_attributes
-SET label = $1, description = $2, options = $3, status = $4,
-    filled_by = $5, required_to_close = $6, team_ids = $7, updated_at = $8
-WHERE workspace_id = $9 AND id = $10
-RETURNING id, workspace_id, key, label, description, data_type, options, status, created_at, updated_at, filled_by, required_to_close, team_ids, position
+SET label = $1, description = $2, options = $3, option_descriptions = $4,
+    status = $5,
+    filled_by = $6, required_to_close = $7, team_ids = $8, updated_at = $9
+WHERE workspace_id = $10 AND id = $11
+RETURNING id, workspace_id, key, label, description, data_type, options, status, created_at, updated_at, filled_by, required_to_close, team_ids, position, option_descriptions
 `
 
 type UpdateAIConversationAttributeParams struct {
-	Label           string     `json:"label"`
-	Description     string     `json:"description"`
-	Options         []string   `json:"options"`
-	Status          string     `json:"status"`
-	FilledBy        string     `json:"filled_by"`
-	RequiredToClose bool       `json:"required_to_close"`
-	TeamIds         []ids.UUID `json:"team_ids"`
-	Now             time.Time  `json:"now"`
-	WorkspaceID     ids.UUID   `json:"workspace_id"`
-	ID              ids.UUID   `json:"id"`
+	Label              string          `json:"label"`
+	Description        string          `json:"description"`
+	Options            []string        `json:"options"`
+	OptionDescriptions json.RawMessage `json:"option_descriptions"`
+	Status             string          `json:"status"`
+	FilledBy           string          `json:"filled_by"`
+	RequiredToClose    bool            `json:"required_to_close"`
+	TeamIds            []ids.UUID      `json:"team_ids"`
+	Now                time.Time       `json:"now"`
+	WorkspaceID        ids.UUID        `json:"workspace_id"`
+	ID                 ids.UUID        `json:"id"`
 }
 
 // UpdateAIConversationAttribute changes an attribute's words, its
@@ -434,6 +467,7 @@ func (q *Queries) UpdateAIConversationAttribute(ctx context.Context, arg UpdateA
 		arg.Label,
 		arg.Description,
 		arg.Options,
+		arg.OptionDescriptions,
 		arg.Status,
 		arg.FilledBy,
 		arg.RequiredToClose,
@@ -458,6 +492,7 @@ func (q *Queries) UpdateAIConversationAttribute(ctx context.Context, arg UpdateA
 		&i.RequiredToClose,
 		&i.TeamIds,
 		&i.Position,
+		&i.OptionDescriptions,
 	)
 	return i, err
 }

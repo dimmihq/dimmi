@@ -89,7 +89,8 @@ func (c *ConversationAttributeController) Store(ctx context.Context, in *request
 
 	row, err := c.Attributes.Create(ctx, aiattributes.CreateInput{
 		Membership: membership(ctx), Key: b.Key, Label: b.Label, Description: b.Description, DataType: b.DataType,
-		Options: b.Options, FilledBy: b.FilledBy, RequiredToClose: b.RequiredToClose, TeamIDs: teams,
+		Options: b.Options, Descriptions: b.Descriptions, FilledBy: b.FilledBy, RequiredToClose: b.RequiredToClose,
+		TeamIDs: teams,
 	})
 
 	return conversationAttributeOutput(row, err)
@@ -108,7 +109,7 @@ func (c *ConversationAttributeController) Update(ctx context.Context, in *reques
 	b := in.Body
 	update := aiattributes.UpdateInput{
 		Membership: membership(ctx), ID: id, Label: b.Label, Description: b.Description, Status: b.Status,
-		FilledBy: b.FilledBy, RequiredToClose: b.RequiredToClose,
+		FilledBy: b.FilledBy, RequiredToClose: b.RequiredToClose, Descriptions: b.Descriptions,
 	}
 
 	if b.Options != nil {
@@ -127,6 +128,29 @@ func (c *ConversationAttributeController) Update(ctx context.Context, in *reques
 	row, err := c.Attributes.Update(ctx, update)
 
 	return conversationAttributeOutput(row, err)
+}
+
+/*
+Reorder puts the attributes in the order given.
+*/
+func (c *ConversationAttributeController) Reorder(
+	ctx context.Context, in *requests.ReorderConversationAttributesRequest,
+) (*ConversationAttributesOutput, error) {
+	order := make([]ids.UUID, 0, len(in.Body.IDs))
+	for _, public := range in.Body.IDs {
+		id, err := c.IDs.Decode(string(models.PrefixAIAttribute), public)
+		if err != nil {
+			return nil, exceptions.ErrNotFound.OnField("ids")
+		}
+
+		order = append(order, id)
+	}
+
+	if err := c.Attributes.Reorder(ctx, membership(ctx), order); err != nil {
+		return nil, err
+	}
+
+	return c.Index(ctx, nil)
 }
 
 /*

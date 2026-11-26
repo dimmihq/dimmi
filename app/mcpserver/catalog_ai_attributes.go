@@ -63,7 +63,10 @@ func conversationAttributeParams() map[string]string {
 			"what to look for.",
 		"data_type": "text, long_text, number, decimal, choice, multiple_choice, boolean, date, datetime, " +
 			"file, contact or company.",
-		"options":           "With choice or multiple_choice, the values it may take, at most 200.",
+		"options": "With choice or multiple_choice, the values it may take, at most 200.",
+		"option_descriptions": "With choice or multiple_choice, what some options mean, by option, 300 " +
+			"characters each, such as {\"Billing\": \"Charges, invoices and refunds\"}. The AI reads them.",
+		"ids":               "Every attribute's id in the order to show them; those left out follow.",
 		"filled_by":         "ai, teammates or both. The AI fills only text, numbers, yes or no, dates and lists.",
 		"required_to_close": "true to stop teammates closing a conversation while it is empty.",
 		"team_ids":          "The teams that see it in the inbox, every team when empty.",
@@ -98,6 +101,13 @@ func conversationAttributeDocs() map[string]Doc {
 			Use: "Changes an attribute's label, description, options, who fills it, whether it is required " +
 				"to close, the teams that see it, or archives it. Its key and type stay.",
 			Returns: "the attribute as saved.",
+			Params:  params,
+		},
+		"conversation-attributes.order.update": {
+			Name:    "reorder_conversation_attributes",
+			Title:   "Reorder conversation attributes",
+			Use:     "Sets the order attributes show in, in the inbox's details and in settings.",
+			Returns: "the attributes in their new order.",
 			Params:  params,
 		},
 		"conversations.attributes.index": {
@@ -137,11 +147,13 @@ func aiAttributeSchemaTexts() map[string]map[string]string {
 		"ConversationAttribute": {
 			"data_type": "What the value is: text, long_text, number, decimal, choice, multiple_choice, " +
 				"boolean, date, datetime, file, contact or company.",
-			"description":       "What it means; the AI reads it to decide the value. Empty when not set.",
-			"filled_by":         "Who fills it: ai, teammates or both.",
-			"key":               "The attribute's key, as conditions and variables name it: conversation.ai.<key>.",
-			"label":             "What the team calls the attribute.",
-			"options":           "With choice or multiple_choice, the values it may take. Empty otherwise.",
+			"description": "What it means; the AI reads it to decide the value. Empty when not set.",
+			"filled_by":   "Who fills it: ai, teammates or both.",
+			"key":         "The attribute's key, as conditions and variables name it: conversation.ai.<key>.",
+			"label":       "What the team calls the attribute.",
+			"options":     "With choice or multiple_choice, the values it may take. Empty otherwise.",
+			"option_descriptions": "What some options mean, by option, for the AI to read. Empty when none " +
+				"is described.",
 			"required_to_close": "Whether teammates must fill it before closing a conversation.",
 			"status":            "active while it is filled, archived once it stopped.",
 			"team_ids":          "The teams that see it in the inbox. Empty when every team does.",
@@ -159,6 +171,9 @@ func aiAttributeSchemaTexts() map[string]map[string]string {
 			"id":   "The teammate's id when a teammate set it. Null otherwise.",
 			"name": "The teammate's or the workflow's name. Null for the AI and imports.",
 			"at":   "When it was set, as an RFC 3339 time.",
+			"reason": "Why the AI chose the value, in a sentence. Null when the AI gave none or someone " +
+				"else set it.",
+			"sureness": "How sure the AI was, from 0 to 1. Null when the AI did not say or someone else set it.",
 		},
 		"ConversationAttributeValues": {
 			"checked_at": "When the AI last read the conversation. Null when it never has.",

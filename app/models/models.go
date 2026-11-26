@@ -246,20 +246,21 @@ type AiAgentVersion struct {
 }
 
 type AiConversationAttribute struct {
-	ID              ids.UUID   `json:"id"`
-	WorkspaceID     ids.UUID   `json:"workspace_id"`
-	Key             string     `json:"key"`
-	Label           string     `json:"label"`
-	Description     string     `json:"description"`
-	DataType        string     `json:"data_type"`
-	Options         []string   `json:"options"`
-	Status          string     `json:"status"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
-	FilledBy        string     `json:"filled_by"`
-	RequiredToClose bool       `json:"required_to_close"`
-	TeamIds         []ids.UUID `json:"team_ids"`
-	Position        int32      `json:"position"`
+	ID                 ids.UUID        `json:"id"`
+	WorkspaceID        ids.UUID        `json:"workspace_id"`
+	Key                string          `json:"key"`
+	Label              string          `json:"label"`
+	Description        string          `json:"description"`
+	DataType           string          `json:"data_type"`
+	Options            []string        `json:"options"`
+	Status             string          `json:"status"`
+	CreatedAt          time.Time       `json:"created_at"`
+	UpdatedAt          time.Time       `json:"updated_at"`
+	FilledBy           string          `json:"filled_by"`
+	RequiredToClose    bool            `json:"required_to_close"`
+	TeamIds            []ids.UUID      `json:"team_ids"`
+	Position           int32           `json:"position"`
+	OptionDescriptions json.RawMessage `json:"option_descriptions"`
 }
 
 type AiProviderKey struct {

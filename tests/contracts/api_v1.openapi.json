@@ -16647,6 +16647,13 @@
             "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
+          "option_descriptions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "What some options mean, by option, for the AI to read. Empty when none is described.",
+            "type": "object"
+          },
           "options": {
             "description": "With choice or multiple_choice, the values it may take. Empty otherwise.",
             "items": {
@@ -16689,6 +16696,7 @@
           "description",
           "data_type",
           "options",
+          "option_descriptions",
           "filled_by",
           "required_to_close",
           "team_ids",
@@ -16723,13 +16731,30 @@
               "string",
               "null"
             ]
+          },
+          "reason": {
+            "description": "Why the AI chose the value, in a sentence. Null when the AI gave none or someone else set it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sureness": {
+            "description": "How sure the AI was, from 0 to 1. Null when the AI did not say or someone else set it.",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
           }
         },
         "required": [
           "by",
           "id",
           "name",
-          "at"
+          "at",
+          "reason",
+          "sureness"
         ],
         "type": "object"
       },
@@ -29556,6 +29581,26 @@
         ],
         "type": "object"
       },
+      "ReorderConversationAttributesRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "ids": {
+            "description": "Every attribute's id in the order to show them; those left out follow.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 500,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "type": "object"
+      },
       "ReorderConversationViewsRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -37689,6 +37734,14 @@
             "maxLength": 80,
             "type": "string"
           },
+          "option_descriptions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "With choice or multiple_choice, what some options mean, by option, 300 characters each, such as {\"Billing\": \"Charges, invoices and refunds\"}. The AI reads them.",
+            "maxProperties": 200,
+            "type": "object"
+          },
           "options": {
             "description": "With choice or multiple_choice, the values it may take, at most 200.",
             "items": {
@@ -42954,6 +43007,14 @@
             "description": "What the team calls it, up to 80 characters, such as Issue type.",
             "maxLength": 80,
             "type": "string"
+          },
+          "option_descriptions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "With choice or multiple_choice, what some options mean, by option, 300 characters each, such as {\"Billing\": \"Charges, invoices and refunds\"}. The AI reads them.",
+            "maxProperties": 200,
+            "type": "object"
           },
           "options": {
             "description": "With choice or multiple_choice, the values it may take, at most 200.",
@@ -56481,6 +56542,48 @@
           }
         },
         "summary": "Add a conversation attribute",
+        "x-abilities": [
+          "attributes:write"
+        ]
+      }
+    },
+    "/conversation-attributes/order": {
+      "put": {
+        "description": "Sets the order attributes show in, in the inbox's details and in settings. Returns the attributes in their new order.",
+        "operationId": "conversation-attributes.order.update",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderConversationAttributesRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionConversationAttribute"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Reorder conversation attributes",
         "x-abilities": [
           "attributes:write"
         ]

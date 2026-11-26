@@ -70,13 +70,17 @@ var ErrFilledByAI = fault.New(fault.Invalid, "attribute_filled_by_ai",
 
 /*
 Source is who set a value and when: the AI, a teammate (with their id
-and name), a workflow (with its name) or an import.
+and name), a workflow (with its name) or an import. For the AI, Reason
+is why it chose the value and Sureness how sure it was, from 0 to 1,
+when the model said.
 */
 type Source struct {
-	By   string    `json:"by"`
-	ID   string    `json:"id,omitempty"`
-	Name string    `json:"name,omitempty"`
-	At   time.Time `json:"at"`
+	By       string    `json:"by"`
+	ID       string    `json:"id,omitempty"`
+	Name     string    `json:"name,omitempty"`
+	At       time.Time `json:"at"`
+	Reason   string    `json:"reason,omitempty"`
+	Sureness *float64  `json:"sureness,omitempty"`
 }
 
 /*

@@ -110,7 +110,7 @@ func (a *Attributes) Detect(ctx context.Context, args jobs.DetectConversationAtt
 	conv := args.ConversationID
 	got, err := a.Decisions.Extract(ctx, aidecision.Extraction{
 		Subject: aidecision.Subject{WorkspaceID: args.WorkspaceID, ConversationID: &conv, Context: r.text},
-		Fields:  fieldsOf(r.defs),
+		Fields:  fieldsOf(r.defs), Explain: true,
 	})
 	if errors.Is(err, aidecision.ErrUnavailable) {
 		return nil
@@ -120,7 +120,7 @@ func (a *Attributes) Detect(ctx context.Context, args jobs.DetectConversationAtt
 		return err
 	}
 
-	if err := a.keep(ctx, args, r, got.Values); err != nil {
+	if err := a.keep(ctx, args, r, got); err != nil {
 		return err
 	}
 
@@ -242,7 +242,7 @@ keep writes the values found that fit their attributes, as the AI,
 and records the message they were read at.
 */
 func (a *Attributes) keep(
-	ctx context.Context, args jobs.DetectConversationAttributesArgs, r *reading, found map[string]any,
+	ctx context.Context, args jobs.DetectConversationAttributesArgs, r *reading, found aidecision.Extracted,
 ) error {
 	return a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
@@ -259,7 +259,10 @@ func (a *Attributes) keep(
 		}
 
 		w := aiWriter(q, tx, a)
-		if _, err := Write(ctx, w, Writing{Conversation: c, Values: sure(r.defs, found), By: SetByAI}); err != nil {
+		if _, err := Write(ctx, w, Writing{
+			Conversation: c, Values: sure(r.defs, found.Values), By: SetByAI, Reasons: found.Reasons,
+			Sureness: found.Sureness,
+		}); err != nil {
 			return err
 		}
 
@@ -340,6 +343,7 @@ fieldOf turns one attribute into a field.
 func fieldOf(d models.AiConversationAttribute) aidecision.Field {
 	return aidecision.Field{
 		Key: d.Key, Label: d.Label, Description: d.Description, Type: aiType(d.DataType), Options: d.Options,
+		OptionDescriptions: OptionDescriptions(d),
 	}
 }
 
