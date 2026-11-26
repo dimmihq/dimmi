@@ -584,7 +584,6 @@ export class Live {
           slug: a.slug,
           title: a.title,
           summary: a.summary,
-          author: "",
           updated: new Date(a.updated).toLocaleDateString(reading.locale),
           body: a.body,
         })),

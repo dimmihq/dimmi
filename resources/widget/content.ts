@@ -96,7 +96,6 @@ export interface Article {
   slug: string;
   title: string;
   summary: string;
-  author: string;
   updated: string;
   body: Block[];
   /*

@@ -53,7 +53,7 @@
   line-height: 32px;
 }
 
-.byline {
+.page-meta {
   display: flex;
   align-items: center;
   gap: 8px;

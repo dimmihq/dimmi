@@ -190,7 +190,6 @@ export const sample: Content = {
       slug: "install-the-widget",
       title: "Install the messenger on your site",
       summary: "Add one script tag and the messenger appears on every page.",
-      author: "Maya Kerr",
       updated: "Updated this week",
       body: [
         { kind: "p", text: "The messenger loads from a single script tag. It works on any site, framework or CMS." },
@@ -219,7 +218,6 @@ export const sample: Content = {
       slug: "invite-your-team",
       title: "Invite your team",
       summary: "Bring teammates in so they can answer conversations.",
-      author: "Jonas Reed",
       updated: "Updated 2 weeks ago",
       body: [
         { kind: "p", text: "Everyone you invite gets their own login and can reply from the shared inbox." },
@@ -234,7 +232,6 @@ export const sample: Content = {
       slug: "connect-github",
       title: "Connect a GitHub repository",
       summary: "Sync docs and changelog drafts from your repository.",
-      author: "Maya Kerr",
       updated: "Updated yesterday",
       body: [
         {
@@ -266,7 +263,6 @@ export const sample: Content = {
       slug: "change-your-plan",
       title: "Change your plan",
       summary: "Upgrade, downgrade or cancel at any time.",
-      author: "Jonas Reed",
       updated: "Updated last month",
       body: [
         { kind: "p", text: "Plan changes take effect right away. Upgrades are prorated for the rest of the month." },
