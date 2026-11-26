@@ -293,6 +293,12 @@ func (e *Engine) settle(run batchRun, p pending, r Result) error {
 			return err
 		}
 
+		if r.Status == StatusDeferred {
+			st.wait(kind, p.rec.SourceID, r.WaitingFor)
+		} else {
+			st.wait(kind, p.rec.SourceID, nil)
+		}
+
 		st.Failures = dropFailure(st.Failures, kind, p.rec.SourceID)
 	default:
 		run.counts["failed"]++

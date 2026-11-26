@@ -158,6 +158,12 @@ func (e *Engine) Run(ctx context.Context, opts RunOptions) error {
 		}
 	}
 
+	if err := e.settleWaits(ctx, st); err != nil {
+		_ = e.Store.Save(st)
+
+		return err
+	}
+
 	if opts.Sync {
 		st.SyncedAt = e.Now()
 	}

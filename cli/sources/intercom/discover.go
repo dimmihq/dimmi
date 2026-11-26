@@ -73,10 +73,8 @@ func (s *Source) searchTotal(ctx context.Context, path string) (int, error) {
 		TotalCount int `json:"total_count"`
 	}
 
-	body := map[string]any{
-		"query":      map[string]any{"field": "updated_at", "operator": ">", "value": 0},
-		"pagination": map[string]any{"per_page": 1},
-	}
+	body := changedSince(0, "")
+	body["pagination"] = map[string]any{"per_page": 1}
 
 	err := s.Client.post(ctx, path, body, &out)
 

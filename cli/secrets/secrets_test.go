@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/zalando/go-keyring"
 )
 
 func TestFileKeepsSecretsPrivate(t *testing.T) {
@@ -46,5 +48,28 @@ func TestFileKeepsSecretsPrivate(t *testing.T) {
 
 	if _, err := f.Get("dimmi"); !errors.Is(err, ErrNotFound) {
 		t.Fatal("delete kept the secret")
+	}
+}
+
+func TestProfilesKeepTheirOwnKeychainEntries(t *testing.T) {
+	keyring.MockInit()
+
+	a, b := &Keychain{Profile: "default", fallback: &File{Path: t.TempDir() + "/a"}},
+		&Keychain{Profile: "e2e", fallback: &File{Path: t.TempDir() + "/b"}}
+
+	if err := a.Set("dimmi", "token-a"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := b.Get("dimmi"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("profile e2e read profile default's sign-in: %v", err)
+	}
+
+	if err := b.Delete("dimmi"); err != nil {
+		t.Fatal(err)
+	}
+
+	if v, err := a.Get("dimmi"); err != nil || v != "token-a" {
+		t.Fatalf("deleting in one profile touched another: %q %v", v, err)
 	}
 }

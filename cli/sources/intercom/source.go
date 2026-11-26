@@ -26,6 +26,8 @@ type Source struct {
 	mu          sync.Mutex
 	account     *engine.Account
 	known       map[string]bool
+	knownTeams  map[string]bool
+	knownTags   map[string]bool
 	former      map[string]Former
 	centers     map[string]string
 	defaultHC   string
@@ -136,7 +138,16 @@ func (s *Source) Read(
 	ctx context.Context, kind format.Kind, opts engine.ReadOptions, emit func(engine.Page) error,
 ) error {
 	if read, ok := s.readers()[kind]; ok {
-		return read(ctx, opts, emit)
+		return read(ctx, opts, func(p engine.Page) error {
+			recs, err := s.guard(ctx, p.Records)
+			if err != nil {
+				return err
+			}
+
+			p.Records = recs
+
+			return emit(p)
+		})
 	}
 
 	return fmt.Errorf("intercom has no %s", kind)

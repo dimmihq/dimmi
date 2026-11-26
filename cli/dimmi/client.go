@@ -454,10 +454,11 @@ type result struct {
 		Message string `json:"message"`
 		Field   string `json:"field"`
 	} `json:"error"`
+	WaitingFor []engine.Ref `json:"waiting_for"`
 }
 
 func (r result) engine() engine.Result {
-	out := engine.Result{SourceID: r.SourceID}
+	out := engine.Result{SourceID: r.SourceID, WaitingFor: r.WaitingFor}
 	if r.ID != nil {
 		out.ID = *r.ID
 	}

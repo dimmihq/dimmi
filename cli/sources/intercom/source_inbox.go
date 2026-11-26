@@ -108,7 +108,12 @@ func (s *Source) newFormer(list []Former) []format.Record {
 		}
 
 		s.former[f.ID] = f
-		recs = append(recs, translateFormer(f))
+
+		// A teammate is known to dimmi by their email; one Intercom gives
+		// no email for is left out, and the guard drops what names them.
+		if f.Email != "" {
+			recs = append(recs, translateFormer(f))
+		}
 	}
 
 	return recs
@@ -147,10 +152,15 @@ func (s *Source) conversation(ctx context.Context, id ID) (conversation, []part,
 }
 
 /*
-lastPartsPage reports whether a page of n parts is the last: the last of
-the pages Intercom counts, or a short page when it counts none.
+lastPartsPage reports whether a page of n parts is the last: an empty
+page, the last of the pages Intercom counts, or a short page when it
+counts none.
 */
 func lastPartsPage(page, n, totalPages int) bool {
+	if n == 0 {
+		return true
+	}
+
 	if totalPages > 0 {
 		return page >= totalPages
 	}

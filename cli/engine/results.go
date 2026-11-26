@@ -1,5 +1,7 @@
 package engine
 
+import "github.com/dimmihq/dimmi/cli/format"
+
 /*
 RecordError is why dimmi refused a record. Messages never hold the
 record's content.
@@ -21,11 +23,21 @@ const (
 )
 
 /*
-Result is one record's outcome.
+Ref names a record by its kind and source id.
+*/
+type Ref struct {
+	Kind     format.Kind `json:"kind"`
+	SourceID string      `json:"source_id"`
+}
+
+/*
+Result is one record's outcome. A deferred record names the records it
+waits for.
 */
 type Result struct {
-	SourceID string       `json:"source_id"`
-	Status   string       `json:"status"`
-	ID       string       `json:"id,omitempty"`
-	Error    *RecordError `json:"error,omitempty"`
+	SourceID   string       `json:"source_id"`
+	Status     string       `json:"status"`
+	ID         string       `json:"id,omitempty"`
+	Error      *RecordError `json:"error,omitempty"`
+	WaitingFor []Ref        `json:"waiting_for,omitempty"`
 }

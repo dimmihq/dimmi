@@ -321,6 +321,13 @@ func (a *app) loginCommand(ctx context.Context) command {
 			return err
 		}
 
+		// Logging in always signs in again: a saved sign-in dimmi no
+		// longer takes would otherwise count as done, and every command
+		// would keep asking for a login that never happens.
+		if err := a.keys.Delete(a.dimmiKey()); err != nil {
+			return err
+		}
+
 		return a.page(ctx, pageOptions{noBrowser: *noBrowser})
 	}}
 }

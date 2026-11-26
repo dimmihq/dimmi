@@ -152,6 +152,12 @@ func (e *Engine) sampleIDs(ctx context.Context, kind format.Kind, n int) ([]stri
 
 	err := e.Source.Read(ctx, kind, ReadOptions{}, func(p Page) error {
 		for _, r := range p.Records {
+			// A read gives records of earlier kinds too, such as the
+			// teammates conversations reveal; they aren't this kind's.
+			if r.Kind != "" && r.Kind != kind {
+				continue
+			}
+
 			ids = append(ids, r.SourceID)
 			if len(ids) >= n {
 				return ErrStop

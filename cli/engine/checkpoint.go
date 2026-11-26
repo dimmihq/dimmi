@@ -58,6 +58,27 @@ type State struct {
 	UpdatedAt   time.Time                    `json:"updated_at"`
 	SyncedAt    time.Time                    `json:"synced_at,omitzero"`
 	Extra       map[string]map[string]string `json:"extra,omitempty"`
+	Waiting     map[string][]Ref             `json:"waiting,omitempty"`
+}
+
+/*
+wait records what a deferred record waits for, or that it waits no
+more.
+*/
+func (s *State) wait(kind format.Kind, id string, refs []Ref) {
+	key := hashKey(kind, id)
+
+	if len(refs) == 0 {
+		delete(s.Waiting, key)
+
+		return
+	}
+
+	if s.Waiting == nil {
+		s.Waiting = map[string][]Ref{}
+	}
+
+	s.Waiting[key] = refs
 }
 
 /*
@@ -242,6 +263,18 @@ func (s *Store) Taken(kind format.Kind, id, hash string) error {
 	s.hashes[key] = hash
 
 	return nil
+}
+
+/*
+Has reports whether dimmi took the record, in any version.
+*/
+func (s *Store) Has(kind format.Kind, id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	_, ok := s.hashes[hashKey(kind, id)]
+
+	return ok
 }
 
 /*

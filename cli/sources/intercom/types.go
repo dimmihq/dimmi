@@ -273,7 +273,9 @@ type note struct {
 	CreatedAt Time   `json:"created_at"`
 	Body      string `json:"body"`
 	Author    struct {
-		ID ID `json:"id"`
+		ID    ID     `json:"id"`
+		Name  string `json:"name"`
+		Email string `json:"email"`
 	} `json:"author"`
 	Contact *struct {
 		ID ID `json:"id"`

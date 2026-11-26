@@ -63,7 +63,7 @@ func Open(dir string) Store {
 
 	_ = keyring.Delete(Service, "probe")
 
-	return &Keychain{fallback: file}
+	return &Keychain{Profile: filepath.Base(dir), fallback: file}
 }
 
 /*
@@ -71,14 +71,21 @@ Keychain is the operating system's keychain. Secrets saved to the file
 before a keychain was there are still read.
 */
 type Keychain struct {
+	Profile  string
 	fallback *File
 }
+
+/*
+account is the keychain entry of a secret: the profile's own, so each
+profile keeps its own sign-ins.
+*/
+func (k *Keychain) account(name string) string { return k.Profile + "/" + name }
 
 /*
 Get reads a secret from the keychain, then from the file.
 */
 func (k *Keychain) Get(name string) (string, error) {
-	v, err := keyring.Get(Service, name)
+	v, err := keyring.Get(Service, k.account(name))
 	if errors.Is(err, keyring.ErrNotFound) {
 		return k.fallback.Get(name)
 	}
@@ -89,13 +96,13 @@ func (k *Keychain) Get(name string) (string, error) {
 /*
 Set saves a secret in the keychain.
 */
-func (k *Keychain) Set(name, value string) error { return keyring.Set(Service, name, value) }
+func (k *Keychain) Set(name, value string) error { return keyring.Set(Service, k.account(name), value) }
 
 /*
 Delete forgets a secret in the keychain and in the file.
 */
 func (k *Keychain) Delete(name string) error {
-	err := keyring.Delete(Service, name)
+	err := keyring.Delete(Service, k.account(name))
 	if errors.Is(err, keyring.ErrNotFound) {
 		err = nil
 	}

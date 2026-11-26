@@ -449,6 +449,29 @@ func (s *Source) contactNotes(ctx context.Context, c contact) ([]format.Record, 
 }
 
 /*
+noteAuthors returns teammate records for the authors of notes who were
+removed from Intercom, before the notes themselves.
+*/
+func (s *Source) noteAuthors(ctx context.Context, list []note) ([]format.Record, error) {
+	known, err := s.knownAdmins(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var former []Former
+
+	for _, n := range list {
+		if n.Author.ID != "" && !known[string(n.Author.ID)] {
+			former = append(former, Former{
+				ID: string(n.Author.ID), Name: text(n.Author.Name), Email: text(n.Author.Email),
+			})
+		}
+	}
+
+	return s.newFormer(former), nil
+}
+
+/*
 companyNotes reads a company's notes, oldest first.
 */
 func (s *Source) companyNotes(ctx context.Context, c company) ([]format.Record, error) {
@@ -467,6 +490,7 @@ notes reads every page of a notes list.
 */
 func (s *Source) notes(ctx context.Context, path string, fn func(note) format.Record) ([]format.Record, error) {
 	var recs []format.Record
+	var all []note
 
 	for page := 1; page < 1000; page++ {
 		var out list[note]
@@ -480,12 +504,19 @@ func (s *Source) notes(ctx context.Context, path string, fn func(note) format.Re
 			recs = append(recs, fn(n))
 		}
 
+		all = append(all, out.Data...)
+
 		if len(out.Data) == 0 || int(out.Pages.TotalPages) <= page {
 			break
 		}
 	}
 
-	return recs, nil
+	authors, err := s.noteAuthors(ctx, all)
+	if err != nil {
+		return nil, err
+	}
+
+	return append(authors, recs...), nil
 }
 
 func (s *Source) readTicketTypes(ctx context.Context, _ engine.ReadOptions, emit func(engine.Page) error) error {

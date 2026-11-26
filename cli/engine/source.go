@@ -95,6 +95,16 @@ type Source interface {
 }
 
 /*
+Fetcher reads records by their ids. A source that has one is asked for
+the records dimmi waits on that its reads didn't give, such as a contact
+a conversation names that the list of contacts leaves out.
+*/
+type Fetcher interface {
+	/* Fetch reads the records of a kind it can find; it leaves out ids it can't. */
+	Fetch(ctx context.Context, kind format.Kind, ids []string) ([]format.Record, error)
+}
+
+/*
 Describer tells which tool and workspace a source reads, and what the
 workspace holds.
 */
