@@ -16,9 +16,20 @@ import { articleTranslationsQuery } from "@/lib/api/translations";
 
 import { standingOf, standings, type TranslationStanding, useLanguageNames } from "./translation-standing";
 
+/*
+ * StandingChip names where a translation stands. The grey chips carry a
+ * hairline so they stay visible on a highlighted menu or list row, whose
+ * surface is the same grey.
+ */
 export function StandingChip({ standing }: { standing: TranslationStanding }) {
+  const { color } = standings[standing];
+  const quiet = color === "neutral" || color === "soft" || color === "gray";
   return (
-    <Chip variant="caption" color={standings[standing].color}>
+    <Chip
+      variant="caption"
+      color={color}
+      className={quiet ? "ring-1 ring-border-button-default ring-inset" : undefined}
+    >
       {standings[standing].text}
     </Chip>
   );
