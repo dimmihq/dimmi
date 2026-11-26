@@ -38,8 +38,8 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 			<meta property="og:title" content={ m.Title }/>
 			<meta property="og:site_name" content={ c.Name }/>
 			<meta name="theme-color" content={ c.Brand }/>
-			if c.LogoLight != "" {
-				<link rel="icon" href={ Path(c, c.LogoLight) }/>
+			if icon := tabIcon(c); icon != "" {
+				<link rel="icon" href={ icon }/>
 			} else {
 				<link rel="icon" href="data:,"/>
 			}
@@ -440,16 +440,36 @@ func helpIcon(c Center) string {
 
 /*
 Logo draws the portal's logo, in its light or dark version to match the
-page, or the product's name when it has none.
+page, or the company's square mark beside the product's name, or the
+name alone when it has neither.
 */
 
 templ Logo(c Center) {
 	if c.LogoLight != "" {
-		<img src={ Path(c, c.LogoLight) } alt={ c.Product } height="22" class="theme-logo-light h-[1.375rem] w-auto"/>
-		<img src={ Path(c, c.LogoDark) } alt={ c.Product } height="22" class="theme-logo-dark h-[1.375rem] w-auto"/>
+		<img src={ Asset(c, c.LogoLight) } alt={ c.Product } height="22" class="theme-logo-light h-[1.375rem] w-auto"/>
+		<img src={ Asset(c, c.LogoDark) } alt={ c.Product } height="22" class="theme-logo-dark h-[1.375rem] w-auto"/>
 	} else {
-		<span class="truncate text-headline-semibold text-text-primary">{ c.Product }</span>
+		<span class="flex min-w-0 items-center gap-2">
+			if c.Mark != "" {
+				<img src={ Asset(c, c.Mark) } alt="" width="28" height="28" class="aspect-square h-7 w-auto shrink-0 rounded-lg object-cover"/>
+			}
+			<span class="truncate text-headline-semibold text-text-primary">{ c.Product }</span>
+		</span>
 	}
+}
+
+/*
+tabIcon is the picture the browser tab shows: the company's square mark,
+else its logo, empty for none.
+*/
+func tabIcon(c Center) string {
+	if c.Mark != "" {
+		return Asset(c, c.Mark)
+	}
+	if c.LogoLight != "" {
+		return Asset(c, c.LogoLight)
+	}
+	return ""
 }
 
 /*

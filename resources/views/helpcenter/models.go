@@ -23,7 +23,8 @@ import (
 Center is the portal a page belongs to: its name, the scheme and host
 it is served on, the path every link starts with, its brand color as a
 hex code, the paths of its logo for light and dark pages (empty to draw
-its initial on the brand), the address of the product it supports, the
+its initial on the brand), Mark, the company's square logo shown beside
+its name when it has no wide one, the address of the product it supports, the
 sections it shows beside the help center, and the visitor signed in to
 it, if any. SignInURL is where a reader signs in, empty when the help
 center takes no sign-in; SignedIn says a reader is signed in, and
@@ -49,6 +50,7 @@ type Center struct {
 	Brand      string
 	LogoLight  string
 	LogoDark   string
+	Mark       string
 	Tagline    string
 	HomeURL    string
 	ContactURL string

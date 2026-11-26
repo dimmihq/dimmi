@@ -284,6 +284,19 @@ func (q *Queries) FindHelpCenter(ctx context.Context, arg FindHelpCenterParams) 
 	return i, err
 }
 
+const helpCenterLogo = `-- name: HelpCenterLogo :one
+SELECT logo_path FROM workspaces WHERE id = $1
+`
+
+// HelpCenterLogo returns the path of the workspace's logo, which its help
+// centers show, null when it has none.
+func (q *Queries) HelpCenterLogo(ctx context.Context, workspaceID ids.UUID) (*string, error) {
+	row := q.db.QueryRow(ctx, helpCenterLogo, workspaceID)
+	var logo_path *string
+	err := row.Scan(&logo_path)
+	return logo_path, err
+}
+
 const helpCenterSubdomainTaken = `-- name: HelpCenterSubdomainTaken :one
 SELECT help_center_subdomain_taken($1::citext)::boolean AS taken
 `
@@ -456,6 +469,18 @@ type TouchHelpCenterCacheParams struct {
 // can see.
 func (q *Queries) TouchHelpCenterCache(ctx context.Context, arg TouchHelpCenterCacheParams) error {
 	_, err := q.db.Exec(ctx, touchHelpCenterCache, arg.Now, arg.WorkspaceID, arg.ID)
+	return err
+}
+
+const touchWorkspaceHelpCenters = `-- name: TouchWorkspaceHelpCenters :exec
+UPDATE help_centers SET cache_version = cache_version + 1
+WHERE workspace_id = $1 AND deleted_at IS NULL
+`
+
+// TouchWorkspaceHelpCenters moves every help center of the workspace on
+// after a change all of them show, such as the workspace's logo.
+func (q *Queries) TouchWorkspaceHelpCenters(ctx context.Context, workspaceID ids.UUID) error {
+	_, err := q.db.Exec(ctx, touchWorkspaceHelpCenters, workspaceID)
 	return err
 }
 

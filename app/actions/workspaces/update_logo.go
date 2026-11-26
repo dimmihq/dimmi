@@ -145,6 +145,10 @@ func (w logoWriter) replace(
 			return nil
 		}
 
+		if err := q.TouchWorkspaceHelpCenters(ctx, current.ID); err != nil {
+			return fmt.Errorf("refresh help centers after logo change: %w", err)
+		}
+
 		if current.LogoPath != nil {
 			err = w.Queue.PushTx(ctx, tx, pictures.DeleteArgs{Path: *current.LogoPath})
 			if err != nil {

@@ -45,7 +45,7 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 	base string,
 ) (helpcenter.Center, HelpLibrary, bool) {
 	h, prefix := snap.HelpCenter, prefixOf(snap.HelpCenter, snap.Locale)
-	center := c.centerOf(h, base+prefix)
+	center := c.centerOf(snap, base+prefix)
 	center.Origin = origin(r)
 	center.Canonical = c.canonical(r, h)
 	c.withMessenger(&center, snap)

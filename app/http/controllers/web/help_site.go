@@ -118,19 +118,26 @@ func newSite(ctx context.Context, public *helpcenters.Public, snap helpcenters.S
 }
 
 /*
-centerOf is the page frame of a help center served under the base.
+centerOf is the page frame of a help center served under the base, with
+the workspace's square logo as its mark, addressed on the app so every
+host can load it.
 */
-func (c *HelpCenterController) centerOf(h models.HelpCenter, base string) helpcenter.Center {
+func (c *HelpCenterController) centerOf(snap helpcenters.Snapshot, base string) helpcenter.Center {
+	h := snap.HelpCenter
 	s := helpcenters.SettingsOf(h)
 	brand := s.PrimaryColor
 	if brand == "" {
 		brand = "#10b981"
 	}
-	return helpcenter.Center{
+	center := helpcenter.Center{
 		Lang: c.Lang, Name: h.Name, Product: h.Name, Base: base, Brand: brand, Tagline: s.HomeSubtitle,
 		ContactURL: s.ContactURL,
 		Appearance: s.Appearance, HomeTitle: s.HomeTitle, FooterText: s.FooterText, NoIndex: !h.IndexingEnabled,
 	}
+	if snap.Logo != "" {
+		center.Mark = strings.TrimSuffix(c.AppURL, "/") + "/" + snap.Logo
+	}
+	return center
 }
 
 /*

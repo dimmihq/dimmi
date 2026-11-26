@@ -146,7 +146,7 @@ the same sections in the header as every other page.
 */
 func (c *HelpCenterController) readerCenter(r *fhttp.Request, snap helpcenters.Snapshot, base string,
 ) helpcenter.Center {
-	center := c.centerOf(snap.HelpCenter, base)
+	center := c.centerOf(snap, base)
 	center.Origin = origin(r)
 	c.withMessenger(&center, snap)
 	c.announce(r, snap.HelpCenter, &center)

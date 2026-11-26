@@ -41,7 +41,8 @@ marks those. Alternates gives,
 for each article and collection, its slug in every language readers
 may read it in. Restricted says audiences keep some of it from this
 reader, so signing in could show more. Messenger is the messenger its
-pages load, the zero value when they show none.
+pages load, the zero value when they show none, and Logo the path of
+the workspace's logo, empty when it has none.
 */
 type Snapshot struct {
 	HelpCenter  models.HelpCenter
@@ -52,6 +53,7 @@ type Snapshot struct {
 	Alternates  Alternates
 	Restricted  bool
 	Messenger   Messenger
+	Logo        string
 }
 
 /*
@@ -261,8 +263,15 @@ func loadAll(ctx context.Context, q *models.Queries, h models.HelpCenter, locale
 	shown := read.in(locale, SettingsOf(h).UntranslatedArticles)
 	out.Collections, out.Articles, out.Originals = shown.collections, shown.articles, shown.originals
 	out.Alternates = read.alternates()
-	out.Messenger, err = messengerOf(ctx, q, h)
-	return out, err
+	if out.Messenger, err = messengerOf(ctx, q, h); err != nil {
+		return out, err
+	}
+	logo, err := q.HelpCenterLogo(ctx, h.WorkspaceID)
+	if err != nil {
+		return out, fmt.Errorf("read logo: %w", err)
+	}
+	out.Logo = deref(logo)
+	return out, nil
 }
 
 /*

@@ -37,6 +37,17 @@ RETURNING *;
 UPDATE help_centers SET cache_version = cache_version + 1, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id;
 
+-- name: TouchWorkspaceHelpCenters :exec
+-- TouchWorkspaceHelpCenters moves every help center of the workspace on
+-- after a change all of them show, such as the workspace's logo.
+UPDATE help_centers SET cache_version = cache_version + 1
+WHERE workspace_id = @workspace_id AND deleted_at IS NULL;
+
+-- name: HelpCenterLogo :one
+-- HelpCenterLogo returns the path of the workspace's logo, which its help
+-- centers show, null when it has none.
+SELECT logo_path FROM workspaces WHERE id = @workspace_id;
+
 -- name: ResolveHelpCenter :one
 -- ResolveHelpCenter finds which workspace's help center answers a
 -- subdomain, before any workspace is known.
