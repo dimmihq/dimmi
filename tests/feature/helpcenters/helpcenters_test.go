@@ -70,6 +70,13 @@ func (c center) local(path string) string {
 address is where a reader's browser asks for a page of the help center:
 its own host when it has one, else the application's /hc path.
 */
+func (c center) forms(client *testkit.Client) *testkit.Client {
+	return tests.HelpForms(c.d.TC.T, client, c.address(""))
+}
+
+/*
+address is the full address of a path of the help center.
+*/
 func (c center) address(path string) string {
 	if c.d.TC.App.Config.HelpCenters.BaseDomain != "" {
 		return "https://" + c.link(path)

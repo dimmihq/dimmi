@@ -20,7 +20,7 @@ import (
 form posts a sign-in form of the help center.
 */
 func (c center) form(path string, values url.Values) *testkit.Response {
-	return c.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
+	return c.forms(c.d.TC.Client()).WithHeader("Content-Type", "application/x-www-form-urlencoded").
 		WithHeader("Accept", "text/html").Send("POST", c.address(path), values.Encode())
 }
 

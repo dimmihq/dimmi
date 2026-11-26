@@ -1,0 +1,15 @@
+{%- comment -%}
+  The email form that signs a reader up for announcements, or the note
+  telling them to confirm from their inbox once they have. Both are in
+  the page, so the script swaps the form for the note in place. The
+  hidden field catches bots that fill every input.
+{%- endcomment -%}
+<div data-subscribe class="contents">
+<p role="status" data-subscribed{% unless subscribed %} hidden{% endunless %} class="flex items-center gap-2.5 rounded-2xl border border-border-button-default bg-background-primary-default px-4 py-3 text-body-regular"><span class="grid size-7 place-items-center rounded-full bg-tint text-link">{{ 'mail' | icon: 'size-3.5' }}</span>{{ 'check_inbox_to_confirm' | t }}</p>
+<form method="post" action="{{ help_center.subscribe_url }}"{% if subscribed %} hidden{% endif %} class="flex w-full gap-2 md:w-[22rem]">
+{{ form_token_field }}
+<label class="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl border border-border-button-default bg-background-primary-default px-3 shadow-xs transition focus-within:border-border-button-hover focus-within:ring-4 focus-within:ring-tint hover:border-border-button-hover">{{ 'mail' | icon: 'size-4 shrink-0 text-foreground-icon-tertiary' }}<span class="sr-only">{{ 'email_address' | t }}</span><input type="email" name="email" required placeholder="you@company.com" autocomplete="email" class="min-w-0 flex-1 bg-transparent text-body-regular outline-none placeholder:text-text-placeholder"></label>
+<input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="hidden">
+<button type="submit" class="button-brand inline-flex h-10 shrink-0 cursor-pointer items-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:opacity-60">{{ 'subscribe' | t }}</button>
+</form>
+</div>

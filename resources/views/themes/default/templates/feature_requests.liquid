@@ -1,0 +1,67 @@
+{%- comment -%}
+  Feature requests grouped by where they stand, or as one list sorted
+  and searched, each with its vote button, and a way to suggest one.
+{%- endcomment -%}
+<div class="mx-auto w-full px-5 pt-12 md:pt-16 {% if board.listed %}max-w-[48rem]{% else %}max-w-[76rem]{% endif %}">
+<header class="stagger flex flex-wrap items-end justify-between gap-6">
+<div>
+<h1 class="text-display-4-medium tracking-tight">{{ 'feature_requests' | t }}</h1>
+<p class="mt-2 text-title-3-regular text-text-secondary">{{ 'feedback_tagline' | t }}</p>
+</div>
+<a href="{{ board.new_url }}" class="button-brand inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'edit' | icon: 'size-4' }}{{ 'submit_idea' | t }}</a>
+</header>
+{%- if board.submitted %}
+<p role="status" class="mt-8 flex items-center gap-2.5 rounded-2xl border border-border-button-default bg-background-secondary-default px-4 py-3 text-body-regular"><span class="grid size-7 place-items-center rounded-full bg-tint text-link">{{ 'check' | icon: 'size-3.5' }}</span>{% if board.pending %}{{ 'idea_thanks_pending' | t }}{% else %}{{ 'idea_thanks' | t }}{% endif %}</p>
+{%- endif %}
+{%- if board.boards.size > 1 %}
+<nav aria-label="{{ 'boards' | t }}" class="mt-8 flex flex-wrap items-center gap-2 border-b border-separator-border pb-3">
+{%- for tab in board.tabs %}
+<a href="{{ tab.url }}"{% if tab.current %} aria-current="page"{% endif %} class="rounded-full border border-border-button-default px-3 py-1 text-body-2-medium text-text-secondary transition-colors hover:text-text-primary aria-[current=page]:border-transparent aria-[current=page]:bg-tint aria-[current=page]:text-link">{{ tab.name }}</a>
+{%- endfor %}
+</nav>
+{%- endif %}
+<div class="mt-10 flex flex-wrap items-center justify-between gap-3">
+<nav aria-label="{{ 'order' | t }}" class="flex items-center gap-1 rounded-xl bg-background-secondary-default p-1">
+{%- for sort in board.sorts %}
+<a href="{{ sort.url }}"{% if sort.current %} aria-current="page"{% endif %} class="rounded-lg px-3 py-1.5 text-body-2-medium text-text-secondary transition-colors hover:text-text-primary aria-[current=page]:bg-background-primary-default aria-[current=page]:text-text-primary aria-[current=page]:shadow-xs">{{ sort.name }}</a>
+{%- endfor %}
+</nav>
+<form method="get" action="{{ help_center.feedback_url }}" role="search" class="flex h-9 w-full items-center gap-2 rounded-xl border border-border-button-default bg-background-primary-default px-3 shadow-xs sm:w-64">
+{{ 'search' | icon: 'size-4 shrink-0 text-foreground-icon-tertiary' }}
+{%- if board.sort != "" %}<input type="hidden" name="sort" value="{{ board.sort }}">{% endif %}
+{%- if board.active != "" %}<input type="hidden" name="board" value="{{ board.active }}">{% endif %}
+<label class="sr-only" for="feedback-search">{{ 'search_requests' | t }}</label>
+<input id="feedback-search" type="search" name="q" value="{{ board.query }}" placeholder="{{ 'search_requests' | t }}" class="min-w-0 flex-1 bg-transparent text-body-regular outline-none placeholder:text-text-placeholder">
+</form>
+</div>
+<div class="mt-6 flex flex-col gap-6 animate-rise">
+{%- if board.listed %}
+<section aria-label="{{ 'requests' | t }}" class="overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
+{%- if board.list.size == 0 %}
+<p class="px-4 py-6 text-center text-body-regular text-text-tertiary">{{ 'no_requests_match' | t }}</p>
+{%- endif %}
+<ul>
+{%- for idea in board.list %}
+{% render 'idea_row', idea: idea %}
+{%- endfor %}
+</ul>
+</section>
+{%- else %}
+<div class="-mx-5 flex scroll-px-5 snap-x snap-mandatory items-start gap-4 overflow-x-auto px-5 pb-4 md:grid md:snap-none md:overflow-visible md:[grid-template-columns:repeat(auto-fit,minmax(0,1fr))]">
+{%- for s in board.statuses %}
+<section id="{{ s.slug }}" aria-labelledby="{{ s.slug }}-title" class="flex w-[17rem] shrink-0 snap-start flex-col rounded-3xl border border-border-button-default bg-background-secondary-default p-2 md:w-auto">
+<h2 id="{{ s.slug }}-title" class="flex items-center gap-2 px-2.5 pt-1.5 pb-2.5 text-body-2-semibold">{% render 'status_icon', status: s %}{{ s.name }}<span class="ms-auto text-caption-1-medium tabular-nums text-text-tertiary">{{ s.count }}</span></h2>
+{%- if s.ideas.size == 0 %}
+<p class="rounded-2xl border border-dashed border-border-button-default px-3 py-6 text-center text-body-2-regular text-text-tertiary">{{ 'nothing_here_yet' | t }}</p>
+{%- endif %}
+<ul class="flex flex-col gap-2">
+{%- for idea in s.ideas %}
+{% render 'idea_card', idea: idea %}
+{%- endfor %}
+</ul>
+</section>
+{%- endfor %}
+</div>
+{%- endif %}
+</div>
+</div>

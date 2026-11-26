@@ -51,7 +51,7 @@ func (c ChangelogController) realIndex(w fhttp.ResponseWriter, r *fhttp.Request,
 	for i := range index.Entries {
 		trim(&index.Entries[i], opts)
 	}
-	c.respond(w, r, fhttp.StatusOK, views.IndexPage(s.center, index, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, views.IndexPage(s.center, index))
 }
 
 /*
@@ -86,7 +86,7 @@ func (c ChangelogController) realEntry(w fhttp.ResponseWriter, r *fhttp.Request,
 	opts := helpcenters.ChangelogOf(s.help)
 	page.Title, page.NoSubscribe = opts.Title, !opts.Subscriptions
 	trim(&page.Entry, opts)
-	c.respond(w, r, fhttp.StatusOK, views.EntryPage(s.center, labels, page, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, views.EntryPage(s.center, labels, page))
 }
 
 /*
@@ -293,7 +293,7 @@ func (c ChangelogController) subscriberPage(w fhttp.ResponseWriter, r *fhttp.Req
 	}
 	page.Email = sub.Email
 	w.Header().Set("Cache-Control", "private, no-store")
-	c.respond(w, r, fhttp.StatusOK, views.SubscriptionPage(s.center, page, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, views.SubscriptionPage(s.center, page))
 }
 
 /*

@@ -1,0 +1,20 @@
+{%- comment -%}
+  The one box readers ask in, with up to three `suggestions` under it.
+  Where the AI agent answers the messenger, a fresh question goes to it
+  in a new chat; otherwise, on the search page (`query` set) or without
+  scripts, the box searches the articles.
+{%- endcomment -%}
+<form action="{{ help_center.search_url }}" method="get" role="search"{% if help_center.ask_ai and query == "" %} data-ask-ai{% endif %} class="overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default shadow-sm transition focus-within:border-border-button-hover focus-within:ring-4 focus-within:ring-tint">
+<label class="flex h-14 items-center gap-3 ps-4 pe-2.5">
+{%- if help_center.ask_ai %}{{ 'sparkle' | icon: 'size-5 shrink-0 text-link' }}<span class="sr-only">{{ 'ask_label' | t }}</span>{% else %}{{ 'search' | icon: 'size-5 shrink-0 text-link' }}<span class="sr-only">{{ 'search_label' | t }}</span>{% endif %}
+<input type="search" name="q" value="{{ query }}" placeholder="{% if help_center.ask_ai %}{{ 'ask_placeholder' | t }}{% else %}{{ 'search_placeholder' | t }}{% endif %}" autocomplete="off" class="h-full min-w-0 flex-1 bg-transparent text-headline-regular text-text-primary outline-none placeholder:text-text-placeholder">
+<button type="submit" aria-label="{% if help_center.ask_ai %}{{ 'ask' | t }}{% else %}{{ 'search' | t }}{% endif %}" class="button-brand grid size-9 shrink-0 cursor-pointer place-items-center rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'arrow-up' | icon: 'size-4' }}</button>
+</label>
+{%- if suggestions.size > 0 %}
+<div class="flex flex-wrap items-center gap-x-1 gap-y-1 border-t border-separator-border bg-background-secondary-default px-2.5 py-2">
+{%- for a in suggestions limit: 3 %}
+<a href="{{ a.url }}" class="rounded-lg px-1.5 py-1 text-body-2-regular text-text-secondary transition-colors hover:bg-background-secondary-hover hover:text-text-primary">{{ a.title }}</a>
+{%- endfor %}
+</div>
+{%- endif %}
+</form>

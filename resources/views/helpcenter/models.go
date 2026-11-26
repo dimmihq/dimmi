@@ -40,7 +40,8 @@ keeps every page out of them. Locale is the language the page is in,
 empty for English; Languages are the languages a reader may switch to,
 none when the help center speaks one, and Alternates are this page's
 addresses in the other languages it exists in, for search engines.
-Lang holds the help center's words in every language.
+Lang holds the help center's words in every language, and Theming
+says which theme its pages wear and what that theme may do.
 */
 type Center struct {
 	Name       string
@@ -76,6 +77,8 @@ type Center struct {
 	Languages  []LanguageLink
 	Alternates []Alternate
 	Lang       *i18n.Translator
+
+	Theming Theming
 }
 
 /*

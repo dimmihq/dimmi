@@ -1,0 +1,6 @@
+{%- comment -%}What the drawer lists on help pages: every collection as a group, the one holding the page open.{%- endcomment -%}
+<nav aria-label="{{ 'collections' | t }}" class="flex flex-col gap-5">
+{%- for col in collections %}
+{% render 'collection_group', collection: col, current: current, article: article %}
+{%- endfor %}
+</nav>

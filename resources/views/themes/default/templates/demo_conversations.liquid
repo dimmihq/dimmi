@@ -1,0 +1,15 @@
+{%- capture sidebar %}{% render 'demo_conversations_sidebar' %}{% endcapture -%}
+<div class="mx-auto w-full max-w-[48rem] px-5 pt-12 md:pt-16">
+<header class="stagger flex flex-wrap items-end justify-between gap-6">
+<div>
+<h1 class="text-display-4-medium tracking-tight">Your conversations</h1>
+<p class="mt-2 text-title-3-regular text-text-secondary">Everything you asked us, in one place.</p>
+</div>
+<a href="{{ help_center.new_conversation_url }}" class="button-brand inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'edit' | icon: 'size-4' }}New conversation</a>
+</header>
+<ul class="mt-10 animate-rise overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
+{%- for conv in conversations %}
+<li class="border-separator-border [&+&]:border-t"><a href="{{ conv.url }}" class="group flex items-center gap-4 px-4 py-3.5 outline-none transition-colors hover:bg-background-secondary-hover focus-visible:bg-background-secondary-hover"><span class="size-2 shrink-0 rounded-full {% if conv.unread %}bg-brand{% else %}bg-transparent{% endif %}" aria-hidden="true"></span><span class="min-w-0 flex-1"><span class="block truncate text-body-medium {% if conv.unread %}font-semibold text-text-primary{% else %}text-text-primary{% endif %}">{{ conv.subject }}</span><span class="block truncate text-body-2-regular text-text-tertiary">{{ conv.preview }}</span></span>{% render 'demo_conversation_status', status: conv.status %}<span class="w-14 shrink-0 text-end text-caption-1-regular text-text-tertiary">{{ conv.updated }}</span></a></li>
+{%- endfor %}
+</ul>
+</div>

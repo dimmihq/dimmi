@@ -1,0 +1,19 @@
+{%- comment -%}
+  The drawer beside the page rather than inside it, so it stays put while
+  the page moves aside to make room for it. `sidebar` is what the page
+  lists in it.
+{%- endcomment -%}
+<aside data-drawer-panel aria-label="{{ page.drawer_title }}" class="fixed inset-y-0 start-0 z-50 flex flex-col border-e border-separator-border bg-background-full">
+<div class="flex h-14 shrink-0 items-center justify-between px-4">
+<p class="text-body-semibold">{{ page.drawer_title }}</p>
+<button type="button" data-drawer-close aria-label="{{ 'close' | t }}" class="grid size-8 cursor-pointer place-items-center rounded-lg text-foreground-icon-secondary hover:bg-background-secondary-hover">{{ 'close' | icon: 'size-4' }}</button>
+</div>
+{%- if page.section == "help" %}
+<form action="{{ help_center.search_url }}" method="get" role="search" class="mx-4 mb-3 flex h-9 items-center gap-2 rounded-lg border border-border-button-default bg-background-secondary-default px-2.5">
+{{ 'search' | icon: 'size-3.5 shrink-0 text-foreground-icon-tertiary' }}
+<label for="drawer-search" class="sr-only">{{ 'search_label' | t }}</label>
+<input id="drawer-search" type="search" name="q" placeholder="{{ 'search_short' | t }}" class="min-w-0 flex-1 bg-transparent text-body-2-regular outline-none placeholder:text-text-placeholder">
+</form>
+{%- endif %}
+<div class="min-h-0 flex-1 overflow-y-auto px-3 pb-6">{{ sidebar }}</div>
+</aside>

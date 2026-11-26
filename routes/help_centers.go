@@ -78,12 +78,34 @@ func helpCenterRoutes(workspace *routing.Router, a *app.App) {
 
 	portalRoutes(workspace, a)
 
+	themeRoutes(workspace, a)
+
 	translationRoutes(workspace, a)
 
 	aud := &v1.HelpAudienceController{Articles: acts.Articles, Collections: acts.Collections, IDs: a.IDs}
 	routing.Patch(workspace, article+"/audience", "articles.audience.update", aud.Article).Ability("articles:write")
 	routing.Patch(workspace, "/collections/{collection}/audience", "collections.audience.update", aud.Collection).
 		Ability("articles:write")
+}
+
+/*
+themeRoutes declares a help center's themes: each upload a version of
+its own, its settings, its zip, and the version its pages wear.
+*/
+func themeRoutes(workspace *routing.Router, a *app.App) {
+	th := &v1.HelpCenterThemeController{
+		Themes: a.Actions.HelpThemes, Addresses: a.Actions.HelpCenterAddresses, IDs: a.IDs,
+	}
+	themes, one := "/help-centers/{help_center}/themes", "/help-centers/{help_center}/themes/{theme}"
+
+	routing.Get(workspace, themes, "help-centers.themes.index", th.Index).Ability("settings:write")
+	routing.Post(workspace, themes, "help-centers.themes.store", th.Store).Ability("settings:write").
+		Status(fhttp.StatusCreated).Use(middleware.BodyLimit(helpcenters.MaxThemeArchiveBytes + imageUploadOverhead))
+	routing.Get(workspace, one, "help-centers.themes.show", th.Show).Ability("settings:write")
+	routing.Patch(workspace, one, "help-centers.themes.update", th.Update).Ability("settings:write")
+	routing.Get(workspace, one+"/archive", "help-centers.themes.archive", th.Download).Ability("settings:write")
+	routing.Put(workspace, "/help-centers/{help_center}/live-theme", "help-centers.live-theme.update", th.UpdateLive).
+		Ability("settings:write")
 }
 
 /*

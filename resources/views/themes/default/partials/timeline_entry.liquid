@@ -1,0 +1,23 @@
+<li class="grid gap-4 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-10">
+<div class="md:pt-1.5"><div class="flex items-center gap-3 md:sticky md:top-20 md:flex-col md:items-start md:gap-2"><time datetime="{{ entry.published | format_date: 'iso' }}" class="text-body-medium text-text-secondary">{{ entry.published | format_date }}</time>{% if entry.version != "" %}{% render 'version', version: entry.version %}{% endif %}</div></div>
+<article class="relative min-w-0 pb-20 md:border-s md:border-separator-border md:ps-10">
+<span class="absolute -start-[5px] top-3 size-[9px] rounded-full bg-brand ring-4 ring-background-full max-md:hidden" aria-hidden="true"></span>
+{% render 'labels', labels: entry.labels %}
+<h2 class="mt-3 text-display-4-medium tracking-tight text-balance max-md:text-title-1-medium"><a href="{{ entry.url }}" class="outline-none hover:text-link focus-visible:underline">{{ entry.title }}</a></h2>
+{%- if entry.cover != "" %}
+<a href="{{ entry.url }}" class="mt-6 block overflow-hidden rounded-2xl border border-separator-border" tabindex="-1"><img src="{{ entry.cover }}" alt="" width="1600" height="900" loading="lazy" decoding="async" class="aspect-video w-full object-cover transition duration-500 hover:scale-[1.01]"></a>
+{%- endif %}
+{%- if entry.full %}
+<div class="prose mt-6">{{ entry.body }}</div>
+{%- else %}
+<p class="mt-4 text-headline-regular text-text-secondary">{{ entry.summary }}</p>
+<a href="{{ entry.url }}" class="mt-3 inline-flex items-center gap-1 text-body-medium text-link hover:underline">{{ 'read_more' | t }}{{ 'arrow-right' | icon: 'size-4 rtl:-scale-x-100' }}</a>
+{%- endif %}
+<div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+{% render 'reactions', entry: entry %}
+{%- if entry.authors.size > 0 %}
+<span class="ms-auto flex items-center gap-2 text-body-2-regular text-text-tertiary">{% render 'avatars', people: entry.authors %}{{ entry.author_names }}</span>
+{%- endif %}
+</div>
+</article>
+</li>

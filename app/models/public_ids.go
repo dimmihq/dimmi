@@ -313,6 +313,7 @@ const (
 	PrefixKnowledgeSource Prefix = "ks"
 	PrefixArticle         Prefix = "art"
 	PrefixArticleVersion  Prefix = "artv"
+	PrefixHelpCenterTheme Prefix = "thm"
 )
 
 /*
@@ -328,6 +329,7 @@ func helpCenterPublicIDs() []PublicIDEntry {
 		{"sug", "article_suggestions"},
 		{"sugb", "article_suggestion_batches"},
 		{"hcd", "help_center_domains"},
+		{PrefixHelpCenterTheme, "help_center_themes"},
 		{"rdr", "help_center_redirects"},
 		{"ast", "help_center_assets"},
 		{PrefixKnowledgeSource, "knowledge_sources"},

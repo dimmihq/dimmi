@@ -32,7 +32,8 @@ func (l log) subscriber(t *testing.T, email string) {
 	fake := l.d.TC.Mail()
 	l.form("/changelog/subscriptions", url.Values{"email": {email}})
 	confirm, _ := tests.LastSent[appmail.ChangelogConfirmMail](l.d.TC, fake)
-	l.d.TC.Client().Send("POST", strings.TrimPrefix(confirm.Link, l.d.TC.App.Application.Config.App.URL), nil).
+	link := strings.TrimPrefix(confirm.Link, l.d.TC.App.Application.Config.App.URL)
+	l.formsAt(l.d.TC.Client(), link).Send("POST", link, nil).
 		AssertOK()
 }
 

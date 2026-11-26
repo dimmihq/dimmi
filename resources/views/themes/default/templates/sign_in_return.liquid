@@ -1,0 +1,17 @@
+{%- comment -%}
+  Takes a reader back from the team's product, or in from the messenger:
+  the token arrives in the address's fragment, which the page's script
+  copies into the form and sends. Without scripts, the reader presses
+  the button.
+{%- endcomment -%}
+<div class="mx-auto flex max-w-md flex-col items-center py-24 text-center">
+<h1 class="text-title-2-medium tracking-tight">{{ 'signing_you_in' | t }}</h1>
+<p class="mt-2 text-body-regular text-text-secondary">{{ 'one_moment' | t: product: help_center.product }}</p>
+<form method="post" action="{{ sign_in.action }}" data-help-sign-in class="mt-6">
+{{ form_token_field }}
+<input type="hidden" name="token" value="">
+<input type="hidden" name="pass" value="">
+<input type="hidden" name="next" value="{{ sign_in.next }}">
+<button type="submit" class="button-brand inline-flex h-10 cursor-pointer items-center rounded-xl px-4 text-body-medium">{{ 'continue' | t }}</button>
+</form>
+</div>

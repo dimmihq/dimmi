@@ -1,0 +1,16 @@
+{%- comment -%}
+  A collection: the way back home, its name and who writes it, then the
+  collections inside it, each opening in place, and its own articles.
+{%- endcomment -%}
+{%- capture sidebar %}{% render 'help_sidebar', current: collection.slug, article: "" %}{% endcapture -%}
+<div class="stagger mx-auto w-full max-w-[42rem] px-5 pt-10 md:pt-14">
+{% render 'breadcrumb', crumbs: breadcrumb %}
+<header class="mt-5">
+<h1 class="text-title-1-medium tracking-tight">{{ collection.title }}</h1>
+{%- if collection.description != "" %}
+<p class="mt-2 text-body-regular text-text-secondary">{{ collection.description }}</p>
+{%- endif %}
+<p class="mt-4 flex items-center gap-2.5 text-body-2-regular text-text-tertiary">{% if collection.authors.size > 0 %}{% render 'avatars', people: collection.authors %}{% endif %}{{ collection.byline }} · {{ 'article_count' | t: count: collection.count }}</p>
+</header>
+<div class="mt-8">{% render 'collection_group', collection: in_collection, current: "", article: "" %}</div>
+</div>

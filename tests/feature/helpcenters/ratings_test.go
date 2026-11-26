@@ -15,7 +15,7 @@ answer posts a reader's form on the help center as a browser without
 scripts does, and returns where the portal sends them.
 */
 func (c center) answer(path string, form url.Values) string {
-	res := c.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
+	res := c.forms(c.d.TC.Client()).WithHeader("Content-Type", "application/x-www-form-urlencoded").
 		WithHeader("Accept", "text/html").Send("POST", c.address(path), form.Encode())
 	return res.Header.Get("Location")
 }
@@ -25,7 +25,7 @@ sendInPlace posts a reader's form the way the portal's script does, in
 the background, and returns the status it gets.
 */
 func (c center) sendInPlace(path string, form url.Values) int {
-	return c.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
+	return c.forms(c.d.TC.Client()).WithHeader("Content-Type", "application/x-www-form-urlencoded").
 		WithHeader("Accept", "application/json").Send("POST", c.address(path), form.Encode()).Status
 }
 

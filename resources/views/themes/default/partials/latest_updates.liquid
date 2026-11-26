@@ -1,0 +1,15 @@
+<section aria-labelledby="updates">
+<div class="flex items-baseline justify-between">
+<h2 id="updates" class="text-body-medium text-text-secondary">{{ 'latest_updates' | t }}</h2>
+<a href="{{ help_center.changelog_url }}" class="text-body-2-medium text-link hover:underline">{{ 'changelog' | t }}</a>
+</div>
+<ol class="relative ms-1 mt-5 border-s border-separator-border">
+{%- for u in updates %}
+<li class="relative pb-6 ps-5 last:pb-0">
+<span class="absolute -start-[5px] top-1.5 size-[9px] rounded-full bg-brand ring-4 ring-background-full" aria-hidden="true"></span>
+<p class="text-caption-1-regular text-text-tertiary"><time datetime="{{ u.published | format_date: 'iso' }}">{{ u.published | format_date }}</time>{% if u.label != "" %} · {{ u.label }}{% endif %}</p>
+<a href="{{ u.url }}" class="mt-1 block text-body-medium text-text-primary hover:text-link">{{ u.title }}</a>
+</li>
+{%- endfor %}
+</ol>
+</section>
