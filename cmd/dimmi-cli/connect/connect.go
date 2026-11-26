@@ -25,8 +25,21 @@ import (
 	"github.com/dimmihq/dimmi/cmd/dimmi-cli/dimmi"
 )
 
-//go:embed page.html
+//go:embed page.html page.css
 var pages embed.FS
+
+/*
+pageCSS is the page's stylesheet, compiled from dimmi's BoardUI theme by
+scripts/build-connect-css.mjs.
+*/
+var pageCSS = func() template.CSS {
+	raw, err := pages.ReadFile("page.css")
+	if err != nil {
+		panic(err)
+	}
+
+	return template.CSS(raw) //nolint:gosec // the stylesheet is the binary's own file
+}()
 
 var page = template.Must(template.ParseFS(pages, "page.html"))
 
@@ -147,6 +160,7 @@ func secure(next http.Handler) http.Handler {
 }
 
 type view struct {
+	CSS        template.CSS
 	Base       string
 	DimmiURL   string
 	DimmiDone  bool
@@ -175,7 +189,7 @@ func (s *Server) render(w http.ResponseWriter, finished bool) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = page.Execute(w, view{
-		Base: "/" + s.secret, DimmiURL: s.DimmiURL, DimmiDone: dimmiDone, Tool: s.Source.Tool, Help: s.Source.Help,
+		CSS: pageCSS, Base: "/" + s.secret, DimmiURL: s.DimmiURL, DimmiDone: dimmiDone, Tool: s.Source.Tool, Help: s.Source.Help,
 		Regions: s.Source.Regions, SourceDone: sourceDone, Account: account, Error: msg,
 		AllDone: dimmiDone && (s.Source.Tool == "" || sourceDone), Finished: finished,
 	})
