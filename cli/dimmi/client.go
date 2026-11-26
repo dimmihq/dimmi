@@ -42,9 +42,16 @@ Refused reports whether dimmi turned the request down for what it held,
 which sending it again won't change.
 */
 func (e *Error) Refused() bool {
-	return e.Status >= 400 && e.Status < 500 && e.Status != http.StatusUnauthorized && e.Status != http.StatusTooManyRequests
+	if e.Status == http.StatusUnauthorized || e.Status == http.StatusTooManyRequests {
+		return false
+	}
+
+	return e.Status >= 400 && e.Status < 500
 }
 
+/*
+Error says what dimmi answered.
+*/
 func (e *Error) Error() string {
 	return fmt.Sprintf("dimmi answered %d %s: %s", e.Status, e.Code, e.Message)
 }
@@ -53,7 +60,10 @@ func (e *Error) Error() string {
 Tokens hands out a valid access token, refreshing it when asked.
 */
 type Tokens interface {
+	/* Token returns a valid access token. */
 	Token(ctx context.Context) (string, error)
+
+	/* Refresh trades the token for a new one and returns it. */
 	Refresh(ctx context.Context) (string, error)
 }
 
@@ -83,71 +93,27 @@ func NewClient(base string, tokens Tokens, transport http.RoundTripper, version 
 func (c *Client) url(path string) string { return c.BaseURL + "/api/v1" + path }
 
 /*
+call is one request to the migrations API: its method and path, and a
+body of the content type, if any.
+*/
+type call struct {
+	method      string
+	path        string
+	body        io.Reader
+	contentType string
+}
+
+/*
 do sends a request and decodes a JSON answer into out. A 401 refreshes
 the token once.
 */
-func (c *Client) do(ctx context.Context, method, path string, body io.Reader, contentType string, out any) error {
-	var raw []byte
-
-	if body != nil {
-		if r, ok := body.(*bytes.Reader); ok {
-			raw = make([]byte, r.Len())
-			_, _ = r.Read(raw)
-			body = nil
-		}
-	}
+func (c *Client) do(ctx context.Context, in call, out any) error {
+	p := newPayload(in.body)
 
 	for attempt := range 2 {
-		token, err := c.Tokens.Token(ctx)
-		if attempt == 1 {
-			token, err = c.Tokens.Refresh(ctx)
-		}
-
+		req, err := c.request(ctx, in, p, attempt)
 		if err != nil {
 			return err
-		}
-
-		reqBody := body
-		if raw != nil {
-			reqBody = bytes.NewReader(raw)
-		}
-
-		req, err := http.NewRequestWithContext(ctx, method, c.url(path), reqBody)
-		if err != nil {
-			return err
-		}
-
-		if sz, ok := body.(sized); ok {
-			req.Body = io.NopCloser(sz.r)
-			req.ContentLength = sz.n
-
-			if seeker, ok := sz.r.(io.Seeker); ok {
-				req.GetBody = func() (io.ReadCloser, error) {
-					if _, err := seeker.Seek(0, io.SeekStart); err != nil {
-						return nil, err
-					}
-
-					return io.NopCloser(sz.r), nil
-				}
-			}
-		}
-
-		req.Header.Set("Authorization", "Bearer "+token)
-		req.Header.Set("Accept", "application/json")
-		req.Header.Set("User-Agent", c.Agent)
-
-		if contentType != "" {
-			req.Header.Set("Content-Type", contentType)
-		}
-
-		if seeker, ok := body.(io.ReadSeeker); ok && raw == nil {
-			req.GetBody = func() (io.ReadCloser, error) {
-				if _, err := seeker.Seek(0, io.SeekStart); err != nil {
-					return nil, err
-				}
-
-				return io.NopCloser(seeker), nil
-			}
 		}
 
 		res, err := c.HTTP.Do(req)
@@ -155,30 +121,155 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, co
 			return err
 		}
 
-		if res.StatusCode == http.StatusUnauthorized && attempt == 0 {
-			var seeker io.Seeker
+		if res.StatusCode == http.StatusUnauthorized && attempt == 0 && p.resendable() {
+			_ = res.Body.Close()
 
-			rewinds := false
-			if sz, ok := body.(sized); ok {
-				seeker, rewinds = sz.r.(io.Seeker)
+			if err := p.rewind(); err != nil {
+				return err
 			}
-			if raw != nil || body == nil || rewinds {
-				_ = res.Body.Close()
 
-				if rewinds {
-					if _, err := seeker.Seek(0, io.SeekStart); err != nil {
-						return err
-					}
-				}
-
-				continue
-			}
+			continue
 		}
 
 		return decode(res, out)
 	}
 
 	return errors.New("dimmi refused the refreshed token: run `dimmi login` again")
+}
+
+/*
+request builds an attempt's request: the first with the saved token,
+the second with a refreshed one.
+*/
+func (c *Client) request(ctx context.Context, in call, p payload, attempt int) (*http.Request, error) {
+	token, err := c.Tokens.Token(ctx)
+	if attempt == 1 {
+		token, err = c.Tokens.Refresh(ctx)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := p.request(ctx, in.method, c.url(in.path))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", c.Agent)
+
+	if in.contentType != "" {
+		req.Header.Set("Content-Type", in.contentType)
+	}
+
+	return req, nil
+}
+
+/*
+payload is a request body that can be sent more than once: JSON bytes
+are kept, and an upload is rewound when it can seek.
+*/
+type payload struct {
+	raw  []byte
+	body io.Reader
+}
+
+/*
+newPayload keeps the bytes of a bytes.Reader, and any other body as it
+is.
+*/
+func newPayload(body io.Reader) payload {
+	if r, ok := body.(*bytes.Reader); ok {
+		raw := make([]byte, r.Len())
+		_, _ = r.Read(raw)
+
+		return payload{raw: raw}
+	}
+
+	return payload{body: body}
+}
+
+/*
+request builds a request carrying the payload.
+*/
+func (p payload) request(ctx context.Context, method, target string) (*http.Request, error) {
+	reqBody := p.body
+	if p.raw != nil {
+		reqBody = bytes.NewReader(p.raw)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, target, reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	if sz, ok := p.body.(sized); ok {
+		req.Body = io.NopCloser(sz.r)
+		req.ContentLength = sz.n
+
+		if seeker, ok := sz.r.(io.Seeker); ok {
+			req.GetBody = rewinder(seeker, sz.r)
+		}
+	}
+
+	if seeker, ok := p.body.(io.ReadSeeker); ok && p.raw == nil {
+		req.GetBody = rewinder(seeker, seeker)
+	}
+
+	return req, nil
+}
+
+/*
+rewinder returns a GetBody that seeks back to the start and reads r.
+*/
+func rewinder(seeker io.Seeker, r io.Reader) func() (io.ReadCloser, error) {
+	return func() (io.ReadCloser, error) {
+		if _, err := seeker.Seek(0, io.SeekStart); err != nil {
+			return nil, err
+		}
+
+		return io.NopCloser(r), nil
+	}
+}
+
+/*
+seeker is the upload's reader when it can seek.
+*/
+func (p payload) seeker() (io.Seeker, bool) {
+	sz, ok := p.body.(sized)
+	if !ok {
+		return nil, false
+	}
+
+	seeker, ok := sz.r.(io.Seeker)
+
+	return seeker, ok
+}
+
+/*
+resendable reports whether the payload can be sent again: no body, kept
+bytes, or an upload that can seek.
+*/
+func (p payload) resendable() bool {
+	_, rewinds := p.seeker()
+
+	return p.raw != nil || p.body == nil || rewinds
+}
+
+/*
+rewind seeks an upload back to its start.
+*/
+func (p payload) rewind() error {
+	seeker, ok := p.seeker()
+	if !ok {
+		return nil
+	}
+
+	_, err := seeker.Seek(0, io.SeekStart)
+
+	return err
 }
 
 /*
@@ -191,10 +282,13 @@ type sized struct {
 
 func (s sized) Read(p []byte) (int, error) { return s.r.Read(p) }
 
+/*
+decode reads an answer into out, or turns an error answer into an Error.
+*/
 func decode(res *http.Response, out any) error {
-	defer res.Body.Close()
-
 	raw, err := io.ReadAll(io.LimitReader(res.Body, 32<<20))
+	_ = res.Body.Close()
+
 	if err != nil {
 		return err
 	}
@@ -233,7 +327,10 @@ func decode(res *http.Response, out any) error {
 	return json.Unmarshal(raw, out)
 }
 
-func (c *Client) json(ctx context.Context, method, path string, in, out any) error {
+/*
+json sends in as JSON and decodes the answer into out.
+*/
+func (c *Client) json(ctx context.Context, to call, in, out any) error {
 	var body io.Reader
 
 	if in != nil {
@@ -245,7 +342,9 @@ func (c *Client) json(ctx context.Context, method, path string, in, out any) err
 		body = bytes.NewReader(raw)
 	}
 
-	return c.do(ctx, method, path, body, "application/json", out)
+	to.body, to.contentType = body, "application/json"
+
+	return c.do(ctx, to, out)
 }
 
 /*
@@ -269,10 +368,11 @@ engine reads dimmi's counts: applied records are held, created ones a
 part of them; deferred ones wait for the records they name.
 */
 func (m migration) engine() engine.Migration {
-	out := engine.Migration{ID: m.ID, Status: m.Status, Counts: map[format.Kind]engine.Counts{}}
+	out := engine.Migration{ID: m.ID, Status: m.Status, Counts: make(map[format.Kind]engine.Counts)}
 	for _, c := range m.Counts {
 		out.Counts[c.Kind] = engine.Counts{
-			Created: c.Created, Updated: c.Applied - c.Created, Unchanged: c.Unsupported, Failed: c.Failed, Deferred: c.Deferred,
+			Created: c.Created, Updated: c.Applied - c.Created, Unchanged: c.Unsupported,
+			Failed: c.Failed, Deferred: c.Deferred,
 		}
 	}
 
@@ -289,7 +389,7 @@ source account.
 */
 func (c *Client) Start(ctx context.Context, s engine.Start) (engine.Migration, error) {
 	var out migrationEnvelope
-	err := c.json(ctx, http.MethodPost, "/migrations", s, &out)
+	err := c.json(ctx, call{method: http.MethodPost, path: "/migrations"}, s, &out)
 
 	return out.Data.engine(), err
 }
@@ -299,7 +399,7 @@ Get reads a migration's progress.
 */
 func (c *Client) Get(ctx context.Context, id string) (engine.Migration, error) {
 	var out migrationEnvelope
-	err := c.json(ctx, http.MethodGet, "/migrations/"+url.PathEscape(id), nil, &out)
+	err := c.json(ctx, call{method: http.MethodGet, path: "/migrations/" + url.PathEscape(id)}, nil, &out)
 
 	return out.Data.engine(), err
 }
@@ -307,7 +407,9 @@ func (c *Client) Get(ctx context.Context, id string) (engine.Migration, error) {
 /*
 Upsert sends one batch of records of a kind.
 */
-func (c *Client) Upsert(ctx context.Context, id string, kind format.Kind, records []format.Record) ([]engine.Result, error) {
+func (c *Client) Upsert(
+	ctx context.Context, id string, kind format.Kind, records []format.Record,
+) ([]engine.Result, error) {
 	data := make([]any, len(records))
 	for i, r := range records {
 		data[i] = r.Data
@@ -325,7 +427,8 @@ func (c *Client) Upsert(ctx context.Context, id string, kind format.Kind, record
 		} `json:"data"`
 	}
 
-	if err := c.json(ctx, http.MethodPost, "/migrations/"+url.PathEscape(id)+"/records", in, &out); err != nil {
+	to := call{method: http.MethodPost, path: "/migrations/" + url.PathEscape(id) + "/records"}
+	if err := c.json(ctx, to, in, &out); err != nil {
 		return nil, err
 	}
 
@@ -401,7 +504,12 @@ func (c *Client) Upload(ctx context.Context, id string, f engine.Upload) (string
 		} `json:"data"`
 	}
 
-	err := c.do(ctx, http.MethodPost, "/migrations/"+url.PathEscape(id)+"/files?"+q.Encode(), sized{f.Body, f.Size}, ct, &out)
+	err := c.do(ctx, call{
+		method:      http.MethodPost,
+		path:        "/migrations/" + url.PathEscape(id) + "/files?" + q.Encode(),
+		body:        sized{f.Body, f.Size},
+		contentType: ct,
+	}, &out)
 
 	return out.Data.ID, err
 }
@@ -422,7 +530,8 @@ func (c *Client) Lookup(ctx context.Context, id string, kind format.Kind, ids []
 		} `json:"data"`
 	}
 
-	if err := c.json(ctx, http.MethodPost, "/migrations/"+url.PathEscape(id)+"/lookups", in, &out); err != nil {
+	to := call{method: http.MethodPost, path: "/migrations/" + url.PathEscape(id) + "/lookups"}
+	if err := c.json(ctx, to, in, &out); err != nil {
 		var e *Error
 		if errors.As(err, &e) && (e.Status == http.StatusNotFound || e.Status == http.StatusMethodNotAllowed) {
 			return nil, engine.ErrNoLookup
@@ -444,7 +553,8 @@ Rollback undoes everything the migration created.
 */
 func (c *Client) Rollback(ctx context.Context, id string) (engine.Migration, error) {
 	var out migrationEnvelope
-	err := c.json(ctx, http.MethodPost, "/migrations/"+url.PathEscape(id)+"/rollbacks", struct{}{}, &out)
+	to := call{method: http.MethodPost, path: "/migrations/" + url.PathEscape(id) + "/rollbacks"}
+	err := c.json(ctx, to, struct{}{}, &out)
 
 	return out.Data.engine(), err
 }

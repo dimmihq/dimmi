@@ -4,17 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 )
 
 /*
@@ -64,13 +60,18 @@ type AnonymousReport struct {
 }
 
 /*
-keep are the keys whose values are kinds, not content, and stay in
-the scrubbed shapes.
+keep reports whether the key's values are kinds, not content, and stay
+in the scrubbed shapes.
 */
-var keep = map[string]bool{
-	"type": true, "part_type": true, "data_type": true, "model": true, "state": true, "role": true,
-	"category": true, "delivered_as": true, "exception_type": true, "visible_to": true, "parent_type": true,
-	"help_center_audience": true, "priority": true, "content_type": true, "trigger_type": true, "channel": true,
+func keep(key string) bool {
+	switch key {
+	case "type", "part_type", "data_type", "model", "state", "role",
+		"category", "delivered_as", "exception_type", "visible_to", "parent_type",
+		"help_center_audience", "priority", "content_type", "trigger_type", "channel":
+		return true
+	}
+
+	return false
 }
 
 /*
@@ -97,7 +98,7 @@ func scrub(v any, key string) any {
 
 		return out
 	case string:
-		if keep[key] {
+		if keep(key) {
 			return x
 		}
 
@@ -164,6 +165,53 @@ var (
 )
 
 /*
+inventory is an inventory in progress: the report, and where samples
+are written.
+*/
+type inventory struct {
+	s   *Source
+	dir string
+	r   *Report
+}
+
+/*
+sample writes one scrubbed sample of an answer.
+*/
+func (iv *inventory) sample(name string, raw json.RawMessage) {
+	if iv.dir == "" || len(raw) == 0 {
+		return
+	}
+
+	var v any
+	if json.Unmarshal(raw, &v) != nil {
+		return
+	}
+
+	out, _ := json.MarshalIndent(scrub(v, ""), "", "  ")
+	path := filepath.Join(iv.dir, name+".json")
+
+	if err := os.WriteFile(path, append(out, '\n'), 0o600); err == nil {
+		iv.r.Shapes = append(iv.r.Shapes, path)
+	}
+}
+
+/*
+get reads one endpoint and samples it, noting an error by name.
+*/
+func (iv *inventory) get(ctx context.Context, name, path string, q url.Values) json.RawMessage {
+	var raw json.RawMessage
+	if err := iv.s.Client.get(ctx, path, q, &raw); err != nil {
+		iv.r.Errors[name] = err.Error()
+
+		return nil
+	}
+
+	iv.sample(name, raw)
+
+	return raw
+}
+
+/*
 Inventory reads the workspace and reports its shapes. When dir is set,
 it writes one scrubbed sample per endpoint there. VisitorID is an
 anonymous visitor's intercom-id cookie to look for.
@@ -175,36 +223,7 @@ func (s *Source) Inventory(ctx context.Context, dir, visitorID string) (Report, 
 		Attachments: AttachmentReport{Hosts: map[string]int{}}, Errors: map[string]string{},
 	}
 
-	sample := func(name string, raw json.RawMessage) {
-		if dir == "" || len(raw) == 0 {
-			return
-		}
-
-		var v any
-		if json.Unmarshal(raw, &v) != nil {
-			return
-		}
-
-		out, _ := json.MarshalIndent(scrub(v, ""), "", "  ")
-		path := filepath.Join(dir, name+".json")
-
-		if err := os.WriteFile(path, append(out, '\n'), 0o600); err == nil {
-			r.Shapes = append(r.Shapes, path)
-		}
-	}
-
-	get := func(name, path string, q url.Values) json.RawMessage {
-		var raw json.RawMessage
-		if err := s.Client.get(ctx, path, q, &raw); err != nil {
-			r.Errors[name] = err.Error()
-
-			return nil
-		}
-
-		sample(name, raw)
-
-		return raw
-	}
+	iv := &inventory{s: s, dir: dir, r: &r}
 
 	if dir != "" {
 		if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -218,90 +237,16 @@ func (s *Source) Inventory(ctx context.Context, dir, visitorID string) (Report, 
 	}
 
 	r.Admins = len(known)
-	get("admins", "/admins", nil)
-	get("teams", "/teams", nil)
-	get("tags", "/tags", nil)
-	get("data_attributes_contact", "/data_attributes", url.Values{"model": {"contact"}})
-	get("data_attributes_company", "/data_attributes", url.Values{"model": {"company"}})
-	get("conversation_attributes", "/conversations/attributes", nil)
-	get("companies_scroll", "/companies/scroll", nil)
-	get("ticket_types", "/ticket_types", nil)
-	get("help_centers", "/help_center/help_centers", nil)
-	get("collections", "/help_center/collections", nil)
-	get("snippets", "/content_snippets", nil)
-	get("macros", "/macros", nil)
-	get("office_hours", "/office_hours_schedules", nil)
-	get("internal_articles", "/internal_articles", nil)
 
-	contactsRaw := get("contacts", "/contacts", url.Values{"per_page": {"150"}})
-	s.inventoryArticles(ctx, &r, get("articles", "/articles", url.Values{"per_page": {"250"}}))
-
-	former := map[string]bool{}
-
-	var convs struct {
-		Conversations []conversation `json:"conversations"`
+	for _, e := range inventoryEndpoints() {
+		iv.get(ctx, e.name, e.path, e.query)
 	}
 
-	if err := s.search(ctx, "/conversations/search", time.Time{}, "", &convs); err != nil {
-		r.Errors["conversations"] = err.Error()
-	}
+	contactsRaw := iv.get(ctx, "contacts", "/contacts", url.Values{"per_page": {"150"}})
+	s.inventoryArticles(ctx, &r, iv.get(ctx, "articles", "/articles", url.Values{"per_page": {"250"}}))
 
-	for i, c := range convs.Conversations {
-		var raw json.RawMessage
-		if err := s.Client.get(ctx, "/conversations/"+url.PathEscape(string(c.ID)), url.Values{"page": {"1"}, "per_page": {"500"}}, &raw); err != nil {
-			r.Errors["conversation"] = err.Error()
-
-			continue
-		}
-
-		if i == 0 {
-			sample("conversation", raw)
-		}
-
-		var full conversation
-		_ = json.Unmarshal(raw, &full)
-
-		r.SourceTypes[full.Source.Type]++
-		r.AuthorTypes[full.Source.Author.Type]++
-		s.inventoryFiles(ctx, &r, full.Source.Attachments)
-
-		for _, p := range full.Parts.Parts {
-			r.PartTypes[p.PartType]++
-			r.AuthorTypes[p.Author.Type]++
-
-			if p.Author.Type == "admin" && !known[string(p.Author.ID)] {
-				former[string(p.Author.ID)] = true
-			}
-
-			s.inventoryFiles(ctx, &r, p.Attachments)
-
-			for _, src := range imgSrc.FindAllStringSubmatch(p.Body, -1) {
-				s.inventoryFiles(ctx, &r, []attachment{{URL: src[2]}})
-			}
-		}
-	}
-
-	var tickets struct {
-		Tickets []ticket `json:"tickets"`
-	}
-
-	if err := s.search(ctx, "/tickets/search", time.Time{}, "", &tickets); err == nil {
-		for i, t := range tickets.Tickets {
-			raw := get("ticket", "/tickets/"+url.PathEscape(string(t.ID)), nil)
-			if i > 0 {
-				r.Shapes = r.Shapes[:len(r.Shapes)-1]
-			}
-
-			var full ticket
-			_ = json.Unmarshal(raw, &full)
-
-			for _, p := range full.Parts.Parts {
-				r.PartTypes["ticket:"+p.PartType]++
-			}
-		}
-	}
-
-	r.FormerAuthors = len(former)
+	r.FormerAuthors = s.inventoryConversations(ctx, iv, known)
+	s.inventoryTickets(ctx, iv)
 
 	if visitorID != "" {
 		r.AnonymousID = s.inventoryAnonymous(ctx, contactsRaw, visitorID)
@@ -314,6 +259,127 @@ func (s *Source) Inventory(ctx context.Context, dir, visitorID string) (Report, 
 	return r, nil
 }
 
+/*
+endpoint is a list an inventory samples.
+*/
+type endpoint struct {
+	name  string
+	path  string
+	query url.Values
+}
+
+func inventoryEndpoints() []endpoint {
+	return []endpoint{
+		{"admins", "/admins", nil},
+		{"teams", "/teams", nil},
+		{"tags", "/tags", nil},
+		{"data_attributes_contact", "/data_attributes", url.Values{"model": {"contact"}}},
+		{"data_attributes_company", "/data_attributes", url.Values{"model": {"company"}}},
+		{"conversation_attributes", "/conversations/attributes", nil},
+		{"companies_scroll", "/companies/scroll", nil},
+		{"ticket_types", "/ticket_types", nil},
+		{"help_centers", "/help_center/help_centers", nil},
+		{"collections", "/help_center/collections", nil},
+		{"snippets", "/content_snippets", nil},
+		{"macros", "/macros", nil},
+		{"office_hours", "/office_hours_schedules", nil},
+		{"internal_articles", "/internal_articles", nil},
+	}
+}
+
+/*
+inventoryConversations counts the part, source and author types of the
+first page of conversations and probes their files. It returns how many
+admin authors GET /admins doesn't list.
+*/
+func (s *Source) inventoryConversations(ctx context.Context, iv *inventory, known map[string]bool) int {
+	r := iv.r
+	former := map[string]bool{}
+
+	var convs struct {
+		Conversations []conversation `json:"conversations"`
+	}
+
+	if err := s.search(ctx, "/conversations/search", searchPage{}, &convs); err != nil {
+		r.Errors["conversations"] = err.Error()
+	}
+
+	for i, c := range convs.Conversations {
+		var raw json.RawMessage
+
+		q := url.Values{"page": {"1"}, "per_page": {"500"}}
+		if err := s.Client.get(ctx, "/conversations/"+url.PathEscape(string(c.ID)), q, &raw); err != nil {
+			r.Errors["conversation"] = err.Error()
+
+			continue
+		}
+
+		if i == 0 {
+			iv.sample("conversation", raw)
+		}
+
+		var full conversation
+		_ = json.Unmarshal(raw, &full)
+
+		r.SourceTypes[full.Source.Type]++
+		r.AuthorTypes[full.Source.Author.Type]++
+		s.inventoryFiles(ctx, r, full.Source.Attachments)
+
+		for _, p := range full.Parts.Parts {
+			if p.Author.Type == "admin" && !known[string(p.Author.ID)] {
+				former[string(p.Author.ID)] = true
+			}
+
+			s.inventoryPart(ctx, r, p)
+		}
+	}
+
+	return len(former)
+}
+
+/*
+inventoryPart counts a conversation part's type and author and probes
+its files and pictures.
+*/
+func (s *Source) inventoryPart(ctx context.Context, r *Report, p part) {
+	r.PartTypes[p.PartType]++
+	r.AuthorTypes[p.Author.Type]++
+
+	s.inventoryFiles(ctx, r, p.Attachments)
+
+	for _, src := range imgSrc.FindAllStringSubmatch(p.Body, -1) {
+		s.inventoryFiles(ctx, r, []attachment{{URL: src[2]}})
+	}
+}
+
+/*
+inventoryTickets counts the part types of the first page of tickets,
+keeping one sample.
+*/
+func (s *Source) inventoryTickets(ctx context.Context, iv *inventory) {
+	var tickets struct {
+		Tickets []ticket `json:"tickets"`
+	}
+
+	if err := s.search(ctx, "/tickets/search", searchPage{}, &tickets); err != nil {
+		return
+	}
+
+	for i, t := range tickets.Tickets {
+		raw := iv.get(ctx, "ticket", "/tickets/"+url.PathEscape(string(t.ID)), nil)
+		if i > 0 {
+			iv.r.Shapes = iv.r.Shapes[:len(iv.r.Shapes)-1]
+		}
+
+		var full ticket
+		_ = json.Unmarshal(raw, &full)
+
+		for _, p := range full.Parts.Parts {
+			iv.r.PartTypes["ticket:"+p.PartType]++
+		}
+	}
+}
+
 func (s *Source) inventoryArticles(ctx context.Context, r *Report, raw json.RawMessage) {
 	var list struct {
 		Data []article `json:"data"`
@@ -324,34 +390,50 @@ func (s *Source) inventoryArticles(ctx context.Context, r *Report, raw json.RawM
 	}
 
 	for _, a := range list.Data {
-		bodies := map[string][2]string{"default": {a.Body, a.BodyMarkdown}}
-
-		for l, v := range a.Translated {
-			var c articleContent
-			if l != "type" && json.Unmarshal(v, &c) == nil && c.Body != "" {
-				bodies[l] = [2]string{c.Body, c.BodyMarkdown}
-			}
+		for _, b := range articleBodies(a) {
+			s.inventoryBody(ctx, r, b[0], b[1])
 		}
+	}
+}
 
-		for _, b := range bodies {
-			for _, m := range htmlTag.FindAllStringSubmatch(b[0], -1) {
-				r.ArticleTags[strings.ToLower(m[1])]++
-			}
+/*
+articleBodies returns an article's HTML and Markdown bodies, its own and
+each translation's, by locale.
+*/
+func articleBodies(a article) map[string][2]string {
+	bodies := map[string][2]string{"default": {a.Body, a.BodyMarkdown}}
 
-			for _, m := range icClass.FindAllString(b[0], -1) {
-				r.ArticleClasses[m]++
-			}
-
-			for block, re := range blockPatterns {
-				if re.MatchString(b[0]) && !markdownKeeps(block, b[1]) {
-					r.MarkdownLosses[block]++
-				}
-			}
-
-			for _, src := range imgSrc.FindAllStringSubmatch(b[0], -1) {
-				s.inventoryFiles(ctx, r, []attachment{{URL: src[2]}})
-			}
+	for l, v := range a.Translated {
+		var c articleContent
+		if l != "type" && json.Unmarshal(v, &c) == nil && c.Body != "" {
+			bodies[l] = [2]string{c.Body, c.BodyMarkdown}
 		}
+	}
+
+	return bodies
+}
+
+/*
+inventoryBody counts the tags, Intercom classes and blocks one article
+body uses, the blocks its Markdown drops, and probes its pictures.
+*/
+func (s *Source) inventoryBody(ctx context.Context, r *Report, body, md string) {
+	for _, m := range htmlTag.FindAllStringSubmatch(body, -1) {
+		r.ArticleTags[strings.ToLower(m[1])]++
+	}
+
+	for _, m := range icClass.FindAllString(body, -1) {
+		r.ArticleClasses[m]++
+	}
+
+	for _, b := range blocks() {
+		if b.in(body) && !markdownKeeps(b.name, md) {
+			r.MarkdownLosses[b.name]++
+		}
+	}
+
+	for _, src := range imgSrc.FindAllStringSubmatch(body, -1) {
+		s.inventoryFiles(ctx, r, []attachment{{URL: src[2]}})
 	}
 }
 
@@ -377,113 +459,23 @@ func markdownKeeps(block, md string) bool {
 }
 
 /*
-inventoryFiles notes how each attachment is served: its host, size,
-whether its link is signed and when it expires, and whether it downloads
-without the token. It reads at most a few bytes.
-*/
-func (s *Source) inventoryFiles(ctx context.Context, r *Report, list []attachment) {
-	for _, a := range list {
-		u, err := url.Parse(a.URL)
-		if err != nil || u.Host == "" {
-			continue
-		}
-
-		r.Attachments.Count++
-		r.Attachments.Hosts[u.Host]++
-		r.Attachments.LargestBytes = max(r.Attachments.LargestBytes, a.Filesize)
-
-		if m := expiring.FindAllStringSubmatch(u.RawQuery, -1); len(m) > 0 {
-			r.Attachments.SignedLinks++
-
-			for _, p := range m {
-				name := strings.ToLower(p[1])
-				if !contains(r.Attachments.ExpiryParams, name) {
-					r.Attachments.ExpiryParams = append(r.Attachments.ExpiryParams, name)
-				}
-
-				if name == "expires" {
-					if at, err := strconv.ParseInt(p[2], 10, 64); err == nil {
-						r.Attachments.ExpiresInSeconds = append(r.Attachments.ExpiresInSeconds, at-time.Now().Unix())
-					}
-				}
-			}
-		}
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.URL, http.NoBody)
-		if err != nil {
-			continue
-		}
-
-		req.Header.Set("Range", "bytes=0-15")
-
-		res, err := http.DefaultClient.Do(req)
-		if err != nil {
-			continue
-		}
-
-		_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 64))
-		_ = res.Body.Close()
-
-		if res.StatusCode < 300 {
-			r.Attachments.DownloadedNoAuth++
-
-			if a.Filesize == 0 {
-				if cr := res.Header.Get("Content-Range"); cr != "" {
-					if i := strings.LastIndex(cr, "/"); i >= 0 {
-						if n, err := strconv.ParseInt(cr[i+1:], 10, 64); err == nil {
-							r.Attachments.LargestBytes = max(r.Attachments.LargestBytes, n)
-						}
-					}
-				}
-			}
-		} else {
-			r.Attachments.RefusedNoAuth++
-		}
-	}
-}
-
-func contains(list []string, s string) bool {
-	return slices.Contains(list, s)
-}
-
-/*
 inventoryAnonymous looks for a visitor's anonymous id in every lead's
 fields, in GET /visitors?user_id= and in the lead's events.
 */
-func (s *Source) inventoryAnonymous(ctx context.Context, contactsRaw json.RawMessage, visitorID string) *AnonymousReport {
+func (s *Source) inventoryAnonymous(
+	ctx context.Context, contactsRaw json.RawMessage, visitorID string,
+) *AnonymousReport {
 	out := &AnonymousReport{}
-
-	var list struct {
-		Data []json.RawMessage `json:"data"`
-	}
-
-	_ = json.Unmarshal(contactsRaw, &list)
 
 	var leadID string
 
-	for _, raw := range list.Data {
-		var c contact
-		_ = json.Unmarshal(raw, &c)
-
-		var full json.RawMessage
-		if err := s.Client.get(ctx, "/contacts/"+url.PathEscape(string(c.ID)), nil, &full); err == nil {
-			raw = full
-		}
-
-		if found := matches(raw, visitorID); len(found) > 0 {
-			out.ContactFields = append(out.ContactFields, found...)
-			leadID = string(c.ID)
-		}
-	}
+	out.ContactFields, leadID = s.leadFields(ctx, contactsRaw, visitorID)
 
 	var visitor json.RawMessage
 
-	err := s.Client.get(ctx, "/visitors", url.Values{"user_id": {visitorID}}, &visitor)
-
-	switch {
-	case err != nil:
+	if err := s.Client.get(ctx, "/visitors", url.Values{"user_id": {visitorID}}, &visitor); err != nil {
 		out.VisitorLookup = err.Error()
-	default:
+	} else {
 		out.VisitorLookup = "found"
 		out.VisitorFields = matches(visitor, visitorID)
 	}
@@ -496,7 +488,7 @@ func (s *Source) inventoryAnonymous(ctx context.Context, contactsRaw json.RawMes
 
 	var events json.RawMessage
 
-	err = s.Client.get(ctx, "/events", url.Values{"type": {"user"}, "intercom_user_id": {leadID}}, &events)
+	err := s.Client.get(ctx, "/events", url.Values{"type": {"user"}, "intercom_user_id": {leadID}}, &events)
 	if err != nil {
 		out.EventsLookup = err.Error()
 	} else {
@@ -505,4 +497,36 @@ func (s *Source) inventoryAnonymous(ctx context.Context, contactsRaw json.RawMes
 	}
 
 	return out
+}
+
+/*
+leadFields reads each listed contact in full and returns the field paths
+holding the visitor's id, and the last lead that carries it.
+*/
+func (s *Source) leadFields(ctx context.Context, contactsRaw json.RawMessage, visitorID string) ([]string, string) {
+	var list struct {
+		Data []json.RawMessage `json:"data"`
+	}
+
+	_ = json.Unmarshal(contactsRaw, &list)
+
+	var fields []string
+	var leadID string
+
+	for _, raw := range list.Data {
+		var c contact
+		_ = json.Unmarshal(raw, &c)
+
+		var full json.RawMessage
+		if err := s.Client.get(ctx, "/contacts/"+url.PathEscape(string(c.ID)), nil, &full); err == nil {
+			raw = full
+		}
+
+		if found := matches(raw, visitorID); len(found) > 0 {
+			fields = append(fields, found...)
+			leadID = string(c.ID)
+		}
+	}
+
+	return fields, leadID
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -13,6 +14,13 @@ import (
 	"github.com/dimmihq/dimmi/cli/engine"
 	"github.com/dimmihq/dimmi/cli/format"
 )
+
+/*
+write answers with a fixed body.
+*/
+func write(w http.ResponseWriter, body string) {
+	_, _ = io.WriteString(w, body)
+}
 
 /*
 fakeIntercom serves two conversations through two search pages, one of
@@ -41,84 +49,88 @@ func fakeIntercom(t *testing.T, limited *atomic.Int32) *httptest.Server {
 		return true
 	}
 
-	mux.HandleFunc("GET /admins", func(w http.ResponseWriter, r *http.Request) {
-		if check(w, r) {
-			fmt.Fprint(w, `{"admins":[{"type":"admin","id":"1","name":"A","email":"a@x"}]}`)
+	guard := func(h http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			if check(w, r) {
+				h(w, r)
+			}
 		}
-	})
+	}
 
-	mux.HandleFunc("POST /conversations/search", func(w http.ResponseWriter, r *http.Request) {
-		if !check(w, r) {
-			return
-		}
-
-		var body struct {
-			Pagination struct {
-				StartingAfter string `json:"starting_after"`
-			} `json:"pagination"`
-		}
-
-		_ = json.NewDecoder(r.Body).Decode(&body)
-
-		if body.Pagination.StartingAfter == "" {
-			fmt.Fprint(w, `{"conversations":[{"id":"c1"}],"pages":{"next":{"starting_after":"cur2"}}}`)
-
-			return
-		}
-
-		fmt.Fprint(w, `{"conversations":[{"id":"c2"}],"pages":{}}`)
-	})
-
-	mux.HandleFunc("GET /conversations/{id}", func(w http.ResponseWriter, r *http.Request) {
-		if !check(w, r) {
-			return
-		}
-
-		id := r.PathValue("id")
-		total := 3
-
-		if id == "c1" {
-			total = 750
-		}
-
-		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-		if page == 0 {
-			t.Error("conversation read without page: only the latest 500 parts would come back")
-		}
-
-		var parts []map[string]any
-
-		for i := (page - 1) * 500; i < min(page*500, total); i++ {
-			parts = append(parts, map[string]any{
-				"id": fmt.Sprintf("%s-p%d", id, i), "part_type": "comment", "body": "<p>x</p>", "created_at": 1000 + i,
-				"author": map[string]any{"type": "admin", "id": "1"},
-			})
-		}
-
-		_ = json.NewEncoder(w).Encode(map[string]any{
-			"id": id, "created_at": 1000, "updated_at": 2000, "state": "open",
-			"source":             map[string]any{"type": "conversation", "id": "s" + id, "body": "<p>hi</p>", "author": map[string]any{"type": "user", "id": "u1"}},
-			"contacts":           map[string]any{"contacts": []any{map[string]any{"id": "u1"}}},
-			"conversation_parts": map[string]any{"conversation_parts": parts, "total_count": total},
-		})
-	})
-
-	mux.HandleFunc("GET /companies/scroll", func(w http.ResponseWriter, r *http.Request) {
-		if !check(w, r) {
-			return
-		}
-
-		switch r.URL.Query().Get("scroll_param") {
-		case "":
-			fmt.Fprint(w, `{"data":[{"id":"co1","name":"One"}],"scroll_param":"s2"}`)
-		case "s2":
-			fmt.Fprint(w, `{"data":[{"id":"co2","name":"Two"}],"scroll_param":"s3"}`)
-		default:
-			fmt.Fprint(w, `{"data":[],"scroll_param":null}`)
-		}
-	})
+	mux.HandleFunc("GET /admins", guard(func(w http.ResponseWriter, _ *http.Request) {
+		write(w, `{"admins":[{"type":"admin","id":"1","name":"A","email":"a@x"}]}`)
+	}))
+	mux.HandleFunc("POST /conversations/search", guard(fakeSearch))
+	mux.HandleFunc("GET /conversations/{id}", guard(func(w http.ResponseWriter, r *http.Request) {
+		fakeConversation(t, w, r)
+	}))
+	mux.HandleFunc("GET /companies/scroll", guard(fakeCompanies))
 
 	return httptest.NewServer(mux)
+}
+
+func fakeSearch(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Pagination struct {
+			StartingAfter string `json:"starting_after"`
+		} `json:"pagination"`
+	}
+
+	_ = json.NewDecoder(r.Body).Decode(&body)
+
+	if body.Pagination.StartingAfter == "" {
+		write(w, `{"conversations":[{"id":"c1"}],"pages":{"next":{"starting_after":"cur2"}}}`)
+
+		return
+	}
+
+	write(w, `{"conversations":[{"id":"c2"}],"pages":{}}`)
+}
+
+func fakeConversation(t *testing.T, w http.ResponseWriter, r *http.Request) {
+	t.Helper()
+
+	id := r.PathValue("id")
+	total := 3
+
+	if id == "c1" {
+		total = 750
+	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page == 0 {
+		t.Error("conversation read without page: only the latest 500 parts would come back")
+	}
+
+	var parts []map[string]any
+
+	for i := (page - 1) * 500; i < min(page*500, total); i++ {
+		parts = append(parts, map[string]any{
+			"id": fmt.Sprintf("%s-p%d", id, i), "part_type": "comment", "body": "<p>x</p>", "created_at": 1000 + i,
+			"author": map[string]any{"type": "admin", "id": "1"},
+		})
+	}
+
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"id": id, "created_at": 1000, "updated_at": 2000, "state": "open",
+		"source": map[string]any{
+			"type": "conversation", "id": "s" + id, "body": "<p>hi</p>",
+			"author": map[string]any{"type": "user", "id": "u1"},
+		},
+		"contacts":           map[string]any{"contacts": []any{map[string]any{"id": "u1"}}},
+		"conversation_parts": map[string]any{"conversation_parts": parts, "total_count": total},
+	})
+}
+
+func fakeCompanies(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Query().Get("scroll_param") {
+	case "":
+		write(w, `{"data":[{"id":"co1","name":"One"}],"scroll_param":"s2"}`)
+	case "s2":
+		write(w, `{"data":[{"id":"co2","name":"Two"}],"scroll_param":"s3"}`)
+	default:
+		write(w, `{"data":[],"scroll_param":null}`)
+	}
 }
 
 func testSource(t *testing.T, limited *atomic.Int32) *Source {
@@ -152,7 +164,11 @@ func TestConversationsReadEveryPartThroughSearchPages(t *testing.T) {
 		t.Fatalf("records %d cursors %q", len(recs), cursors)
 	}
 
-	c1 := recs[0].Data.(*format.Conversation)
+	c1, ok := recs[0].Data.(*format.Conversation)
+	if !ok {
+		t.Fatalf("record holds %T", recs[0].Data)
+	}
+
 	if len(c1.Entries) != 751 {
 		t.Fatalf("c1 has %d entries, want the source and all 750 parts", len(c1.Entries))
 	}
@@ -191,7 +207,11 @@ func TestReadsWaitOut429(t *testing.T) {
 }
 
 func TestRegions(t *testing.T) {
-	for region, host := range map[string]string{"us": "https://api.intercom.io", "EU": "https://api.eu.intercom.io", "au": "https://api.au.intercom.io"} {
+	hosts := map[string]string{
+		"us": "https://api.intercom.io", "EU": "https://api.eu.intercom.io", "au": "https://api.au.intercom.io",
+	}
+
+	for region, host := range hosts {
 		c, err := NewClient(nil, region, "t")
 		if err != nil || c.Base != host {
 			t.Errorf("%s: %v %v", region, c, err)

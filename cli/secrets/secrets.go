@@ -33,9 +33,16 @@ const Service = "dimmi-cli"
 Store keeps named secrets.
 */
 type Store interface {
+	/* Get reads a secret, and returns ErrNotFound when it was never saved. */
 	Get(name string) (string, error)
+
+	/* Set saves a secret. */
 	Set(name, value string) error
+
+	/* Delete forgets a secret; a missing one is not an error. */
 	Delete(name string) error
+
+	/* Where names the place secrets are kept, for messages. */
 	Where() string
 }
 
@@ -67,6 +74,9 @@ type Keychain struct {
 	fallback *File
 }
 
+/*
+Get reads a secret from the keychain, then from the file.
+*/
 func (k *Keychain) Get(name string) (string, error) {
 	v, err := keyring.Get(Service, name)
 	if errors.Is(err, keyring.ErrNotFound) {
@@ -76,8 +86,14 @@ func (k *Keychain) Get(name string) (string, error) {
 	return v, err
 }
 
+/*
+Set saves a secret in the keychain.
+*/
 func (k *Keychain) Set(name, value string) error { return keyring.Set(Service, name, value) }
 
+/*
+Delete forgets a secret in the keychain and in the file.
+*/
 func (k *Keychain) Delete(name string) error {
 	err := keyring.Delete(Service, name)
 	if errors.Is(err, keyring.ErrNotFound) {
@@ -91,6 +107,9 @@ func (k *Keychain) Delete(name string) error {
 	return err
 }
 
+/*
+Where names the keychain.
+*/
 func (k *Keychain) Where() string { return "the system keychain" }
 
 /*
@@ -144,6 +163,9 @@ func (f *File) write(m map[string]string) error {
 	return os.Rename(tmp, f.Path)
 }
 
+/*
+Get reads a secret from the file.
+*/
 func (f *File) Get(name string) (string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -161,6 +183,9 @@ func (f *File) Get(name string) (string, error) {
 	return v, nil
 }
 
+/*
+Set saves a secret in the file.
+*/
 func (f *File) Set(name, value string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -175,6 +200,9 @@ func (f *File) Set(name, value string) error {
 	return f.write(m)
 }
 
+/*
+Delete forgets a secret in the file.
+*/
 func (f *File) Delete(name string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -193,6 +221,9 @@ func (f *File) Delete(name string) error {
 	return f.write(m)
 }
 
+/*
+Where returns the file's path.
+*/
 func (f *File) Where() string { return f.Path }
 
 /*

@@ -27,12 +27,20 @@ APIVersion is the Intercom API version every request asks for.
 const APIVersion = "2.18"
 
 /*
-Regions are where Intercom hosts workspaces, and their API addresses.
+regionBase returns the API address of a region where Intercom hosts
+workspaces.
 */
-var Regions = map[string]string{
-	"us": "https://api.intercom.io",
-	"eu": "https://api.eu.intercom.io",
-	"au": "https://api.au.intercom.io",
+func regionBase(region string) (string, bool) {
+	switch strings.ToLower(region) {
+	case "us":
+		return "https://api.intercom.io", true
+	case "eu":
+		return "https://api.eu.intercom.io", true
+	case "au":
+		return "https://api.au.intercom.io", true
+	}
+
+	return "", false
 }
 
 /*
@@ -74,7 +82,7 @@ type Client struct {
 NewClient returns a client for the region, us, eu or au.
 */
 func NewClient(hc *http.Client, region, token string) (*Client, error) {
-	base, ok := Regions[strings.ToLower(region)]
+	base, ok := regionBase(region)
 	if !ok {
 		return nil, fmt.Errorf("unknown Intercom region %q: use us, eu or au", region)
 	}
@@ -87,18 +95,29 @@ func NewClient(hc *http.Client, region, token string) (*Client, error) {
 }
 
 /*
+request is one call to Intercom's API: a method, a path, its query and
+a body sent as JSON.
+*/
+type request struct {
+	method string
+	path   string
+	query  url.Values
+	body   any
+}
+
+/*
 do sends a request and decodes the JSON answer.
 */
-func (c *Client) do(ctx context.Context, method, path string, query url.Values, body, out any) error {
-	u := c.Base + path
-	if len(query) > 0 {
-		u += "?" + query.Encode()
+func (c *Client) do(ctx context.Context, r request, out any) error {
+	u := c.Base + r.path
+	if len(r.query) > 0 {
+		u += "?" + r.query.Encode()
 	}
 
 	var reader io.Reader
 
-	if body != nil {
-		raw, err := json.Marshal(body)
+	if r.body != nil {
+		raw, err := json.Marshal(r.body)
 		if err != nil {
 			return err
 		}
@@ -106,7 +125,7 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 		reader = bytes.NewReader(raw)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, u, reader)
+	req, err := http.NewRequestWithContext(ctx, r.method, u, reader)
 	if err != nil {
 		return err
 	}
@@ -115,7 +134,7 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 	req.Header.Set("Intercom-Version", APIVersion)
 	req.Header.Set("Accept", "application/json")
 
-	if body != nil {
+	if r.body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
@@ -123,15 +142,24 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+
+	defer func() { _ = res.Body.Close() }()
 
 	raw, err := io.ReadAll(io.LimitReader(res.Body, 64<<20))
 	if err != nil {
 		return err
 	}
 
-	if res.StatusCode >= 300 {
-		e := &APIError{Status: res.StatusCode, Path: path}
+	return decode(res.StatusCode, r.path, raw, out)
+}
+
+/*
+decode reads Intercom's answer: an error for a failed call, otherwise
+the JSON into out.
+*/
+func decode(statusCode int, path string, raw []byte, out any) error {
+	if statusCode >= 300 {
+		e := &APIError{Status: statusCode, Path: path}
 
 		var list struct {
 			Errors []struct {
@@ -159,11 +187,11 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 }
 
 func (c *Client) get(ctx context.Context, path string, query url.Values, out any) error {
-	return c.do(ctx, http.MethodGet, path, query, nil, out)
+	return c.do(ctx, request{method: http.MethodGet, path: path, query: query}, out)
 }
 
 func (c *Client) post(ctx context.Context, path string, body, out any) error {
-	return c.do(ctx, http.MethodPost, path, nil, body, out)
+	return c.do(ctx, request{method: http.MethodPost, path: path, body: body}, out)
 }
 
 /*

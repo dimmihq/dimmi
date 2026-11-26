@@ -29,19 +29,24 @@ import (
 var pages embed.FS
 
 /*
-pageCSS is the page's stylesheet, compiled from dimmi's BoardUI theme by
-scripts/build-connect-css.mjs.
+pageCSS reads the page's stylesheet, compiled from dimmi's BoardUI theme
+by scripts/build-connect-css.mjs.
 */
-var pageCSS = func() template.CSS {
+func pageCSS() (template.CSS, error) {
 	raw, err := pages.ReadFile("page.css")
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
-	return template.CSS(raw) //nolint:gosec // the stylesheet is the binary's own file
-}()
+	return template.CSS(raw), nil //nolint:gosec // the stylesheet is the binary's own file
+}
 
-var page = template.Must(template.ParseFS(pages, "page.html"))
+/*
+pageTemplate parses the page's template.
+*/
+func pageTemplate() (*template.Template, error) {
+	return template.ParseFS(pages, "page.html")
+}
 
 /*
 CallbackPath is where dimmi's sign-in returns. The dimmi CLI's OAuth
@@ -95,7 +100,9 @@ type Server struct {
 Start listens on a free loopback port and returns the page's address.
 */
 func (s *Server) Start(ctx context.Context) (string, func() error, error) {
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	var lc net.ListenConfig
+
+	ln, err := lc.Listen(ctx, "tcp", "127.0.0.1:0")
 	if err != nil {
 		return "", nil, err
 	}
@@ -126,7 +133,7 @@ func (s *Server) Start(ctx context.Context) (string, func() error, error) {
 	go func() { _ = srv.Serve(ln) }()
 
 	stop := func() error {
-		sctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		sctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
 		defer cancel()
 
 		return srv.Shutdown(sctx)
@@ -146,6 +153,13 @@ Done is closed when the person finishes on the page.
 func (s *Server) Done() <-chan struct{} { return s.done }
 
 /*
+contentSecurityPolicy lets the page load nothing but its inline styles,
+and post its forms only to itself or to an https sign-in page.
+*/
+const contentSecurityPolicy = "default-src 'none'; style-src 'unsafe-inline'; " +
+	"form-action 'self' https:; base-uri 'none'; frame-ancestors 'none'"
+
+/*
 secure sets headers that keep the page out of frames and caches.
 */
 func secure(next http.Handler) http.Handler {
@@ -154,7 +168,7 @@ func secure(next http.Handler) http.Handler {
 		h.Set("Cache-Control", "no-store")
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "same-origin")
-		h.Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https:; base-uri 'none'; frame-ancestors 'none'")
+		h.Set("Content-Security-Policy", contentSecurityPolicy)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -187,10 +201,25 @@ func (s *Server) render(w http.ResponseWriter, finished bool) {
 
 	dimmiDone := s.DimmiDone()
 
+	css, err := pageCSS()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	page, err := pageTemplate()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = page.Execute(w, view{
-		CSS: pageCSS, Base: "/" + s.secret, DimmiURL: s.DimmiURL, DimmiDone: dimmiDone, Tool: s.Source.Tool, Help: s.Source.Help,
-		Regions: s.Source.Regions, SourceDone: sourceDone, Account: account, Error: msg,
+		CSS: css, Base: "/" + s.secret, DimmiURL: s.DimmiURL, DimmiDone: dimmiDone,
+		Tool: s.Source.Tool, Help: s.Source.Help, Regions: s.Source.Regions,
+		SourceDone: sourceDone, Account: account, Error: msg,
 		AllDone: dimmiDone && (s.Source.Tool == "" || sourceDone), Finished: finished,
 	})
 }

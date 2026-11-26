@@ -2,6 +2,7 @@ package connect
 
 import (
 	"context"
+	"maps"
 	"net/http"
 	"net/url"
 	"strings"
@@ -29,7 +30,8 @@ func TestPageIsSecretAndRefusesOtherOrigins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer stop()
+
+	defer func() { _ = stop() }()
 
 	if !strings.HasPrefix(addr, "http://127.0.0.1:") {
 		t.Fatalf("listens at %s, not loopback", addr)
@@ -38,44 +40,81 @@ func TestPageIsSecretAndRefusesOtherOrigins(t *testing.T) {
 	u, _ := url.Parse(addr)
 	root := u.Scheme + "://" + u.Host
 
-	if res, err := http.Get(root + "/"); err != nil || res.StatusCode != http.StatusNotFound {
-		t.Fatalf("the page answered without its secret path: %v %v", res.StatusCode, err)
+	code, err := send(t, request{method: http.MethodGet, target: root + "/"})
+	if err != nil || code != http.StatusNotFound {
+		t.Fatalf("the page answered without its secret path: %v %v", code, err)
 	}
 
-	req, _ := http.NewRequest(http.MethodPost, addr+"source", strings.NewReader("region=us&token=abc"))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", "https://evil.example")
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil || res.StatusCode != http.StatusForbidden || saved != "" {
-		t.Fatalf("a post from another site was taken: %v %v", res.StatusCode, err)
+	code, err = postSource(t, addr, "abc", map[string]string{"Origin": "https://evil.example"})
+	if err != nil || code != http.StatusForbidden || saved != "" {
+		t.Fatalf("a post from another site was taken: %v %v", code, err)
 	}
 
-	req, _ = http.NewRequest(http.MethodPost, addr+"source", strings.NewReader("region=us&token=abc"))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", root)
-
-	if _, err := http.DefaultClient.Do(req); err != nil || saved != "abc" {
+	if _, err := postSource(t, addr, "abc", map[string]string{"Origin": root}); err != nil || saved != "abc" {
 		t.Fatalf("the page's own post was refused: %v saved %q", err, saved)
 	}
 
 	saved = ""
-	req, _ = http.NewRequest(http.MethodPost, addr+"source", strings.NewReader("region=us&token=def"))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", "null")
-	req.Header.Set("Sec-Fetch-Site", "same-origin")
+	sameSite := map[string]string{"Origin": "null", "Sec-Fetch-Site": "same-origin"}
 
-	if _, err := http.DefaultClient.Do(req); err != nil || saved != "def" {
+	if _, err := postSource(t, addr, "def", sameSite); err != nil || saved != "def" {
 		t.Fatalf("a same-origin post with a null origin was refused: %v saved %q", err, saved)
 	}
 
 	saved = ""
-	req, _ = http.NewRequest(http.MethodPost, addr+"source", strings.NewReader("region=us&token=ghi"))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", "null")
-	req.Header.Set("Sec-Fetch-Site", "cross-site")
+	crossSite := map[string]string{"Origin": "null", "Sec-Fetch-Site": "cross-site"}
 
-	if res, err := http.DefaultClient.Do(req); err != nil || res.StatusCode != http.StatusForbidden || saved != "" {
+	code, err = postSource(t, addr, "ghi", crossSite)
+	if err != nil || code != http.StatusForbidden || saved != "" {
 		t.Fatalf("a cross-site post with a null origin was taken: %v saved %q", err, saved)
 	}
+}
+
+/*
+postSource posts a token to the page's source form with the headers.
+*/
+func postSource(t *testing.T, addr, token string, headers map[string]string) (int, error) {
+	t.Helper()
+
+	h := map[string]string{"Content-Type": "application/x-www-form-urlencoded"}
+	maps.Copy(h, headers)
+
+	return send(t, request{
+		method: http.MethodPost, target: addr + "source", body: "region=us&token=" + token, headers: h,
+	})
+}
+
+/*
+request is one request a test sends to the page.
+*/
+type request struct {
+	method  string
+	target  string
+	body    string
+	headers map[string]string
+}
+
+/*
+send makes a request and returns its status, closing the body.
+*/
+func send(t *testing.T, r request) (int, error) {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(t.Context(), r.method, r.target, strings.NewReader(r.body))
+	if err != nil {
+		return 0, err
+	}
+
+	for k, v := range r.headers {
+		req.Header.Set(k, v)
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+
+	_ = res.Body.Close()
+
+	return res.StatusCode, nil
 }

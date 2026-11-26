@@ -31,7 +31,8 @@ type Event struct {
 Reporter writes events.
 */
 type Reporter interface {
-	Report(Event)
+	/* Report writes one event. */
+	Report(e Event)
 }
 
 /*
@@ -42,6 +43,9 @@ type JSONReporter struct {
 	mu sync.Mutex
 }
 
+/*
+Report writes the event as one line of JSON.
+*/
 func (r *JSONReporter) Report(e Event) {
 	if e.Time.IsZero() {
 		e.Time = time.Now().UTC()
@@ -67,8 +71,16 @@ type TextReporter struct {
 	mu      sync.Mutex
 }
 
+/*
+Report writes the event as a short line, leaving progress out unless
+the reporter is verbose.
+*/
 func (r *TextReporter) Report(e Event) {
-	line := textLine(e, r.Verbose)
+	if e.Event == "progress" && !r.Verbose {
+		return
+	}
+
+	line := textLine(e)
 	if line == "" {
 		return
 	}
@@ -79,23 +91,19 @@ func (r *TextReporter) Report(e Event) {
 	_, _ = fmt.Fprintln(r.W, line)
 }
 
-func textLine(e Event, verbose bool) string {
+func textLine(e Event) string {
 	switch e.Event {
 	case "kind_started":
-		return fmt.Sprintf("→ %s", label(e.Kind))
+		return fmt.Sprintf("→ %s", Label(e.Kind))
 	case "progress":
-		if !verbose {
-			return ""
-		}
-
-		return fmt.Sprintf("  %s: %s", label(e.Kind), countText(e.Counts))
+		return fmt.Sprintf("  %s: %s", Label(e.Kind), countText(e.Counts))
 	case "kind_finished":
-		return fmt.Sprintf("✓ %s: %s", label(e.Kind), countText(e.Counts))
+		return fmt.Sprintf("✓ %s: %s", Label(e.Kind), countText(e.Counts))
 	case "record_failed":
 		return fmt.Sprintf("  ✗ %s %s: %s %s", e.Kind, e.SourceID, e.Code, e.Message)
 	case "warning":
 		if e.Kind != "" {
-			return fmt.Sprintf("  ! %s: %s", label(e.Kind), e.Message)
+			return fmt.Sprintf("  ! %s: %s", Label(e.Kind), e.Message)
 		}
 
 		return "  ! " + e.Message
@@ -111,8 +119,6 @@ func textLine(e Event, verbose bool) string {
 
 	return ""
 }
-
-func label(kind format.Kind) string { return Label(kind) }
 
 /*
 Label is a kind's plural name for people: "companies", "saved replies".
@@ -136,7 +142,9 @@ func countText(counts map[string]int) string {
 		keys = append(keys, k)
 	}
 
-	order := map[string]int{"read": 0, "created": 1, "updated": 2, "unchanged": 3, "skipped": 4, "failed": 5, "files": 6}
+	order := map[string]int{
+		"read": 0, "created": 1, "updated": 2, "unchanged": 3, "skipped": 4, "failed": 5, "files": 6,
+	}
 	sort.Slice(keys, func(i, j int) bool {
 		oi, iok := order[keys[i]]
 		oj, jok := order[keys[j]]
@@ -167,4 +175,7 @@ Discard drops every event.
 */
 type Discard struct{}
 
+/*
+Report drops the event.
+*/
 func (Discard) Report(Event) {}

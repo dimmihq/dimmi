@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,12 +19,26 @@ content, translated into the import format and compared with
 testdata/golden. Run with -update to rewrite the golden files after an
 intended change, then read the diff.
 */
-var update = flag.Bool("update", false, "rewrite the golden files")
+var update = flag.Bool("update", false, "rewrite the golden files") //nolint:gochecknoglobals // a test flag is global
+
+/*
+data reads the record's data as the type the test expects.
+*/
+func data[T any](t *testing.T, rec format.Record) T {
+	t.Helper()
+
+	v, ok := rec.Data.(T)
+	if !ok {
+		t.Fatalf("record holds %T", rec.Data)
+	}
+
+	return v
+}
 
 func read(t *testing.T, name string, v any) {
 	t.Helper()
 
-	raw, err := os.ReadFile(filepath.Join("testdata", "in", name))
+	raw, err := fs.ReadFile(os.DirFS(filepath.Join("testdata", "in")), name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,18 +64,18 @@ func golden(t *testing.T, name string, out any) {
 	path := filepath.Join("testdata", "golden", name)
 
 	if *update {
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 			t.Fatal(err)
 		}
 
-		if err := os.WriteFile(path, got, 0o644); err != nil {
+		if err := os.WriteFile(path, got, 0o600); err != nil {
 			t.Fatal(err)
 		}
 
 		return
 	}
 
-	want, err := os.ReadFile(path)
+	want, err := fs.ReadFile(os.DirFS(filepath.Join("testdata", "golden")), name)
 	if err != nil {
 		t.Fatalf("%v: run go test -update to write it", err)
 	}
@@ -115,7 +130,7 @@ func TestConversationGolden(t *testing.T) {
 
 	golden(t, "conversation.json", asSent(append(recs, rec)...))
 
-	conv := rec.Data.(*format.Conversation)
+	conv := data[*format.Conversation](t, rec)
 
 	for _, e := range conv.Entries {
 		if e.Type == format.EntryEvent && e.Event.RawType == "" {
@@ -135,14 +150,17 @@ func TestConversationGolden(t *testing.T) {
 func TestEveryPartTypeIsKept(t *testing.T) {
 	types := []string{
 		"comment", "note", "assignment", "assign_and_reopen", "open", "close", "snoozed", "timer_unsnooze",
-		"conversation_attribute_updated_by_admin", "conversation_attribute_updated_by_workflow", "operator_workflow_event",
-		"custom_action_started", "ticket_state_updated_by_admin", "merged_primary_conversation", "unknown", "made_up_type",
+		"conversation_attribute_updated_by_admin", "conversation_attribute_updated_by_workflow",
+		"operator_workflow_event", "custom_action_started", "ticket_state_updated_by_admin",
+		"merged_primary_conversation", "unknown", "made_up_type",
 	}
 
 	tr := &convTranslation{contacts: map[string]bool{}, former: map[string]Former{}, seen: map[string]bool{}}
 
 	for _, typ := range types {
-		got := tr.entry(part{ID: ID("p-" + typ), PartType: typ, Body: "<p>x</p>", CreatedAt: 1, Author: author{Type: "admin", ID: "1"}})
+		got := tr.entry(part{
+			ID: ID("p-" + typ), PartType: typ, Body: "<p>x</p>", CreatedAt: 1, Author: author{Type: "admin", ID: "1"},
+		})
 		if len(got) == 0 {
 			t.Errorf("%s was dropped", typ)
 		}
@@ -156,12 +174,13 @@ func TestArticleGolden(t *testing.T) {
 	rec := translateArticle(a, "hc-1", "en")
 	golden(t, "article.json", asSent(rec))
 
-	art := rec.Data.(*format.Article)
+	art := data[*format.Article](t, rec)
 	if len(art.Translations) != 1 || art.Translations[0].Locale != "fr" {
 		t.Fatalf("translations %+v, want only fr: en is the article itself", art.Translations)
 	}
 
-	if !strings.Contains(strings.Join(art.Blocks, ","), "button") || !strings.Contains(strings.Join(art.Blocks, ","), "video") {
+	blocks := strings.Join(art.Blocks, ",")
+	if !strings.Contains(blocks, "button") || !strings.Contains(blocks, "video") {
 		t.Errorf("blocks %v", art.Blocks)
 	}
 }
@@ -173,8 +192,9 @@ func TestMacroPlaceholders(t *testing.T) {
 	rec := translateMacro(m)
 	golden(t, "macro.json", asSent(rec))
 
-	r := rec.Data.(*format.SavedReply)
-	if !strings.Contains(r.Body, `{{ contact.first_name | default: "there" }}`) || !strings.Contains(r.Body, "{{ company.name }}") ||
+	r := data[*format.SavedReply](t, rec)
+	if !strings.Contains(r.Body, `{{ contact.first_name | default: "there" }}`) ||
+		!strings.Contains(r.Body, "{{ company.name }}") ||
 		!strings.Contains(r.Body, "{{ sender.first_name }}") {
 		t.Errorf("body %q", r.Body)
 	}
@@ -213,7 +233,7 @@ func TestContactGolden(t *testing.T) {
 	rec := translateContact(c, refIDs(c.Tags.Data), refIDs(c.Companies.Data))
 	golden(t, "contact.json", asSent(rec))
 
-	got := rec.Data.(*format.Contact)
+	got := data[*format.Contact](t, rec)
 	if got.Name != "Ada <Lovelace>" || got.Email != "ada&co@example.com" {
 		t.Errorf("name %q email %q: escapes must be undone", got.Name, got.Email)
 	}
@@ -230,7 +250,7 @@ func TestWorkflowGolden(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wf := rec.Data.(*format.Workflow)
+	wf := data[*format.Workflow](t, rec)
 	if wf.Enabled {
 		t.Error("a workflow must arrive disabled")
 	}

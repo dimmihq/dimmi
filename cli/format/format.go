@@ -157,7 +157,9 @@ func ParseLine(raw []byte) (Record, error) {
 			src = "file://" + f.Path
 		}
 
-		rec.Files = append(rec.Files, &File{SourceID: f.SourceID, Name: f.Name, ContentType: f.ContentType, Source: src})
+		rec.Files = append(rec.Files, &File{
+			SourceID: f.SourceID, Name: f.Name, ContentType: f.ContentType, Source: src,
+		})
 	}
 
 	return rec, nil

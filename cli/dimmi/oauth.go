@@ -59,7 +59,9 @@ type Metadata struct {
 Discover reads the OAuth server metadata of the dimmi at base.
 */
 func Discover(ctx context.Context, hc *http.Client, base string) (Metadata, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimRight(base, "/")+"/.well-known/oauth-authorization-server", http.NoBody)
+	target := strings.TrimRight(base, "/") + "/.well-known/oauth-authorization-server"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, http.NoBody)
 	if err != nil {
 		return Metadata{}, err
 	}
@@ -155,17 +157,34 @@ func (f *Flow) Exchange(ctx context.Context, hc *http.Client, base string, query
 		return Token{}, errors.New("the sign-in answer has no code")
 	}
 
-	return tokenRequest(ctx, hc, f.Meta.TokenEndpoint, base, f.ClientID, url.Values{
-		"grant_type":    {"authorization_code"},
-		"code":          {code},
-		"redirect_uri":  {f.RedirectURI},
-		"client_id":     {f.ClientID},
-		"code_verifier": {f.Verifier},
+	return tokenRequest(ctx, hc, grant{
+		endpoint: f.Meta.TokenEndpoint, base: base, clientID: f.ClientID,
+		form: url.Values{
+			"grant_type":    {"authorization_code"},
+			"code":          {code},
+			"redirect_uri":  {f.RedirectURI},
+			"client_id":     {f.ClientID},
+			"code_verifier": {f.Verifier},
+		},
 	})
 }
 
-func tokenRequest(ctx context.Context, hc *http.Client, endpoint, base, clientID string, form url.Values) (Token, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
+/*
+grant is a token request: the form posted to the token endpoint, and
+the dimmi and client the token is saved for.
+*/
+type grant struct {
+	endpoint string
+	base     string
+	clientID string
+	form     url.Values
+}
+
+/*
+tokenRequest posts a grant to the token endpoint and reads the token.
+*/
+func tokenRequest(ctx context.Context, hc *http.Client, g grant) (Token, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, g.endpoint, strings.NewReader(g.form.Encode()))
 	if err != nil {
 		return Token{}, err
 	}
@@ -177,7 +196,7 @@ func tokenRequest(ctx context.Context, hc *http.Client, endpoint, base, clientID
 	if err != nil {
 		return Token{}, err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	var out struct {
 		AccessToken  string `json:"access_token"`
@@ -197,7 +216,7 @@ func tokenRequest(ctx context.Context, hc *http.Client, endpoint, base, clientID
 	}
 
 	return Token{
-		BaseURL: base, ClientID: clientID, AccessToken: out.AccessToken, RefreshToken: out.RefreshToken,
+		BaseURL: g.base, ClientID: g.clientID, AccessToken: out.AccessToken, RefreshToken: out.RefreshToken,
 		ExpiresAt: time.Now().Add(time.Duration(out.ExpiresIn) * time.Second), Scope: out.Scope,
 	}, nil
 }
@@ -284,10 +303,13 @@ func (s *SavedTokens) Refresh(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	next, err := tokenRequest(ctx, hc, meta.TokenEndpoint, t.BaseURL, t.ClientID, url.Values{
-		"grant_type":    {"refresh_token"},
-		"refresh_token": {t.RefreshToken},
-		"client_id":     {t.ClientID},
+	next, err := tokenRequest(ctx, hc, grant{
+		endpoint: meta.TokenEndpoint, base: t.BaseURL, clientID: t.ClientID,
+		form: url.Values{
+			"grant_type":    {"refresh_token"},
+			"refresh_token": {t.RefreshToken},
+			"client_id":     {t.ClientID},
+		},
 	})
 	if err != nil {
 		return "", fmt.Errorf("%w: run `dimmi login` again", err)

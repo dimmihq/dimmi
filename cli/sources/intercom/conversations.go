@@ -5,6 +5,7 @@ import (
 	"html"
 	"path"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/dom"
@@ -207,53 +208,47 @@ func (t *convTranslation) entry(p part) []format.Entry {
 	t.noteFormer(p.Author)
 
 	e := format.Entry{
-		SourceID: string(p.ID), CreatedAt: at(p.CreatedAt), Author: authorOf(p.Author, t.contacts), Redacted: p.Redacted,
+		SourceID: string(p.ID), CreatedAt: at(p.CreatedAt), Author: authorOf(p.Author, t.contacts),
+		Redacted: p.Redacted,
 	}
 
 	if p.EmailMetadata != nil && p.EmailMetadata.MessageID != "" {
 		e.Email = &format.EmailRefs{MessageID: p.EmailMetadata.MessageID}
 	}
 
-	event := func(ev format.Event) []format.Entry {
-		e.Type = format.EntryEvent
-		if e.Author.Type == format.AuthorAIAgent && !p.Author.FromAIAgent {
-			e.Author = format.Author{Type: format.AuthorSystem, Label: e.Author.Label}
-		}
-
-		ev.RawType = p.PartType
-		e.Event = &ev
-
-		return []format.Entry{e}
+	if out := t.knownEntry(p, e); out != nil {
+		return out
 	}
 
+	return t.otherEntry(p, e)
+}
+
+/*
+eventEntry turns the entry into an event. An AI agent that didn't write
+the part itself, such as a workflow, shows as the system.
+*/
+func eventEntry(p part, e format.Entry, ev format.Event) []format.Entry {
+	e.Type = format.EntryEvent
+	if e.Author.Type == format.AuthorAIAgent && !p.Author.FromAIAgent {
+		e.Author = format.Author{Type: format.AuthorSystem, Label: e.Author.Label}
+	}
+
+	ev.RawType = p.PartType
+	e.Event = &ev
+
+	return []format.Entry{e}
+}
+
+/*
+knownEntry turns the part types dimmi has a meaning for. It returns nil
+for any other part.
+*/
+func (t *convTranslation) knownEntry(p part, e format.Entry) []format.Entry {
 	switch p.PartType {
 	case "comment", "quick_reply", "email", "conversation_message":
-		e.Type = format.EntryReply
-		if e.Author.Type == format.AuthorContact {
-			e.Type = format.EntryMessage
-		}
-
-		body, pics := t.inline(p.Body)
-		e.Body = toMarkdown(body)
-		e.Attachments = append(pics, t.addFiles(p.Attachments)...)
-
-		if e.Body == "" && len(e.Attachments) == 0 && !e.Redacted {
-			return event(format.Event{Type: format.EventCustom, Text: plain(p.Body)})
-		}
-
-		return []format.Entry{e}
+		return t.messageEntry(p, e)
 	case "note", "note_and_reopen":
-		e.Type = format.EntryNote
-		body, pics := t.inline(p.Body)
-		e.Body = toMarkdown(body)
-		e.Attachments = append(pics, t.addFiles(p.Attachments)...)
-		out := []format.Entry{e}
-
-		if p.PartType == "note_and_reopen" {
-			out = append(out, reopen(p, e.Author))
-		}
-
-		return out
+		return t.noteEntry(p, e)
 	case "assignment", "assign_and_reopen", "default_assignment", "away_mode_assignment", "assign_and_unsnooze":
 		out := t.assignment(p, e)
 		if p.PartType != "assignment" && p.PartType != "default_assignment" && p.PartType != "away_mode_assignment" {
@@ -262,28 +257,74 @@ func (t *convTranslation) entry(p part) []format.Entry {
 
 		return out
 	case "open", "timer_unsnooze", "unsnoozed":
-		return event(format.Event{Type: format.EventStatus, Status: "open"})
+		return eventEntry(p, e, format.Event{Type: format.EventStatus, Status: "open"})
 	case "close", "closed":
-		return event(format.Event{Type: format.EventStatus, Status: "closed"})
+		return eventEntry(p, e, format.Event{Type: format.EventStatus, Status: "closed"})
 	case "snoozed", "snooze":
-		return event(format.Event{Type: format.EventStatus, Status: "snoozed"})
+		return eventEntry(p, e, format.Event{Type: format.EventStatus, Status: "snoozed"})
 	case "conversation_attribute_updated_by_admin", "conversation_attribute_updated_by_workflow",
 		"conversation_attribute_updated_by_user":
 		name, value := eventDetails(p.EventDetails)
 		if name != "" {
-			return event(format.Event{Type: format.EventAttribute, Attribute: attrKey(name), Value: value})
+			return eventEntry(p, e, format.Event{Type: format.EventAttribute, Attribute: attrKey(name), Value: value})
 		}
 	case "priority_changed", "priority_updated", "conversation_priority_changed":
-		return event(format.Event{Type: format.EventCustom, Text: plain(p.Body)})
+		return eventEntry(p, e, format.Event{Type: format.EventCustom, Text: plain(p.Body)})
 	}
 
+	return nil
+}
+
+/*
+messageEntry turns a message or a reply. One with nothing left to show
+is kept as a custom event.
+*/
+func (t *convTranslation) messageEntry(p part, e format.Entry) []format.Entry {
+	e.Type = format.EntryReply
+	if e.Author.Type == format.AuthorContact {
+		e.Type = format.EntryMessage
+	}
+
+	body, pics := t.inline(p.Body)
+	e.Body = toMarkdown(body)
+	e.Attachments = slices.Concat(pics, t.addFiles(p.Attachments))
+
+	if e.Body == "" && len(e.Attachments) == 0 && !e.Redacted {
+		return eventEntry(p, e, format.Event{Type: format.EventCustom, Text: plain(p.Body)})
+	}
+
+	return []format.Entry{e}
+}
+
+/*
+noteEntry turns a note, and the reopening a note_and_reopen part does.
+*/
+func (t *convTranslation) noteEntry(p part, e format.Entry) []format.Entry {
+	e.Type = format.EntryNote
+	body, pics := t.inline(p.Body)
+	e.Body = toMarkdown(body)
+	e.Attachments = slices.Concat(pics, t.addFiles(p.Attachments))
+	out := []format.Entry{e}
+
+	if p.PartType == "note_and_reopen" {
+		out = append(out, reopen(p, e.Author))
+	}
+
+	return out
+}
+
+/*
+otherEntry keeps a tag change as a tag event and anything else as a
+custom event with its own type.
+*/
+func (t *convTranslation) otherEntry(p part, e format.Entry) []format.Entry {
 	if strings.Contains(p.PartType, "tag") && len(p.Tags) > 0 {
 		var ids []string
 		for _, tg := range p.Tags {
 			ids = append(ids, string(tg.ID))
 		}
 
-		return event(format.Event{Type: format.EventTag, AddedTagRefs: ids})
+		return eventEntry(p, e, format.Event{Type: format.EventTag, AddedTagRefs: ids})
 	}
 
 	txt := plain(p.Body)
@@ -293,7 +334,7 @@ func (t *convTranslation) entry(p part) []format.Entry {
 
 	e.Attachments = t.addFiles(p.Attachments)
 
-	return event(format.Event{Type: format.EventCustom, Text: txt})
+	return eventEntry(p, e, format.Event{Type: format.EventCustom, Text: txt})
 }
 
 /*
@@ -351,12 +392,16 @@ func (t *convTranslation) assignment(p part, e format.Entry) []format.Entry {
 
 	switch p.AssignedTo.Type {
 	case "team":
-		e.Event = &format.Event{Type: format.EventTeamAssignment, TeamRef: refOrNil(p.AssignedTo.ID), RawType: p.PartType}
+		e.Event = &format.Event{
+			Type: format.EventTeamAssignment, TeamRef: refOrNil(p.AssignedTo.ID), RawType: p.PartType,
+		}
 	case "nobody_admin":
 		e.Event = &format.Event{Type: format.EventAssignment, AssigneeRef: refOrNil(""), RawType: p.PartType}
 	default:
 		t.noteFormer(author{Type: "admin", ID: p.AssignedTo.ID})
-		e.Event = &format.Event{Type: format.EventAssignment, AssigneeRef: refOrNil(p.AssignedTo.ID), RawType: p.PartType}
+		e.Event = &format.Event{
+			Type: format.EventAssignment, AssigneeRef: refOrNil(p.AssignedTo.ID), RawType: p.PartType,
+		}
 	}
 
 	if body := toMarkdown(p.Body); body != "" {
@@ -372,16 +417,13 @@ func (t *convTranslation) assignment(p part, e format.Entry) []format.Entry {
 }
 
 /*
-status maps a conversation's state.
+status maps a conversation's state; one Intercom doesn't name is
+closed.
 */
-func status(state string, open bool) string {
+func status(state string) string {
 	switch state {
 	case "open", "closed", "snoozed":
 		return state
-	}
-
-	if open {
-		return "open"
 	}
 
 	return "closed"
@@ -393,15 +435,54 @@ first. Known lists the teammates GET /admins returned; authors outside
 it are returned as former teammates.
 */
 func translateConversation(c conversation, parts []part, known map[string]bool) (format.Record, []Former) {
-	t := &convTranslation{known: known, contacts: map[string]bool{}, former: map[string]Former{}, seen: map[string]bool{}}
+	t := newTranslation(known)
 
 	conv := &format.Conversation{
-		Base: base(c.ID, c.UpdatedAt), Channel: channel(c.Source.Type), Subject: text(firstOf(c.Title, c.Source.Subject)),
-		CreatedAt: at(c.CreatedAt), Status: status(c.State, false), SnoozedUntil: when(c.SnoozedUntil),
+		Base: base(c.ID, c.UpdatedAt), Channel: channel(c.Source.Type),
+		Subject:   text(firstOf(c.Title, c.Source.Subject)),
+		CreatedAt: at(c.CreatedAt), Status: status(c.State), SnoozedUntil: when(c.SnoozedUntil),
 		Priority: priority(c.Priority), Attributes: attrValues(c.CustomAttrs), Entries: []format.Entry{},
 		Source: format.ConversationSource{Type: c.Source.Type, URL: c.Source.URL},
 	}
 
+	t.conversationParties(c, conv)
+
+	if first := t.sourceEntry(c); first.Body != "" || len(first.Attachments) > 0 || first.Redacted {
+		conv.Entries = append(conv.Entries, first)
+	}
+
+	for _, p := range parts {
+		conv.Entries = append(conv.Entries, t.entry(p)...)
+	}
+
+	conv.Rating = rating(c)
+
+	return format.NewRecord(format.KindConversation, conv.SourceID, conv, t.files...), t.formerList()
+}
+
+func newTranslation(known map[string]bool) *convTranslation {
+	return &convTranslation{
+		known: known, contacts: map[string]bool{}, former: map[string]Former{}, seen: map[string]bool{},
+	}
+}
+
+/*
+formerList returns the former teammates the translation met, by id.
+*/
+func (t *convTranslation) formerList() []Former {
+	var former []Former
+	for _, id := range sortedKeys(t.former) {
+		former = append(former, t.former[id])
+	}
+
+	return former
+}
+
+/*
+conversationParties sets the conversation's contact, participants,
+company, assignees and tags.
+*/
+func (t *convTranslation) conversationParties(c conversation, conv *format.Conversation) {
 	for i, ct := range c.Contacts.Contacts {
 		t.contacts[string(ct.ID)] = true
 
@@ -432,7 +513,12 @@ func translateConversation(c conversation, parts []part, known map[string]bool) 
 	for _, tg := range c.Tags.Tags {
 		conv.TagRefs = append(conv.TagRefs, string(tg.ID))
 	}
+}
 
+/*
+sourceEntry turns the message that started the conversation.
+*/
+func (t *convTranslation) sourceEntry(c conversation) format.Entry {
 	first := format.Entry{
 		SourceID: "source_" + string(firstID(c.Source.ID, c.ID)), CreatedAt: at(c.CreatedAt),
 		Author: authorOf(c.Source.Author, t.contacts), Redacted: c.Source.Redacted,
@@ -440,7 +526,7 @@ func translateConversation(c conversation, parts []part, known map[string]bool) 
 
 	sourceBody, pics := t.inline(c.Source.Body)
 	first.Body = toMarkdown(sourceBody)
-	first.Attachments = append(pics, t.addFiles(c.Source.Attachments)...)
+	first.Attachments = slices.Concat(pics, t.addFiles(c.Source.Attachments))
 	t.noteFormer(c.Source.Author)
 
 	if c.Source.EmailMetadata != nil && c.Source.EmailMetadata.MessageID != "" {
@@ -452,31 +538,28 @@ func translateConversation(c conversation, parts []part, known map[string]bool) 
 		first.Type = format.EntryReply
 	}
 
-	if first.Body != "" || len(first.Attachments) > 0 || first.Redacted {
-		conv.Entries = append(conv.Entries, first)
+	return first
+}
+
+/*
+rating turns the conversation's rating, dated when the conversation was
+last updated if Intercom gives it no date.
+*/
+func rating(c conversation) *format.Rating {
+	if c.Rating == nil || c.Rating.Rating <= 0 {
+		return nil
 	}
 
-	for _, p := range parts {
-		conv.Entries = append(conv.Entries, t.entry(p)...)
+	r := &format.Rating{Score: c.Rating.Rating, Remark: text(c.Rating.Remark), CreatedAt: at(c.Rating.CreatedAt)}
+	if r.CreatedAt.IsZero() {
+		r.CreatedAt = at(c.UpdatedAt)
 	}
 
-	if c.Rating != nil && c.Rating.Rating > 0 {
-		conv.Rating = &format.Rating{Score: c.Rating.Rating, Remark: text(c.Rating.Remark), CreatedAt: at(c.Rating.CreatedAt)}
-		if conv.Rating.CreatedAt.IsZero() {
-			conv.Rating.CreatedAt = at(c.UpdatedAt)
-		}
-
-		if c.Rating.Teammate != nil {
-			conv.Rating.TeammateRef = string(c.Rating.Teammate.ID)
-		}
+	if c.Rating.Teammate != nil {
+		r.TeammateRef = string(c.Rating.Teammate.ID)
 	}
 
-	var former []Former
-	for _, id := range sortedKeys(t.former) {
-		former = append(former, t.former[id])
-	}
-
-	return format.NewRecord(format.KindConversation, conv.SourceID, conv, t.files...), former
+	return r
 }
 
 func priority(p string) string {
@@ -488,93 +571,6 @@ func priority(p string) string {
 	}
 
 	return p
-}
-
-/*
-translateTicket turns a ticket with its parts. Intercom returns at most
-500; a ticket with more is marked capped.
-*/
-func translateTicket(tk ticket, known map[string]bool) (format.Record, []Former) {
-	t := &convTranslation{known: known, contacts: map[string]bool{}, former: map[string]Former{}, seen: map[string]bool{}}
-
-	title, description := "", ""
-	values := map[string]any{}
-
-	for k, v := range tk.Attributes {
-		switch k {
-		case defaultTitle:
-			title, _ = v.(string)
-		case defaultDescription:
-			description, _ = v.(string)
-		default:
-			values[attrKey(k)] = v
-		}
-	}
-
-	if len(values) == 0 {
-		values = nil
-	}
-
-	rec := &format.Ticket{
-		Base: base(tk.ID, tk.UpdatedAt), TicketTypeRef: string(tk.Type.ID), StateRef: string(tk.State.ID),
-		Title: firstOf(text(title), text(tk.Type.Name)+" "+tk.TicketID), Description: toMarkdown(description), Values: values,
-		CreatedAt: at(tk.CreatedAt), UpdatedAt: when(tk.UpdatedAt), CompanyRef: string(tk.CompanyID),
-	}
-
-	for i, ct := range tk.Contacts.Contacts {
-		t.contacts[string(ct.ID)] = true
-
-		if i == 0 {
-			rec.ContactRef = string(ct.ID)
-		}
-	}
-
-	if tk.AdminAssigneeID != "" && tk.AdminAssigneeID != "0" {
-		rec.AssigneeRef = string(tk.AdminAssigneeID)
-		t.noteFormer(author{Type: "admin", ID: tk.AdminAssigneeID})
-	}
-
-	if tk.TeamAssigneeID != "" && tk.TeamAssigneeID != "0" {
-		rec.TeamRef = string(tk.TeamAssigneeID)
-	}
-
-	for _, l := range tk.Linked.Data {
-		if l.Type == "conversation" && rec.ConversationRef == "" {
-			rec.ConversationRef = string(l.ID)
-		}
-	}
-
-	for _, tg := range tk.Tags.Tags {
-		rec.TagRefs = append(rec.TagRefs, string(tg.ID))
-	}
-
-	states := map[string]string{}
-	for _, s := range tk.Type.States.Data {
-		states[s.Category] = string(s.ID)
-	}
-
-	for _, p := range tk.Parts.Parts {
-		if p.PartType == "ticket_state_updated_by_admin" || p.TicketState != "" && p.PreviousState != p.TicketState {
-			if ref := states[p.TicketState]; ref != "" {
-				rec.StateHistory = append(rec.StateHistory, format.StateMove{StateRef: ref, At: at(p.CreatedAt)})
-			}
-		}
-
-		rec.Entries = append(rec.Entries, t.entry(p)...)
-	}
-
-	if len(rec.StateHistory) == 0 && rec.StateRef != "" {
-		rec.StateHistory = []format.StateMove{{StateRef: rec.StateRef, At: at(tk.CreatedAt)}}
-	}
-
-	rec.EntriesCapped = tk.Parts.TotalCount > len(tk.Parts.Parts) || len(tk.Parts.Parts) >= 500
-
-	var former []Former
-	for _, id := range sortedKeys(t.former) {
-		former = append(former, t.former[id])
-	}
-
-	return format.NewRecord(format.KindTicket, rec.SourceID, rec, t.files...), former
 }
 
 /*

@@ -125,6 +125,9 @@ func newCommand(name string, a *app) *flag.FlagSet {
 	return fs
 }
 
+/*
+dispatch finds the command the name gives, reads its flags and runs it.
+*/
 func dispatch(ctx context.Context, name string, args []string) error {
 	a := &app{out: os.Stdout}
 
@@ -145,20 +148,10 @@ func dispatch(ctx context.Context, name string, args []string) error {
 		fs := newCommand("logout", a)
 		cmd = command{fs, a.logout}
 	case "migrate":
-		if len(args) == 0 || strings.HasPrefix(args[0], "-") {
-			fmt.Print(migrateUsage)
-
-			return nil
+		var err error
+		if cmd, args, err = a.migrate(ctx, args); err != nil || cmd.flags == nil {
+			return err
 		}
-
-		var ok bool
-		if cmd, ok = a.migrateCommand(ctx, args[0]); !ok {
-			fmt.Fprintf(os.Stderr, "unknown command \"migrate %s\"\n\n%s", args[0], migrateUsage)
-
-			return errors.New("unknown command")
-		}
-
-		args = args[1:]
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command %q\n\n%s", name, usage)
 
@@ -174,6 +167,28 @@ func dispatch(ctx context.Context, name string, args []string) error {
 	}
 
 	return a.fail(cmd.run())
+}
+
+/*
+migrate finds the migrate subcommand the arguments name and returns it
+with the arguments left for its flags. It returns no command when it
+printed the usage instead.
+*/
+func (a *app) migrate(ctx context.Context, args []string) (command, []string, error) {
+	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
+		fmt.Print(migrateUsage)
+
+		return command{}, nil, nil
+	}
+
+	cmd, ok := a.migrateCommand(ctx, args[0])
+	if !ok {
+		fmt.Fprintf(os.Stderr, "unknown command \"migrate %s\"\n\n%s", args[0], migrateUsage)
+
+		return command{}, nil, errors.New("unknown command")
+	}
+
+	return cmd, args[1:], nil
 }
 
 /*
@@ -306,7 +321,7 @@ func (a *app) loginCommand(ctx context.Context) command {
 			return err
 		}
 
-		return a.page(ctx, nil, *noBrowser)
+		return a.page(ctx, pageOptions{noBrowser: *noBrowser})
 	}}
 }
 
@@ -328,33 +343,42 @@ func (a *app) useURL(raw string) error {
 }
 
 /*
+pageOptions is what the sign-in page shows: the source's token step when
+source is set, and whether to leave the browser closed.
+*/
+type pageOptions struct {
+	source    *connect.Setup
+	noBrowser bool
+}
+
+/*
 page runs the local sign-in page: the dimmi sign-in, and the source's
 token step when source is set. It returns once the person finishes.
 */
-func (a *app) page(ctx context.Context, source *connect.Setup, noBrowser bool) error {
+func (a *app) page(ctx context.Context, opts pageOptions) error {
 	srv := &connect.Server{
 		DimmiURL:  a.cfg.DimmiURL,
 		SaveToken: func(t dimmi.Token) error { return secrets.SetJSON(a.keys, a.dimmiKey(), t) },
 		DimmiDone: a.signedIn,
 	}
 
-	if source != nil {
-		srv.Source = *source
+	if opts.source != nil {
+		srv.Source = *opts.source
 	}
 
 	addr, shutdown, err := srv.Start(ctx)
 	if err != nil {
 		return err
 	}
-	defer shutdown()
+	defer func() { _ = shutdown() }()
 
 	a.report.Report(engine.Event{
 		Event: "connect_page", Message: "Open this page to finish in your browser: " + addr,
 		Data: map[string]string{"url": addr, "keys_saved_in": a.keys.Where()},
 	})
 
-	if !noBrowser {
-		_ = connect.OpenBrowser(addr)
+	if !opts.noBrowser {
+		_ = connect.OpenBrowser(ctx, addr)
 	}
 
 	select {

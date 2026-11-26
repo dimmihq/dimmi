@@ -36,18 +36,25 @@ func WorkflowID(s string) (string, bool) {
 }
 
 /*
-stepTypes are the Intercom step and action types dimmi's workflows can
-run, and what they become.
+stepType maps an Intercom step or action type onto the dimmi step it
+becomes, if dimmi's workflows can run it.
 */
-var stepTypes = map[string]string{
-	"send_message": "send_message", "reply": "send_message", "chat_message": "send_message", "message": "send_message",
-	"add_tag": "add_tag", "tag_conversation": "add_tag", "remove_tag": "remove_tag",
-	"assign": "assign", "assign_conversation": "assign", "assign_to_team": "assign", "assign_to_teammate": "assign",
-	"close": "close", "close_conversation": "close", "snooze": "snooze", "snooze_conversation": "snooze",
-	"set_attribute": "set_attribute", "set_conversation_data_attribute": "set_attribute",
-	"note": "add_note", "add_note": "add_note", "wait": "wait", "branches": "branch", "condition": "branch",
-	"collect_customer_data": "collect", "collect_data": "collect", "reply_buttons": "choice", "buttons": "choice",
-	"priority": "set_priority", "mark_priority": "set_priority", "convert_to_ticket": "create_ticket",
+func stepType(t string) (string, bool) {
+	types := map[string]string{
+		"send_message": "send_message", "reply": "send_message", "chat_message": "send_message",
+		"message": "send_message", "add_tag": "add_tag", "tag_conversation": "add_tag", "remove_tag": "remove_tag",
+		"assign": "assign", "assign_conversation": "assign", "assign_to_team": "assign",
+		"assign_to_teammate": "assign", "close": "close", "close_conversation": "close", "snooze": "snooze",
+		"snooze_conversation": "snooze", "set_attribute": "set_attribute",
+		"set_conversation_data_attribute": "set_attribute", "note": "add_note", "add_note": "add_note",
+		"wait": "wait", "branches": "branch", "condition": "branch", "collect_customer_data": "collect",
+		"collect_data": "collect", "reply_buttons": "choice", "buttons": "choice", "priority": "set_priority",
+		"mark_priority": "set_priority", "convert_to_ticket": "create_ticket",
+	}
+
+	dimmi, ok := types[t]
+
+	return dimmi, ok
 }
 
 /*
@@ -57,29 +64,9 @@ type it names, keeping only the type names, never their content.
 func stepTypesIn(raw json.RawMessage) []string {
 	seen := map[string]bool{}
 
-	var walk func(v any, key string)
-	walk = func(v any, key string) {
-		switch x := v.(type) {
-		case map[string]any:
-			for _, k := range []string{"step_type", "action_type", "type"} {
-				if t, ok := x[k].(string); ok && t != "" && (k != "type" || key == "steps" || key == "actions") {
-					seen[t] = true
-				}
-			}
-
-			for k, child := range x {
-				walk(child, k)
-			}
-		case []any:
-			for _, child := range x {
-				walk(child, key)
-			}
-		}
-	}
-
 	var v any
 	if json.Unmarshal(raw, &v) == nil {
-		walk(v, "")
+		walkSteps(v, "", seen)
 	}
 
 	out := make([]string, 0, len(seen))
@@ -88,6 +75,46 @@ func stepTypesIn(raw json.RawMessage) []string {
 	}
 
 	sort.Strings(out)
+
+	return out
+}
+
+/*
+walkSteps collects the step and action types of a value found under key.
+*/
+func walkSteps(v any, key string, seen map[string]bool) {
+	switch x := v.(type) {
+	case map[string]any:
+		for _, t := range typesOf(x, key) {
+			seen[t] = true
+		}
+
+		for k, child := range x {
+			walkSteps(child, k, seen)
+		}
+	case []any:
+		for _, child := range x {
+			walkSteps(child, key, seen)
+		}
+	}
+}
+
+/*
+typesOf reads an object's step_type and action_type, and its type when
+it sits in a list of steps or actions.
+*/
+func typesOf(x map[string]any, key string) []string {
+	var out []string
+
+	for _, k := range []string{"step_type", "action_type", "type"} {
+		if k == "type" && key != "steps" && key != "actions" {
+			continue
+		}
+
+		if t, ok := x[k].(string); ok && t != "" {
+			out = append(out, t)
+		}
+	}
 
 	return out
 }
@@ -120,7 +147,7 @@ func translateWorkflow(rulesetID string, raw json.RawMessage) (format.Record, er
 	}
 
 	for _, t := range stepTypesIn(raw) {
-		dimmi, ok := stepTypes[t]
+		dimmi, ok := stepType(t)
 		wf.Steps = append(wf.Steps, format.WorkflowStep{SourceType: t, Type: dimmi, Supported: ok})
 
 		if !ok {

@@ -2,6 +2,7 @@ package intercom
 
 import (
 	"encoding/json"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -47,7 +48,7 @@ func TestRealShapesDecode(t *testing.T) {
 			continue
 		}
 
-		raw, err := os.ReadFile(f)
+		raw, err := fs.ReadFile(os.DirFS(filepath.Join("testdata", "shapes")), name)
 		if err != nil {
 			t.Fatal(err)
 		}

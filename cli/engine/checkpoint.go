@@ -65,7 +65,7 @@ Kind returns the kind's state, adding it when missing.
 */
 func (s *State) Kind(kind format.Kind) *KindState {
 	if s.Kinds == nil {
-		s.Kinds = map[format.Kind]*KindState{}
+		s.Kinds = make(map[format.Kind]*KindState)
 	}
 
 	if s.Kinds[kind] == nil {
@@ -272,7 +272,7 @@ func (s *Store) loadHashes() error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 64<<10), 1<<20)

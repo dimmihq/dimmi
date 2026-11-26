@@ -48,8 +48,8 @@ func (s *fakeSource) Discover(context.Context) (Inventory, error) {
 func (s *fakeSource) Read(_ context.Context, kind format.Kind, opts ReadOptions, emit func(Page) error) error {
 	s.mu.Lock()
 	if s.sinces == nil {
-		s.sinces = map[format.Kind]time.Time{}
-		s.cursors = map[format.Kind][]string{}
+		s.sinces = make(map[format.Kind]time.Time)
+		s.cursors = make(map[format.Kind][]string)
 	}
 	s.sinces[kind] = opts.Since
 	s.cursors[kind] = append(s.cursors[kind], opts.Cursor)
@@ -58,7 +58,9 @@ func (s *fakeSource) Read(_ context.Context, kind format.Kind, opts ReadOptions,
 	recs := s.records[kind]
 	start := 0
 	if opts.Cursor != "" {
-		fmt.Sscanf(opts.Cursor, "%d", &start)
+		if _, err := fmt.Sscanf(opts.Cursor, "%d", &start); err != nil {
+			return err
+		}
 	}
 
 	for i := start; i < len(recs); i += 2 {
@@ -105,7 +107,7 @@ type fakeDest struct {
 	startedAs Start
 }
 
-func newDest() *fakeDest { return &fakeDest{held: map[format.Kind]map[string]string{}} }
+func newDest() *fakeDest { return &fakeDest{held: make(map[format.Kind]map[string]string)} }
 
 func (d *fakeDest) Start(_ context.Context, s Start) (Migration, error) {
 	d.startedAs = s
@@ -117,7 +119,7 @@ func (d *fakeDest) Get(context.Context, string) (Migration, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	m := Migration{ID: "mig_1", Counts: map[format.Kind]Counts{}}
+	m := Migration{ID: "mig_1", Counts: make(map[format.Kind]Counts)}
 	for k, held := range d.held {
 		m.Counts[k] = Counts{Created: len(held)}
 	}
@@ -142,7 +144,9 @@ func (d *fakeDest) Upsert(_ context.Context, _ string, kind format.Kind, recs []
 	var out []Result
 	for _, r := range recs {
 		if d.refuse[r.SourceID] {
-			out = append(out, Result{SourceID: r.SourceID, Status: StatusFailed, Error: &RecordError{Code: "invalid", Message: "refused"}})
+			out = append(out, Result{
+				SourceID: r.SourceID, Status: StatusFailed, Error: &RecordError{Code: "invalid", Message: "refused"},
+			})
 
 			continue
 		}
@@ -201,7 +205,7 @@ func (d *fakeDest) Lookup(_ context.Context, _ string, kind format.Kind, ids []s
 
 func (d *fakeDest) Rollback(context.Context, string) (Migration, error) {
 	d.rolled = true
-	d.held = map[format.Kind]map[string]string{}
+	d.held = make(map[format.Kind]map[string]string)
 
 	return Migration{ID: "mig_1", Status: "rolled_back"}, nil
 }
@@ -210,25 +214,50 @@ func tags(n int) []format.Record {
 	var out []format.Record
 	for i := range n {
 		id := fmt.Sprint("t", i)
-		out = append(out, format.NewRecord(format.KindTag, id, &format.Tag{Base: format.Base{SourceID: id}, Name: fmt.Sprint("tag ", i)}))
+		tag := &format.Tag{Base: format.Base{SourceID: id}, Name: fmt.Sprint("tag ", i)}
+		out = append(out, format.NewRecord(format.KindTag, id, tag))
 	}
 
 	return out
 }
 
 func conversations() []format.Record {
-	a := &format.File{SourceID: format.FileID("https://files.example.com/a.png?sig=1", "a.png", 10), Name: "a.png", Source: "https://files.example.com/a.png?sig=1"}
-	b := &format.File{SourceID: format.FileID("https://files.example.com/b.pdf", "b.pdf", 10), Name: "b.pdf", Source: "https://files.example.com/b.pdf"}
+	a := &format.File{
+		SourceID: format.FileID("https://files.example.com/a.png?sig=1", "a.png", 10),
+		Name:     "a.png", Source: "https://files.example.com/a.png?sig=1",
+	}
+	b := &format.File{
+		SourceID: format.FileID("https://files.example.com/b.pdf", "b.pdf", 10),
+		Name:     "b.pdf", Source: "https://files.example.com/b.pdf",
+	}
+
+	c1 := &format.Conversation{Base: format.Base{SourceID: "c1"}, Entries: []format.Entry{
+		{SourceID: "p1", Type: format.EntryMessage, Attachments: []string{a.SourceID}},
+	}}
+	c2 := &format.Conversation{Base: format.Base{SourceID: "c2"}, Entries: []format.Entry{
+		{SourceID: "p2", Type: format.EntryReply, Attachments: []string{a.SourceID}},
+		{SourceID: "p3", Type: format.EntryNote, Attachments: []string{b.SourceID}},
+	}}
 
 	return []format.Record{
-		format.NewRecord(format.KindConversation, "c1", &format.Conversation{Base: format.Base{SourceID: "c1"}, Entries: []format.Entry{
-			{SourceID: "p1", Type: format.EntryMessage, Attachments: []string{a.SourceID}},
-		}}, a),
-		format.NewRecord(format.KindConversation, "c2", &format.Conversation{Base: format.Base{SourceID: "c2"}, Entries: []format.Entry{
-			{SourceID: "p2", Type: format.EntryReply, Attachments: []string{a.SourceID}},
-			{SourceID: "p3", Type: format.EntryNote, Attachments: []string{b.SourceID}},
-		}}, a, b),
+		format.NewRecord(format.KindConversation, "c1", c1, a),
+		format.NewRecord(format.KindConversation, "c2", c2, a, b),
 	}
+}
+
+/*
+newSource serves the records, grouped by their kind.
+*/
+func newSource(groups ...[]format.Record) *fakeSource {
+	records := make(map[format.Kind][]format.Record)
+
+	for _, group := range groups {
+		for _, r := range group {
+			records[r.Kind] = append(records[r.Kind], r)
+		}
+	}
+
+	return &fakeSource{records: records}
 }
 
 func newEngine(t *testing.T, src *fakeSource, dest *fakeDest) *Engine {
@@ -245,9 +274,7 @@ func newEngine(t *testing.T, src *fakeSource, dest *fakeDest) *Engine {
 }
 
 func TestRunImportsInOrderAndRerunSendsNothing(t *testing.T) {
-	src := &fakeSource{records: map[format.Kind][]format.Record{
-		format.KindTag: tags(7), format.KindConversation: conversations(),
-	}}
+	src := newSource(tags(7), conversations())
 	dest := newDest()
 	e := newEngine(t, src, dest)
 
@@ -275,10 +302,9 @@ func TestRunImportsInOrderAndRerunSendsNothing(t *testing.T) {
 }
 
 func TestRunResumesFromTheCheckpoint(t *testing.T) {
-	src := &fakeSource{
-		records: map[format.Kind][]format.Record{format.KindTag: tags(6)},
-		failAt:  map[format.Kind]int{format.KindTag: 4},
-	}
+	src := newSource(tags(6))
+	src.failAt = make(map[format.Kind]int)
+	src.failAt[format.KindTag] = 4
 	dest := newDest()
 	e := newEngine(t, src, dest)
 
@@ -305,7 +331,7 @@ func TestRunResumesFromTheCheckpoint(t *testing.T) {
 }
 
 func TestSyncReadsFromTheLastRead(t *testing.T) {
-	src := &fakeSource{records: map[format.Kind][]format.Record{format.KindTag: tags(2)}}
+	src := newSource(tags(2))
 	e := newEngine(t, src, newDest())
 
 	first := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
@@ -331,7 +357,7 @@ func TestSyncReadsFromTheLastRead(t *testing.T) {
 }
 
 func TestChangedRecordsAreSentAgain(t *testing.T) {
-	src := &fakeSource{records: map[format.Kind][]format.Record{format.KindTag: tags(3)}}
+	src := newSource(tags(3))
 	dest := newDest()
 	e := newEngine(t, src, dest)
 
@@ -339,7 +365,8 @@ func TestChangedRecordsAreSentAgain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	src.records[format.KindTag][1] = format.NewRecord(format.KindTag, "t1", &format.Tag{Base: format.Base{SourceID: "t1"}, Name: "renamed"})
+	renamed := &format.Tag{Base: format.Base{SourceID: "t1"}, Name: "renamed"}
+	src.records[format.KindTag][1] = format.NewRecord(format.KindTag, "t1", renamed)
 	calls := dest.calls
 
 	if err := e.Run(context.Background(), RunOptions{Sync: true}); err != nil {
@@ -352,7 +379,7 @@ func TestChangedRecordsAreSentAgain(t *testing.T) {
 }
 
 func TestFailedRecordsAreKeptAndRetried(t *testing.T) {
-	src := &fakeSource{records: map[format.Kind][]format.Record{format.KindTag: tags(3)}}
+	src := newSource(tags(3))
 	dest := newDest()
 	dest.refuse = map[string]bool{"t2": true}
 	e := newEngine(t, src, dest)
@@ -379,7 +406,7 @@ func TestFailedRecordsAreKeptAndRetried(t *testing.T) {
 }
 
 func TestTooLargeBatchesAreSplit(t *testing.T) {
-	src := &fakeSource{records: map[format.Kind][]format.Record{format.KindTag: tags(2)}}
+	src := newSource(tags(2))
 	dest := newDest()
 	dest.maxBatch = 1
 	e := newEngine(t, src, dest)
@@ -394,7 +421,7 @@ func TestTooLargeBatchesAreSplit(t *testing.T) {
 }
 
 func TestSkippedKindsAreLeftOut(t *testing.T) {
-	src := &fakeSource{records: map[format.Kind][]format.Record{format.KindTag: tags(2), format.KindConversation: conversations()}}
+	src := newSource(tags(2), conversations())
 	dest := newDest()
 	e := newEngine(t, src, dest)
 
@@ -408,7 +435,7 @@ func TestSkippedKindsAreLeftOut(t *testing.T) {
 }
 
 func TestVerifyAndRollback(t *testing.T) {
-	src := &fakeSource{records: map[format.Kind][]format.Record{format.KindTag: tags(3)}}
+	src := newSource(tags(3))
 	dest := newDest()
 	e := newEngine(t, src, dest)
 
@@ -438,7 +465,7 @@ func TestVerifyAndRollback(t *testing.T) {
 }
 
 func TestACheckpointForAnotherAccountIsRefused(t *testing.T) {
-	src := &fakeSource{records: map[format.Kind][]format.Record{}}
+	src := newSource()
 	e := newEngine(t, src, newDest())
 
 	if err := e.Store.Save(&State{MigrationID: "m", Source: "fake", Account: Account{ID: "other"}}); err != nil {

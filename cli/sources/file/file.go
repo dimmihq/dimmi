@@ -34,6 +34,9 @@ type Source struct {
 	HTTP      *http.Client
 }
 
+/*
+Name is the tool the file came from, or "file".
+*/
 func (s *Source) Name() string {
 	if s.Tool != "" {
 		return s.Tool
@@ -42,6 +45,9 @@ func (s *Source) Name() string {
 	return "file"
 }
 
+/*
+Kinds is every kind: a file can hold any of them.
+*/
 func (s *Source) Kinds() []format.Kind { return format.Kinds() }
 
 /*
@@ -71,7 +77,7 @@ func (s *Source) scan(from int, fn func(n int, rec format.Record) error) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 1<<20), 64<<20)
@@ -99,13 +105,16 @@ func (s *Source) scan(from int, fn func(n int, rec format.Record) error) error {
 	return sc.Err()
 }
 
-func (s *Source) Discover(context.Context) (engine.Inventory, error) {
-	acct, err := s.Account(context.Background())
+/*
+Discover counts the file's records of each kind.
+*/
+func (s *Source) Discover(ctx context.Context) (engine.Inventory, error) {
+	acct, err := s.Account(ctx)
 	if err != nil {
 		return engine.Inventory{}, err
 	}
 
-	counts := map[format.Kind]int{}
+	counts := make(map[format.Kind]int)
 
 	if err := s.scan(1, func(_ int, rec format.Record) error {
 		counts[rec.Kind]++
@@ -129,7 +138,9 @@ func (s *Source) Discover(context.Context) (engine.Inventory, error) {
 Read sends the file's records of the kind, 100 lines a page, the cursor
 being the next line to read.
 */
-func (s *Source) Read(_ context.Context, kind format.Kind, opts engine.ReadOptions, emit func(engine.Page) error) error {
+func (s *Source) Read(
+	_ context.Context, kind format.Kind, opts engine.ReadOptions, emit func(engine.Page) error,
+) error {
 	from, _ := strconv.Atoi(opts.Cursor)
 	if from < 1 {
 		from = 1
@@ -169,7 +180,7 @@ func (s *Source) Open(ctx context.Context, f *format.File) (io.ReadCloser, error
 			path = filepath.Join(filepath.Dir(s.Path), path)
 		}
 
-		return os.Open(path)
+		return os.Open(path) //nolint:gosec // the path is named by the user's own import file
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, f.Source, http.NoBody)

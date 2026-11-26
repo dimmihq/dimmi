@@ -28,7 +28,7 @@ func TestFileKeepsSecretsPrivate(t *testing.T) {
 		t.Fatalf("%v %v", got, err)
 	}
 
-	if err := os.Chmod(f.Path, 0o644); err != nil {
+	if err := os.Chmod(f.Path, 0o644); err != nil { //nolint:gosec // readable by others on purpose
 		t.Fatal(err)
 	}
 

@@ -37,7 +37,7 @@ type Limiter struct {
 	limit     int
 	remaining int
 	reset     time.Time
-	next      time.Time
+	nextAt    time.Time
 }
 
 /*
@@ -89,55 +89,79 @@ func (l *Limiter) RoundTrip(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	ctx := req.Context()
-
 	for attempt := 0; ; attempt++ {
-		if err := l.sleep(ctx, l.wait()); err != nil {
-			return nil, err
-		}
-
-		try := req.Clone(ctx)
-
-		switch {
-		case body != nil:
-			try.Body = io.NopCloser(bytes.NewReader(body))
-			try.ContentLength = int64(len(body))
-		case attempt > 0 && req.GetBody != nil:
-			if try.Body, err = req.GetBody(); err != nil {
-				return nil, err
-			}
-		case attempt > 0 && req.Body != nil && req.Body != http.NoBody:
-			return nil, errors.New("request body can't be sent again")
-		}
-
-		res, err := l.Next.RoundTrip(try)
-		if err != nil {
-			if attempt >= l.MaxRetries || ctx.Err() != nil {
-				return nil, err
-			}
-
-			if err := l.sleep(ctx, backoff(attempt)); err != nil {
-				return nil, err
-			}
-
-			continue
-		}
-
-		l.observe(res.Header)
-
-		if (res.StatusCode != http.StatusTooManyRequests && res.StatusCode != http.StatusServiceUnavailable) ||
-			attempt >= l.MaxRetries {
-			return res, nil
-		}
-
-		wait := l.retryAfter(res.Header, attempt)
-		_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 1<<16))
-		_ = res.Body.Close()
-
-		if err := l.sleep(ctx, wait); err != nil {
-			return nil, err
+		res, err := l.once(req, body, attempt)
+		if err != nil || res != nil {
+			return res, err
 		}
 	}
+}
+
+/*
+once makes one attempt. It returns neither a response nor an error when
+the request is to be sent again, after waiting as long as it must.
+*/
+func (l *Limiter) once(req *http.Request, body []byte, attempt int) (*http.Response, error) {
+	ctx := req.Context()
+
+	if err := l.sleep(ctx, l.wait()); err != nil {
+		return nil, err
+	}
+
+	try, err := attemptRequest(req, body, attempt)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := l.Next.RoundTrip(try)
+	if err != nil {
+		if attempt >= l.MaxRetries || ctx.Err() != nil {
+			return nil, err
+		}
+
+		return nil, l.sleep(ctx, backoff(attempt))
+	}
+
+	l.observe(res.Header)
+
+	if !retryable(res.StatusCode) || attempt >= l.MaxRetries {
+		return res, nil
+	}
+
+	wait := l.retryAfter(res.Header, attempt)
+	_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 1<<16))
+	_ = res.Body.Close()
+
+	return nil, l.sleep(ctx, wait)
+}
+
+/*
+attemptRequest is the request for one attempt, with the body sent again.
+*/
+func attemptRequest(req *http.Request, body []byte, attempt int) (*http.Request, error) {
+	try := req.Clone(req.Context())
+
+	switch {
+	case body != nil:
+		try.Body = io.NopCloser(bytes.NewReader(body))
+		try.ContentLength = int64(len(body))
+	case attempt > 0 && req.GetBody != nil:
+		var err error
+		if try.Body, err = req.GetBody(); err != nil {
+			return nil, err
+		}
+	case attempt > 0 && req.Body != nil && req.Body != http.NoBody:
+		return nil, errors.New("request body can't be sent again")
+	}
+
+	return try, nil
+}
+
+/*
+retryable reports whether the API asks for a status to be retried.
+*/
+func retryable(status int) bool {
+	return status == http.StatusTooManyRequests || status == http.StatusServiceUnavailable
 }
 
 /*
@@ -154,7 +178,7 @@ func rewindable(req *http.Request) ([]byte, error) {
 		return nil, nil
 	}
 
-	defer req.Body.Close()
+	defer func() { _ = req.Body.Close() }()
 
 	return io.ReadAll(req.Body)
 }
@@ -180,11 +204,11 @@ func (l *Limiter) wait() time.Duration {
 		gap := time.Duration(float64(time.Second) / l.Rate)
 		start := now.Add(d)
 
-		if start.Before(l.next) {
-			start = l.next
+		if start.Before(l.nextAt) {
+			start = l.nextAt
 		}
 
-		l.next = start.Add(gap)
+		l.nextAt = start.Add(gap)
 		d = start.Sub(now)
 	}
 
@@ -295,7 +319,7 @@ backoff is the wait before retry n: 1s, 2s, 4s… up to 30s, with jitter.
 func backoff(attempt int) time.Duration {
 	d := min(time.Second<<min(attempt, 5), 30*time.Second)
 
-	return d/2 + time.Duration(rand.Int64N(int64(d/2)+1))
+	return d/2 + time.Duration(rand.Int64N(int64(d/2)+1)) //nolint:gosec // retry jitter, not a secret
 }
 
 /*
