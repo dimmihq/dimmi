@@ -100,6 +100,7 @@ func (a *Application) bootQueue(ctx context.Context) error {
 
 	cfg.NoLeader = !a.Roles.Has(RoleScheduler)
 	cfg.Clock = a.Clock
+	cfg.Report = a.Telemetry.Report
 
 	q, err := queue.New(log.NewContext(ctx, a.Log), a.Config.Database, cfg)
 	if err != nil {

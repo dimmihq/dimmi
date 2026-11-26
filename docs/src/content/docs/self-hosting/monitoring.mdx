@@ -52,4 +52,7 @@ Configure these with [`dimmictl set`](/self-hosting/configuration/):
 | `DIMMI_TELEMETRY__TRACING` | Set `otlp` to export traces over HTTP (default `none`). |
 | `DIMMI_TELEMETRY__OTLP_ENDPOINT` | Collector URL, such as `http://collector:4318/v1/traces`. |
 | `DIMMI_TELEMETRY__OTLP_HEADERS__<NAME>` | Extra header on trace exports, such as `DIMMI_TELEMETRY__OTLP_HEADERS__AUTHORIZATION`. |
-| `DIMMI_TELEMETRY__SENTRY_DSN` | Sentry DSN; reported errors include trace IDs automatically. |
+| `DIMMI_TELEMETRY__SENTRY_DSN` | Sentry DSN for server errors. Reports carry the trace ID and the release. |
+| `DIMMI_FRONTEND__ERRORS_DSN` | Sentry DSN for dashboard errors. Must be reachable from your team's browsers. |
+
+Any Sentry-compatible tracker works, such as Sentry, GlitchTip or Rustrak. The server reports failed requests, panics, and background jobs that fail on their last attempt. The dashboard reports its own crashes; failed API calls are left to the server's report. Neither sends email addresses, cookies or request bodies.

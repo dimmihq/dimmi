@@ -6,10 +6,21 @@ import "github.com/dimmihq/dimmi/resources/views/theme"
 Shell is the page every route of the browser app starts from: the
 document the app mounts into, in the browser's theme, with the tags
 that load it. The app sits behind a sign-in, so search engines are
-asked not to index it.
+asked not to index it. When the app reports its errors, the page names
+where to, and which environment and release the reports come from.
 */
 
-templ Shell(lang, chosenTheme string, assets templ.Component) {
+/*
+Reporting is where the browser app sends its errors: an empty DSN sends
+nothing.
+*/
+type Reporting struct {
+	DSN         string
+	Environment string
+	Release     string
+}
+
+templ Shell(lang, chosenTheme string, reporting Reporting, assets templ.Component) {
 	<!DOCTYPE html>
 	<html lang={ lang } class={ theme.Root(chosenTheme) } data-accent="emerald">
 		<head>
@@ -17,6 +28,11 @@ templ Shell(lang, chosenTheme string, assets templ.Component) {
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<meta name="robots" content="noindex"/>
 			<meta name="color-scheme" content="light dark"/>
+			if reporting.DSN != "" {
+				<meta name="dimmi-errors-dsn" content={ reporting.DSN }/>
+				<meta name="dimmi-errors-environment" content={ reporting.Environment }/>
+				<meta name="dimmi-errors-release" content={ reporting.Release }/>
+			}
 			<title>Dimmi</title>
 			<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCA0MCI+PHN0eWxlPmd7ZmlsbDojMDAwMDAwfUBtZWRpYSAocHJlZmVycy1jb2xvci1zY2hlbWU6ZGFyayl7Z3tmaWxsOiNGRkZGRkZ9fTwvc3R5bGU+PGcgZmlsbC1ydWxlPSJldmVub2RkIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNCwtNCkiPjxwYXRoIGQ9Ik00LDI0IEEyMCwyMCAwIDAgMSAxOC44NjksNC42NjkgTDQzLjMzMSwyOS4xMzEgQTIwLDIwIDAgMCAxIDI0LDQ0IEwxMSw0NCBBNyw3IDAgMCAxIDQsMzcgWiIvPjxwYXRoIGQ9Ik0yMS45MSw0LjExIEEyMCwyMCAwIDAgMSAzMC4xNzgsNC45NzggTDQzLjAyMiwxNy44MjIgQTIwLDIwIDAgMCAxIDQzLjg5LDI2LjA5IFoiLz48L2c+PC9nPjwvc3ZnPg=="/>
 			@theme.Script()
