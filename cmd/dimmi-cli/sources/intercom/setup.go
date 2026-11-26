@@ -10,29 +10,18 @@ import (
 )
 
 /*
-Help walks the person through making a private app with read
-permissions in their own Intercom Developer Hub.
+Help walks the person through making an app in their own Intercom
+Developer Hub and copying its token: Intercom has no API keys apart
+from an app's.
 */
 const Help template.HTML = `
-<p>dimmi reads Intercom with a token from a private app in your own workspace. It only reads.</p>
+<p>dimmi reads Intercom with a token from an app in your own Intercom workspace. It only reads.</p>
 <ol>
-  <li>In Intercom, open <b>Settings → Integrations → Developer Hub</b>, or go to <code>app.intercom.com/a/apps/_/developer-hub</code>.</li>
-  <li>Click <b>New app</b>. Name it <b>dimmi migration</b>, pick your workspace, and create it.</li>
-  <li>Open <b>Authentication</b> in the app and click <b>Edit</b>. Tick these read permissions:
-    <ul>
-      <li>Read admins</li>
-      <li>Read and list users and companies, Read one company</li>
-      <li>Read conversations</li>
-      <li>Read tickets</li>
-      <li>Read tags</li>
-      <li>Read data attributes</li>
-      <li>Read and list articles, Read content</li>
-      <li>Read workflows, if you'll bring workflows</li>
-    </ul>
-    Leave every write permission off. Save.</li>
-  <li>Still on <b>Authentication</b>, copy the <b>Access token</b> and paste it below.</li>
+  <li>In Intercom, open <b>Settings → Integrations → Developer Hub</b>.</li>
+  <li>Click <b>New app</b>, name it <b>dimmi migration</b> and click <b>Create app</b>. The first time, Intercom asks you to accept its developer terms.</li>
+  <li>The app opens on <b>Authentication</b>. Copy the <b>Access token</b> and paste it below.</li>
 </ol>
-<p class="note">Once the move is done, delete the app in the Developer Hub and the token stops working.</p>
+<p class="note">When you've moved for good, delete the app in the Developer Hub and the token stops working.</p>
 `
 
 /*

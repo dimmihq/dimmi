@@ -9,7 +9,9 @@ You run the `dimmi` CLI on the person's computer. It reads their Intercom worksp
 
 Rules for the whole job:
 
-- **Never ask for a key, token or password in the chat**, and never read one from a file or the keychain. `dimmi migrate connect` opens a page in their browser where they paste it. If they paste a token into the chat anyway, tell them to revoke it in Intercom's Developer Hub and make a new one.
+- **Never ask for a key, token or password in the chat.** If the person pastes one anyway, tell them to delete that Intercom app in the Developer Hub and make a new one.
+- **Never open, browse or click around Intercom for the person**, and never use browser automation on their accounts. Guide them in words: where to click, what to copy. The token goes into the page `dimmi migrate connect` opens on their own computer, and from there into the system keychain.
+- **Never read the saved keys**: not the keychain (`security`, `secret-tool`, Credential Manager), not the `dimmi` config folder. You never need them; every command reads them itself.
 - Always pass `--json`. Each line is one JSON object: read `event`, `kind`, `counts`, `code` and `message`. The output holds ids and counts, never customer content.
 - Never run `rollback` unless the person asks for it in their own words, and confirm first: it deletes everything the migration created in dimmi.
 - Long runs are normal. A big workspace can take hours. Run commands in the background where you can, and report progress from the `progress` events.
@@ -45,7 +47,9 @@ On Linux use `sha256sum -c -`; in PowerShell compare `(Get-FileHash $file -Algor
 
 Self-hosted dimmi: add `--dimmi-url https://support.example.com`.
 
-Tell the person: "A page opened in your browser. Sign in to dimmi there, then follow its steps to make a read-only app in Intercom and paste its token. Tell me when the page says you're connected." The command prints a `connect_page` event with the page's address (open it for them if the browser didn't); it exits with a `connected` event once they finish. Keys go to the system keychain.
+Tell the person: "A page opened in your browser. Sign in to dimmi there. Then, in Intercom, open Settings → Integrations → Developer Hub, click New app, give it a name, and copy the access token it shows. Paste it into the dimmi page, not here. Tell me when the page says you're connected."
+
+The command prints a `connect_page` event with the page's address; if their browser didn't open, give them the address to open themselves. It exits with a `connected` event once they finish. Keys go to the system keychain.
 
 ## 3. Plan, and ask what to skip
 
