@@ -342,6 +342,7 @@
     "help-centers.live-theme.update": {"method":"PATCH","path":"/help-centers/{help_center}/live-theme","params":["help_center"],"body":"required"},
     "help-centers.show": {"method":"GET","path":"/help-centers/{help_center}","params":["help_center"],"body":"none"},
     "help-centers.store": {"method":"POST","path":"/help-centers","params":[],"body":"required"},
+    "help-centers.theme-preview.show": {"method":"GET","path":"/help-centers/{help_center}/theme-preview","params":["help_center"],"body":"none"},
     "help-centers.themes.archive.show": {"method":"GET","path":"/help-centers/{help_center}/themes/{theme}/archive","params":["help_center","theme"],"body":"none"},
     "help-centers.themes.index": {"method":"GET","path":"/help-centers/{help_center}/themes","params":["help_center"],"body":"none"},
     "help-centers.themes.show": {"method":"GET","path":"/help-centers/{help_center}/themes/{theme}","params":["help_center","theme"],"body":"none"},

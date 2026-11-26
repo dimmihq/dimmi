@@ -103,7 +103,8 @@ its own, its settings, its zip, and the version its pages wear.
 */
 func themeRoutes(workspace *routing.Router, a *app.App) {
 	th := &v1.HelpCenterThemeController{
-		Themes: a.Actions.HelpThemes, Addresses: a.Actions.HelpCenterAddresses, IDs: a.IDs,
+		Themes: a.Actions.HelpThemes, HelpCenters: a.Actions.HelpCenters, Addresses: a.Actions.HelpCenterAddresses,
+		IDs: a.IDs, Pages: a.Router.Handler,
 	}
 	themes, one := "/help-centers/{help_center}/themes", "/help-centers/{help_center}/themes/{theme}"
 
@@ -113,6 +114,8 @@ func themeRoutes(workspace *routing.Router, a *app.App) {
 	routing.Get(workspace, one, "help-centers.themes.show", th.Show).Ability("settings:write")
 	routing.Patch(workspace, one, "help-centers.themes.update", th.Update).Ability("settings:write")
 	routing.Get(workspace, one+"/archive", "help-centers.themes.archive.show", th.Download).Ability("settings:write")
+	routing.Get(workspace, "/help-centers/{help_center}/theme-preview", "help-centers.theme-preview.show", th.Preview).
+		Ability("settings:write")
 	routing.Patch(workspace, "/help-centers/{help_center}/live-theme", "help-centers.live-theme.update", th.UpdateLive).
 		Ability("settings:write")
 }

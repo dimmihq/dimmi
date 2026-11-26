@@ -7,6 +7,7 @@ the same sign-in, kept in the system keychain.
 	dimmi login             sign in to dimmi in the browser
 	dimmi logout            forget the sign-in
 	dimmi migrate …         move history in from another support tool
+	dimmi theme …           build, preview and publish a help center theme
 	dimmi version           print the version
 
 Output is short lines for people, or one JSON object a line with --json,
@@ -53,6 +54,7 @@ Commands:
   login        Sign in to dimmi, in your browser
   logout       Forget the sign-in
   migrate      Move your history into dimmi from Intercom ("dimmi migrate -h")
+  theme        Build, preview and publish your help center's theme ("dimmi theme -h")
   version      Print the version
 
 Flags for every command:
@@ -150,6 +152,11 @@ func dispatch(ctx context.Context, name string, args []string) error {
 	case "migrate":
 		var err error
 		if cmd, args, err = a.migrate(ctx, args); err != nil || cmd.flags == nil {
+			return err
+		}
+	case "theme":
+		var err error
+		if cmd, args, err = a.theme(ctx, args); err != nil || cmd.flags == nil {
 			return err
 		}
 	default:

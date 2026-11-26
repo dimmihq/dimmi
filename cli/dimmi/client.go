@@ -32,9 +32,20 @@ Error is an error answer from dimmi. Message is dimmi's own words,
 which never echo a record's content.
 */
 type Error struct {
-	Status  int
-	Code    string
-	Message string
+	Status   int
+	Code     string
+	Message  string
+	Problems []Problem
+}
+
+/*
+Problem is one thing dimmi found wrong with what it was sent, such as a
+theme's template, at its file and line when it has them.
+*/
+type Problem struct {
+	File    string `json:"file,omitempty"`
+	Line    int    `json:"line,omitempty"`
+	Message string `json:"message"`
 }
 
 /*
@@ -301,12 +312,13 @@ func decode(res *http.Response, out any) error {
 		e := &Error{Status: res.StatusCode}
 
 		var body struct {
-			Code    string `json:"code"`
-			Message string `json:"message"`
+			Code     string    `json:"code"`
+			Message  string    `json:"message"`
+			Problems []Problem `json:"problems"`
 		}
 
 		if json.Unmarshal(raw, &body) == nil {
-			e.Code, e.Message = body.Code, body.Message
+			e.Code, e.Message, e.Problems = body.Code, body.Message, body.Problems
 		}
 
 		if e.Code == "" {
@@ -321,6 +333,12 @@ func decode(res *http.Response, out any) error {
 	}
 
 	if out == nil || len(raw) == 0 {
+		return nil
+	}
+
+	if keep, ok := out.(*rawBody); ok {
+		*keep = raw
+
 		return nil
 	}
 

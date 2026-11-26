@@ -12,16 +12,20 @@
 package v1
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/liquid"
 
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/exceptions"
+	"github.com/dimmihq/dimmi/app/http/controllers/web"
 	"github.com/dimmihq/dimmi/app/http/requests"
 	"github.com/dimmihq/dimmi/app/http/resources"
 	"github.com/dimmihq/dimmi/app/models"
@@ -31,9 +35,55 @@ import (
 HelpCenterThemeController serves help centers' themes.
 */
 type HelpCenterThemeController struct {
-	Themes    *helpcenters.Themes
-	Addresses helpcenters.Addresses
-	IDs       *ids.Registry
+	Themes      *helpcenters.Themes
+	HelpCenters *helpcenters.HelpCenters
+	Addresses   helpcenters.Addresses
+	IDs         *ids.Registry
+	Pages       func() (fhttp.Handler, error)
+}
+
+/*
+ThemePreviewOutput is a page built for a preview.
+*/
+type ThemePreviewOutput struct {
+	Body fhttp.Resource[resources.ThemePreview]
+}
+
+/*
+previewTime bounds building one page for a preview.
+*/
+const previewTime = 10 * time.Second
+
+/*
+Preview builds the page at a path of the help center as a signed-out
+reader gets it and answers with its template and variables, for
+`dimmi theme preview` to render with the theme being written.
+*/
+func (c *HelpCenterThemeController) Preview(ctx context.Context, in *requests.ThemePreviewRequest,
+) (*ThemePreviewOutput, error) {
+	hc, err := c.decode(models.PrefixHelpCenter, in.HelpCenter)
+	if err != nil {
+		return nil, err
+	}
+	h, err := c.HelpCenters.Show(ctx, membership(ctx), hc)
+	if err != nil {
+		return nil, err
+	}
+	pages, err := c.Pages()
+	if err != nil {
+		return nil, err
+	}
+	build, cancel := context.WithTimeout(context.WithoutCancel(ctx), previewTime)
+	defer cancel()
+	p, err := web.PreviewPage(build, pages, h.Subdomain, cmp.Or(in.Path, "/"))
+	if err != nil {
+		return nil, err
+	}
+	out := resources.ThemePreview{Object: "theme_preview", Status: p.Status, Location: p.Location, Template: p.Template}
+	if p.Globals != nil {
+		out.Variables, _ = liquid.Encode(p.Globals).(map[string]any)
+	}
+	return &ThemePreviewOutput{Body: fhttp.NewResource(out)}, nil
 }
 
 /*

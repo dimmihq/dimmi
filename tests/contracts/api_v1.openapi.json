@@ -34319,6 +34319,18 @@
         ],
         "type": "object"
       },
+      "ResourceThemePreview": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ThemePreview"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceTicket": {
         "additionalProperties": false,
         "properties": {
@@ -42003,6 +42015,34 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "ThemePreview": {
+        "additionalProperties": false,
+        "properties": {
+          "location": {
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "status": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "template": {
+            "type": "string"
+          },
+          "variables": {
+            "additionalProperties": {},
+            "type": "object"
+          }
+        },
+        "required": [
+          "object",
+          "status"
+        ],
         "type": "object"
       },
       "Ticket": {
@@ -66799,6 +66839,58 @@
           }
         },
         "summary": "Change the theme a help center wears",
+        "x-abilities": [
+          "settings:write"
+        ]
+      }
+    },
+    "/help-centers/{help_center}/theme-preview": {
+      "get": {
+        "operationId": "help-centers.theme-preview.show",
+        "parameters": [
+          {
+            "description": "Id of the help center, starting with hc_, such as hc_01jx2m8k4t. Find it with GET /help-centers.",
+            "in": "path",
+            "name": "help_center",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The page's path, such as /articles/install or /fr.",
+            "explode": false,
+            "in": "query",
+            "name": "path",
+            "schema": {
+              "description": "The page's path, such as /articles/install or /fr.",
+              "maxLength": 2048,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceThemePreview"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
         "x-abilities": [
           "settings:write"
         ]

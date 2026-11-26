@@ -179,3 +179,23 @@ func names(t *testing.T, archive []byte) []string {
 	}
 	return out
 }
+
+func TestHelpCenterThemePreview(t *testing.T) {
+	t.Parallel()
+	c := newCenter(t)
+	body := testkit.JSON{"title": "Install the widget", "body_markdown": "Paste **this**."}
+	id := c.article(t, body).String("data.id")
+	c.d.Owner.PostJSON("/api/v1/articles/"+id+"/publications", nil).AssertOK()
+	path := "/api/v1/help-centers/" + c.id + "/theme-preview?path="
+
+	home := c.d.Owner.GetJSON(path + "/").AssertOK()
+	home.AssertJSONPath("data.template", "home").AssertJSONPath("data.status", float64(200))
+	assert.NotEmpty(t, home.String("data.variables.help_center.name"))
+	assert.Contains(t, home.String("data.variables.platform_assets"), "$html")
+
+	missing := c.d.Owner.GetJSON(path + "/articles/nope").AssertOK()
+	missing.AssertJSONPath("data.template", "404").AssertJSONPath("data.status", float64(404))
+
+	search := c.d.Owner.GetJSON(path + url.QueryEscape("/search?q=widget")).AssertOK()
+	search.AssertJSONPath("data.template", "search").AssertJSONPath("data.variables.search.query", "widget")
+}
