@@ -52,6 +52,7 @@ func (t *Telemetry) setupReporting(cfg Config) error {
 	client, err := sentry.NewClient(sentry.ClientOptions{
 		Dsn:              cfg.SentryDSN,
 		Environment:      cfg.Environment,
+		Release:          cfg.Release,
 		AttachStacktrace: true,
 	})
 	if err != nil {

@@ -54,7 +54,8 @@ WithExporter, such as otlp from the telemetry/otlp package, which sends
 spans over HTTP to OTLPEndpoint, the full URL that receives traces such
 as http://collector:4318/v1/traces, with OTLPHeaders on every request.
 Metrics is none or prometheus, served by MetricsHandler. Errors are
-reported to Sentry only when SentryDSN is set.
+reported to Sentry only when SentryDSN is set, each tagged with Release,
+the build that sent it.
 */
 type Config struct {
 	ServiceName  string            `default:"app"  koanf:"service_name"`
@@ -64,6 +65,7 @@ type Config struct {
 	OTLPHeaders  map[string]string `koanf:"otlp_headers"`
 	Metrics      string            `default:"none" koanf:"metrics"`
 	SentryDSN    string            `koanf:"sentry_dsn"`
+	Release      string            `koanf:"release"`
 }
 
 /*

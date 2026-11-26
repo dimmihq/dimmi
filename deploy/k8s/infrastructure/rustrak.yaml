@@ -1,0 +1,228 @@
+# Error reports from every environment, kept on this cluster. Rustrak speaks
+# the Sentry protocol, so the app and the dashboard report through the
+# official Sentry SDKs. One instance serves staging and production: each
+# report carries its environment, and the dashboard filters by it.
+#
+#   api        project 1, the Go app (web, worker, scheduler). It reports
+#              inside the cluster, to rustrak.rustrak.svc:8080.
+#   dashboard  project 2, the browser app. It reports to the public host,
+#              errors.trydimmi.com, which staging's edge serves
+#              (apps/staging/edge/errors.caddy).
+#
+# Both projects and their DSN keys are fixed in rustrak.toml below. A DSN key
+# only lets a sender submit events, and the dashboard's key ships to every
+# browser anyway, so they are not secrets.
+#
+# Secret rustrak holds the session key, the first owner and the API token CI
+# uploads source maps with. scripts/rustrak.sh makes it once, before this is
+# applied, and never prints a value. Read the owner's sign-in with:
+#
+#   kubectl -n rustrak get secret rustrak -o jsonpath='{.data.CREATE_SUPERUSER}' | base64 -d
+#
+# Reports are diagnostics, not customers' records, so the database has no
+# off-site backup; its volume is kept like every other (data-retain).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rustrak
+  labels:
+    dimmi.com/protected: "true"
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: rustrak-postgres
+  namespace: rustrak
+  labels:
+    dimmi.com/protected: "true"
+spec:
+  instances: 1
+  inheritedMetadata:
+    labels:
+      dimmi.com/protected: "true"
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-trixie
+  storage:
+    storageClass: data-retain
+    size: 10Gi
+  bootstrap:
+    initdb:
+      database: rustrak
+      owner: rustrak
+      dataChecksums: true
+  postgresql:
+    parameters:
+      max_connections: "50"
+      shared_buffers: 64MB
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rustrak-data
+  namespace: rustrak
+  labels:
+    dimmi.com/protected: "true"
+spec:
+  storageClassName: data-retain
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Applied on every start, before the database opens. A project already in
+# the database is left as it is; a key that differs from the stored one
+# stops the server, so a key is never changed here.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rustrak
+  namespace: rustrak
+data:
+  rustrak.toml: |
+    [[bootstrap.projects]]
+    id = 1
+    name = "api"
+    slug = "api"
+    platform = "go"
+    sentry_key = "8de2f491f94f2d93fe021f35484d3077"
+
+    [[bootstrap.projects]]
+    id = 2
+    name = "dashboard"
+    slug = "dashboard"
+    platform = "javascript-react"
+    sentry_key = "76f1924f64f127f474b8cc70bb4a2530"
+
+    [[bootstrap.tokens]]
+    name = "ci"
+    description = "Uploads the dashboard's source maps from main's build"
+    token_file = "/etc/rustrak/secret/CI_TOKEN"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustrak
+  namespace: rustrak
+  labels:
+    app.kubernetes.io/name: rustrak
+spec:
+  replicas: 1
+  # One process per database, and the volume mounts on one pod at a time.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rustrak
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rustrak
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: rustrak
+          image: rustrak/rustrak-server:v0.34.1-postgres
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rustrak-postgres-app
+                  key: password
+            - name: DATABASE_URL
+              value: postgres://rustrak:$(DB_PASSWORD)@rustrak-postgres-rw:5432/rustrak
+            - name: PUBLIC_URL
+              value: https://errors.trydimmi.com
+            - name: SSL_PROXY
+              value: "true"
+            - name: RUSTRAK_CONFIG
+              value: /etc/rustrak/rustrak.toml
+            - name: RUSTRAK_TELEMETRY
+              value: "off"
+            - name: SESSION_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rustrak
+                  key: SESSION_SECRET_KEY
+            - name: CREATE_SUPERUSER
+              valueFrom:
+                secretKeyRef:
+                  name: rustrak
+                  key: CREATE_SUPERUSER
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /etc/rustrak/rustrak.toml
+              subPath: rustrak.toml
+              readOnly: true
+            - name: secret
+              mountPath: /etc/rustrak/secret
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: rustrak-data
+        - name: config
+          configMap:
+            name: rustrak
+        - name: secret
+          secret:
+            secretName: rustrak
+            items:
+              - key: CI_TOKEN
+                path: CI_TOKEN
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustrak
+  namespace: rustrak
+spec:
+  selector:
+    app.kubernetes.io/name: rustrak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

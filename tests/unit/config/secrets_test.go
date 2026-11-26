@@ -15,10 +15,11 @@ import (
 
 /*
 publicSetting reports whether a setting named like a secret is safe to
-print.
+print: the captcha's site key and the browser app's error DSN both ship
+in every page.
 */
 func publicSetting(path string) bool {
-	return path == "auth.captcha.site_key"
+	return path == "auth.captcha.site_key" || path == "frontend.errors_dsn"
 }
 
 /*

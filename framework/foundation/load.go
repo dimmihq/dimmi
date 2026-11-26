@@ -79,6 +79,7 @@ func (c *Config) complete(opts Options) {
 
 	c.Telemetry.Environment = cmp.Or(c.Telemetry.Environment, string(c.App.Env))
 	c.App.Release = cmp.Or(c.App.Release, buildRevision())
+	c.Telemetry.Release = cmp.Or(c.Telemetry.Release, c.App.Release)
 	c.Redis.KeyPrefix = cmp.Or(c.Redis.KeyPrefix, cmp.Or(opts.Name, "app")+":")
 
 	c.Hashing.Default = cmp.Or(c.Hashing.Default, "argon2id")

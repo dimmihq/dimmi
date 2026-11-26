@@ -1,3 +1,4 @@
 allowBuilds:
+  '@sentry/cli': false
   '@swc/core': false
   protobufjs: false

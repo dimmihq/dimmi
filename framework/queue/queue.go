@@ -64,7 +64,14 @@ type Config struct {
 	PollInterval time.Duration  `default:"1s" koanf:"poll_interval"`
 	NoLeader     bool           `koanf:"-"`
 	Clock        clock.Clock    `koanf:"-"`
+	Report       Reporter       `koanf:"-"`
 }
+
+/*
+Reporter hands a job's failure to whoever tracks errors, such as
+telemetry. Nil reports nothing.
+*/
+type Reporter func(ctx context.Context, err error)
 
 /*
 Queue pushes jobs and, on worker nodes, runs them.
@@ -208,6 +215,7 @@ func (q *Queue) riverConfig(ctx context.Context, cfg Config) *river.Config {
 		JobTimeout:        cfg.JobTimeout,
 		FetchPollInterval: cfg.PollInterval,
 		FetchCooldown:     min(cfg.PollInterval, river.FetchCooldownDefault),
+		ErrorHandler:      reportingHandler{report: cfg.Report},
 
 		LeaderElectionDisabled: cfg.NoLeader,
 	}
