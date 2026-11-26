@@ -53,11 +53,15 @@ type Fields struct {
 }
 
 /*
-CreateContactInput is who adds which contact.
+CreateContactInput is who adds which contact. CompanyIDs are the
+companies they belong to, the first their default unless CompanyID
+names it.
 */
 type CreateContactInput struct {
 	Membership authz.Membership
 	Fields     Fields
+	CompanyID  *ids.UUID
+	CompanyIDs []ids.UUID
 }
 
 /*
@@ -67,11 +71,13 @@ Rules:
   - The caller needs contacts:write.
   - An external id another contact holds is refused.
   - An address another contact receives mail at is refused.
+  - Companies must be live ones of the workspace, at most 300.
 
 Events: [appevents.ContactCreated].
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrContactExists],
 [exceptions.ErrContactEmailTaken], [exceptions.ErrInvalidAttributes],
+[exceptions.ErrCompanyNotFound], [exceptions.ErrCompanyLimitReached],
 or a wrapped database error.
 */
 type CreateContact struct {
@@ -83,12 +89,12 @@ type CreateContact struct {
 /*
 Handle adds the contact and returns it.
 */
-func (a *CreateContact) Handle(ctx context.Context, in CreateContactInput) (models.Contact, error) {
+func (a *CreateContact) Handle(ctx context.Context, in CreateContactInput) (Detail, error) {
 	if !in.Membership.Can("contacts:write") {
-		return models.Contact{}, exceptions.ErrForbidden
+		return Detail{}, exceptions.ErrForbidden
 	}
 
-	var out models.Contact
+	var out Detail
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		var err error
@@ -100,13 +106,24 @@ func (a *CreateContact) Handle(ctx context.Context, in CreateContactInput) (mode
 			return err
 		}
 
-		out, err = Create(ctx, tx, a.Clock.Now(), n)
+		contact, err := Create(ctx, tx, a.Clock.Now(), n)
 		if err != nil {
 			return err
 		}
 
+		if len(in.CompanyIDs) > 0 || in.CompanyID != nil {
+			want := CompanySet{IDs: in.CompanyIDs, Default: in.CompanyID, Now: a.Clock.Now()}
+			if contact, _, err = SetCompanies(ctx, models.New(tx), contact, want); err != nil {
+				return err
+			}
+		}
+
+		if out, err = LoadDetail(ctx, models.New(tx), contact); err != nil {
+			return err
+		}
+
 		return a.Events.Dispatch(ctx, tx, appevents.ContactCreated{
-			WorkspaceID: out.WorkspaceID, ContactID: out.ID, ActorID: in.Membership.Member.ID,
+			WorkspaceID: contact.WorkspaceID, ContactID: contact.ID, ActorID: in.Membership.Member.ID,
 		})
 	})
 

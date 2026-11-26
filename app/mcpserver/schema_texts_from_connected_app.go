@@ -28,6 +28,8 @@ func schemaTextsFromConnectedApp() map[string]map[string]string {
 				"or disconnected.",
 		},
 		"Contact": {
+			"companies": "Every company the contact belongs to, the default marked with is_default. " +
+				"company_id and company name the default. Empty when the contact has none.",
 			"avatar_url": "URL of the contact's picture. Null when they have none.",
 			"blocked":    "True when the team has blocked this contact.",
 			"custom_attributes": "The contact's custom attributes as an object of names and values, " +

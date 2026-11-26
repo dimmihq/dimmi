@@ -72,6 +72,24 @@ type Facts interface {
 }
 
 /*
+EachFacts is Facts for a person with several values of one field, such
+as a contact who belongs to several companies. LookupEach returns one
+value per company, nil where that one has none, and false when the
+field has a single value. A condition then holds when any value meets
+it; a negative condition, such as "is not", holds only when every value
+does.
+*/
+type EachFacts interface {
+	Facts
+
+	/*
+		LookupEach returns every value of the field and whether it has
+		several.
+	*/
+	LookupEach(key string) ([]any, bool)
+}
+
+/*
 Values is a ready map of field keys to values.
 */
 type Values map[string]any
@@ -278,6 +296,12 @@ func evalLeaf(n *node, env Env) Truth {
 		return Unknown
 	}
 
+	if each, ok := env.Facts.(EachFacts); ok {
+		if values, several := each.LookupEach(factKey(n)); several {
+			return evalEach(n, env, values)
+		}
+	}
+
 	var value any
 	present := false
 
@@ -285,8 +309,37 @@ func evalLeaf(n *node, env Env) Truth {
 		value, present = env.Facts.Lookup(factKey(n))
 	}
 
+	if !present {
+		value = nil
+	}
+
+	return decide(n, env, value)
+}
+
+/*
+evalEach decides a condition on a field with several values: any value
+meeting it is enough, except for a negative condition, which every value
+must meet.
+*/
+func evalEach(n *node, env Env, values []any) Truth {
+	all := negative(n.op)
+
+	for _, v := range values {
+		held := decide(n, env, v) == True
+		if held != all {
+			return truth(held)
+		}
+	}
+
+	return truth(all)
+}
+
+/*
+decide checks one value against a condition; nil is no value.
+*/
+func decide(n *node, env Env, value any) Truth {
 	normalized := normalize(n, value)
-	if !present || normalized == nil {
+	if value == nil || normalized == nil {
 		return truth(negative(n.op) && !env.Strict)
 	}
 

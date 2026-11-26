@@ -1,6 +1,7 @@
 /*
  * The moves a teammate makes on a case: who holds it, the team it sits
- * with, its status and its priority. Each goes to the server, which records it in the
+ * with, its status, its priority and which of the customer's companies
+ * it is about. Each goes to the server, which records it in the
  * thread as an event so the history says who did what; the open
  * conversation, its timeline, the lists and the sidebar's counts are
  * then read again. Each change carries an id, so its realtime echo is
@@ -79,6 +80,7 @@ export function useCase(workspace: string, conversation: Conversation) {
     setStatus: (status: ConversationStatus) =>
       change.mutate(status === "snoozed" ? { status, snooze_preset: "tomorrow" } : { status }),
     setPriority: (priority: ConversationPriority) => change.mutate({ priority }),
+    setCompany: (company_id: string) => change.mutate({ company_id }),
     addTag: (name: string) => change.mutate({ add_tags: [name] }),
     removeTag: (id: string) => change.mutate({ remove_tags: [id] }),
     trash: () => trash.mutate(),

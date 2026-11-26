@@ -26,7 +26,9 @@ import (
 Conversation is one conversation with what is shown beside it. Viewers
 are the teammates viewing it, present only when the list asked for them
 and they arrived in time. AiPendingApprovals counts the agent's calls in
-it waiting for a teammate's approval.
+it waiting for a teammate's approval. Company is the company the
+conversation is about: the contact's default company when it began, or
+another of their companies a teammate switched it to.
 */
 type Conversation struct {
 	ID                     string                           `json:"id"`
@@ -48,6 +50,7 @@ type Conversation struct {
 	Channel                Channel                          `json:"channel"`
 	Inbox                  Named                            `json:"inbox"`
 	Contact                ContactSummary                   `json:"contact"`
+	Company                *CompanySummary                  `json:"company"`
 	Assignee               *MemberSummary                   `json:"assignee"`
 	Team                   *Named                           `json:"team"`
 	AssignmentWait         *AssignmentWait                  `json:"assignment_wait"`
@@ -113,6 +116,10 @@ func NewConversation(l conversations.Loaded) Conversation {
 		MessageCount: c.MessageCount, Channel: NewChannel(l.Connection),
 		Inbox:   Named{ID: models.PublicID(models.PrefixInbox, l.Inbox.ID), Object: "inbox", Name: l.Inbox.Name},
 		Contact: NewContactSummary(l.Contact), Tags: NewTags(l.Tags), CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
+	}
+
+	if l.Company != nil {
+		out.Company = new(NewCompanySummary(*l.Company))
 	}
 
 	if l.Assignee != nil {

@@ -23,6 +23,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/companies"
+	"github.com/dimmihq/dimmi/app/actions/contacts"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/http/requests"
@@ -75,6 +76,7 @@ type CompanyController struct {
 	Change        *companies.UpdateCompany
 	Remove        *companies.DeleteCompany
 	People        *companies.ListCompanyContacts
+	Describe      *contacts.DescribeContacts
 	Conversations *conversations.ListRecordConversations
 	IDs           *ids.Registry
 	Cursors       *pagination.Cursors
@@ -277,7 +279,12 @@ func (c *CompanyController) Contacts(ctx context.Context, in *requests.CompanyRe
 		return nil, err
 	}
 
-	out := pagination.Page[resources.Contact]{Items: resources.NewContacts(page.Contacts), Limit: input.Limit}
+	details, err := c.Describe.Handle(ctx, page.Contacts)
+	if err != nil {
+		return nil, err
+	}
+
+	out := pagination.Page[resources.Contact]{Items: resources.NewContactDetails(details), Limit: input.Limit}
 	if page.More {
 		last := page.Contacts[len(page.Contacts)-1]
 		if out.NextCursor, err = c.Cursors.Encode(timeCursor{At: last.CreatedAt, ID: last.ID}); err != nil {

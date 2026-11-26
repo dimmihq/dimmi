@@ -38,7 +38,10 @@ type User struct {
 	Timezone      string
 	SignedUpAt    time.Time
 	Company       *Company
-	Attributes    map[string]any
+	// Companies are further companies the user belongs to, 50 at most;
+	// Company stays the default one.
+	Companies  []Company
+	Attributes map[string]any
 }
 
 // Company is the company a user belongs to; ID is required.
@@ -121,22 +124,47 @@ func Claims(u User) (map[string]any, error) {
 		claims["custom_attributes"] = attrs
 	}
 	if u.Company != nil {
-		if u.Company.ID == "" {
-			return nil, identityErr("identify_user_invalid", "company needs an id.")
-		}
-		company := map[string]any{"id": u.Company.ID}
-		set(company, "name", u.Company.Name)
-		set(company, "domain", u.Company.Domain)
-		if len(u.Company.Attributes) > 0 {
-			ca, err := checkAttributes(u.Company.Attributes)
-			if err != nil {
-				return nil, err
-			}
-			company["custom_attributes"] = ca
+		company, err := companyClaims(*u.Company)
+		if err != nil {
+			return nil, err
 		}
 		claims["company"] = company
 	}
+	if len(u.Companies) > maxCompanies {
+		return nil, identityErr("company_limit", fmt.Sprintf("send at most %d companies; add others through the API.", maxCompanies))
+	}
+	if len(u.Companies) > 0 {
+		list := make([]map[string]any, 0, len(u.Companies))
+		for _, c := range u.Companies {
+			company, err := companyClaims(c)
+			if err != nil {
+				return nil, err
+			}
+			list = append(list, company)
+		}
+		claims["companies"] = list
+	}
 	return claims, nil
+}
+
+// maxCompanies is the most companies the companies claim may list.
+const maxCompanies = 50
+
+func companyClaims(c Company) (map[string]any, error) {
+	if c.ID == "" {
+		return nil, identityErr("identify_user_invalid", "company needs an id.")
+	}
+	company := map[string]any{"id": c.ID}
+	set(company, "name", c.Name)
+	set(company, "domain", c.Domain)
+	if len(c.Attributes) > 0 {
+		ca, err := checkAttributes(c.Attributes)
+		if err != nil {
+			return nil, err
+		}
+		company["custom_attributes"] = ca
+	}
+	return company, nil
 }
 
 func set(m map[string]any, name, value string) {

@@ -202,11 +202,30 @@ func TestClaims(t *testing.T) {
 		{dimmi.User{ID: "1", Attributes: map[string]any{"Plan": 1}}, "attribute_key_invalid"},
 		{dimmi.User{ID: "1", Attributes: map[string]any{"plan": []int{1}}}, "attribute_value_invalid"},
 		{dimmi.User{ID: "1", Company: &dimmi.Company{}}, "identify_user_invalid"},
+		{dimmi.User{ID: "1", Companies: []dimmi.Company{{ID: "c1"}, {Name: "Acme"}}}, "identify_user_invalid"},
+		{dimmi.User{ID: "1", Companies: make([]dimmi.Company, 51)}, "company_limit"},
 	} {
 		var ie *dimmi.IdentityError
 		if _, err := dimmi.Claims(c.user); !errors.As(err, &ie) || ie.Code != c.code {
 			t.Errorf("want %s got %v", c.code, err)
 		}
+	}
+}
+
+func TestClaimsCompanies(t *testing.T) {
+	claims, err := dimmi.Claims(dimmi.User{
+		ID: "42", Company: &dimmi.Company{ID: "c1"},
+		Companies: []dimmi.Company{{ID: "c2", Name: "Beta", Domain: "beta.test"}, {ID: "c3"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	list := claims["companies"].([]map[string]any)
+	if len(list) != 2 || list[0]["id"] != "c2" || list[0]["domain"] != "beta.test" || list[1]["id"] != "c3" {
+		t.Fatalf("%v", claims["companies"])
+	}
+	if claims["company"].(map[string]any)["id"] != "c1" {
+		t.Fatalf("%v", claims["company"])
 	}
 }
 

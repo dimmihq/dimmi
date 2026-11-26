@@ -73,6 +73,24 @@ describe("identity tokens", () => {
     expect(() => toClaims({ id: "u", plan: "pro" } as never)).toThrow(/user_field_unknown/);
   });
 
+  it("lists further companies and refuses one without an id or more than fifty", () => {
+    expect(
+      toClaims({
+        id: "u1",
+        company: { id: "c1" },
+        companies: [{ id: 8, name: "Beta", domain: "beta.test" }, { id: "c3" }],
+      }),
+    ).toEqual({
+      sub: "u1",
+      company: { id: "c1" },
+      companies: [{ id: "8", name: "Beta", domain: "beta.test" }, { id: "c3" }],
+    });
+    expect(toClaims({ id: "u1", companies: [] })).toEqual({ sub: "u1" });
+    expect(() => toClaims({ id: "u", companies: [{ name: "x" } as never] })).toThrow(/identify_user_invalid/);
+    const many = Array.from({ length: 51 }, (_, i) => ({ id: `c${i}` }));
+    expect(() => toClaims({ id: "u", companies: many })).toThrow(/company_limit/);
+  });
+
   it("refuses a lifetime over an hour and a missing secret", async () => {
     await expect(signIdentityToken({ id: "u" }, { secret, expiresIn: 7200 })).rejects.toThrow(/expires_in_invalid/);
     await expect(signIdentityToken({ id: "u" })).rejects.toThrow(/secret_missing/);

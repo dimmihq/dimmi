@@ -56,7 +56,7 @@ func (q *Queries) ListChannelMemberLinks(ctx context.Context, arg ListChannelMem
 }
 
 const listContactConnectionConversations = `-- name: ListContactConnectionConversations :many
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory, ai_agent_id, ai_transferred_from_ids FROM conversations
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory, ai_agent_id, ai_transferred_from_ids, company_id FROM conversations
 WHERE workspace_id = $1 AND channel_connection_id = $2
   AND contact_id = $3 AND deleted_at IS NULL
 ORDER BY last_message_at DESC NULLS LAST, id DESC
@@ -132,6 +132,7 @@ func (q *Queries) ListContactConnectionConversations(ctx context.Context, arg Li
 			&i.AiMemory,
 			&i.AiAgentID,
 			&i.AiTransferredFromIds,
+			&i.CompanyID,
 		); err != nil {
 			return nil, err
 		}
@@ -144,7 +145,7 @@ func (q *Queries) ListContactConnectionConversations(ctx context.Context, arg Li
 }
 
 const listMemberOpenConversations = `-- name: ListMemberOpenConversations :many
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory, ai_agent_id, ai_transferred_from_ids FROM conversations
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory, ai_agent_id, ai_transferred_from_ids, company_id FROM conversations
 WHERE workspace_id = $1 AND assignee_member_id = $2 AND status = 'open'
   AND deleted_at IS NULL AND NOT spam
 ORDER BY last_message_at DESC NULLS LAST, id DESC
@@ -214,6 +215,7 @@ func (q *Queries) ListMemberOpenConversations(ctx context.Context, arg ListMembe
 			&i.AiMemory,
 			&i.AiAgentID,
 			&i.AiTransferredFromIds,
+			&i.CompanyID,
 		); err != nil {
 			return nil, err
 		}

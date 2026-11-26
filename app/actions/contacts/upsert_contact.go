@@ -47,6 +47,7 @@ type UpsertInput struct {
 	Fields     Fields
 	Cleared    map[string]bool
 	Company    *companies.Fields
+	CompanyIDs []ids.UUID
 }
 
 /*
@@ -151,6 +152,20 @@ func (r upsertRun) upsert(ctx context.Context) (Upserted, error) {
 		return Upserted{}, err
 	}
 
+	contact, changes, err := r.addCompanies(ctx, contact)
+	if err != nil {
+		return Upserted{}, err
+	}
+
+	if matched && len(changes) > 0 {
+		if err := r.a.Events.Dispatch(ctx, r.tx, appevents.ContactUpdated{
+			WorkspaceID: contact.WorkspaceID, ContactID: contact.ID, ActorID: r.in.Membership.Member.ID,
+			Changes: changes,
+		}); err != nil {
+			return Upserted{}, err
+		}
+	}
+
 	detail, err := LoadDetail(ctx, r.q, contact)
 	if err != nil {
 		return Upserted{}, err
@@ -159,6 +174,29 @@ func (r upsertRun) upsert(ctx context.Context) (Upserted, error) {
 	leads, err := r.leads(ctx, contact)
 
 	return Upserted{Detail: detail, Created: !matched, PossibleDuplicates: leads}, err
+}
+
+/*
+addCompanies adds the companies listed to those the contact belongs to,
+keeping their default, and says what changed.
+*/
+func (r upsertRun) addCompanies(ctx context.Context, c models.Contact) (models.Contact, []string, error) {
+	if len(r.in.CompanyIDs) == 0 {
+		return c, nil, nil
+	}
+
+	if _, err := r.q.LockContact(ctx, models.LockContactParams{WorkspaceID: c.WorkspaceID, ID: c.ID}); err != nil {
+		return c, nil, fmt.Errorf("lock contact: %w", err)
+	}
+
+	have, err := r.q.ContactCompanyIDs(ctx, models.ContactCompanyIDsParams{
+		WorkspaceID: c.WorkspaceID, ContactID: c.ID,
+	})
+	if err != nil {
+		return c, nil, fmt.Errorf("read contact companies: %w", err)
+	}
+
+	return SetCompanies(ctx, r.q, c, CompanySet{IDs: append(have, r.in.CompanyIDs...), Now: r.now})
 }
 
 /*

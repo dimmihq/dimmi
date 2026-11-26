@@ -992,6 +992,14 @@ type Contact struct {
 	Placeholder          bool                    `json:"placeholder"`
 }
 
+type ContactCompany struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   ids.UUID  `json:"contact_id"`
+	CompanyID   ids.UUID  `json:"company_id"`
+	IsDefault   bool      `json:"is_default"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type ContactErasure struct {
 	ID                  ids.UUID        `json:"id"`
 	WorkspaceID         ids.UUID        `json:"workspace_id"`
@@ -1110,6 +1118,7 @@ type Conversation struct {
 	AiMemory               json.RawMessage         `json:"ai_memory"`
 	AiAgentID              *ids.UUID               `json:"ai_agent_id"`
 	AiTransferredFromIds   []ids.UUID              `json:"ai_transferred_from_ids"`
+	CompanyID              *ids.UUID               `json:"company_id"`
 }
 
 type ConversationAiValue struct {

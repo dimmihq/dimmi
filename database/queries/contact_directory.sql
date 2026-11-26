@@ -13,7 +13,10 @@ WHERE c.workspace_id = @workspace_id
   AND (sqlc.narg(email)::citext IS NULL OR c.email = sqlc.narg(email)::citext)
   AND (sqlc.narg(external_id)::text IS NULL OR c.external_id = sqlc.narg(external_id)::text)
   AND (sqlc.narg(blocked)::boolean IS NULL OR (c.blocked_at IS NOT NULL) = sqlc.narg(blocked)::boolean)
-  AND (sqlc.narg(company_id)::uuid IS NULL OR c.company_id = sqlc.narg(company_id)::uuid)
+  AND (sqlc.narg(company_id)::uuid IS NULL OR c.id IN (
+      SELECT cc.contact_id FROM contact_companies AS cc
+      WHERE cc.workspace_id = @workspace_id AND cc.company_id = sqlc.narg(company_id)::uuid
+  ))
   AND (sqlc.narg(last_seen_after)::timestamptz IS NULL OR c.last_seen_at >= sqlc.narg(last_seen_after)::timestamptz)
   AND (sqlc.narg(last_seen_before)::timestamptz IS NULL OR c.last_seen_at < sqlc.narg(last_seen_before)::timestamptz)
   AND (sqlc.narg(created_after)::timestamptz IS NULL OR c.created_at >= sqlc.narg(created_after)::timestamptz)
@@ -54,7 +57,10 @@ WHERE c.workspace_id = @workspace_id
   AND (sqlc.narg(email)::citext IS NULL OR c.email = sqlc.narg(email)::citext)
   AND (sqlc.narg(external_id)::text IS NULL OR c.external_id = sqlc.narg(external_id)::text)
   AND (sqlc.narg(blocked)::boolean IS NULL OR (c.blocked_at IS NOT NULL) = sqlc.narg(blocked)::boolean)
-  AND (sqlc.narg(company_id)::uuid IS NULL OR c.company_id = sqlc.narg(company_id)::uuid)
+  AND (sqlc.narg(company_id)::uuid IS NULL OR c.id IN (
+      SELECT cc.contact_id FROM contact_companies AS cc
+      WHERE cc.workspace_id = @workspace_id AND cc.company_id = sqlc.narg(company_id)::uuid
+  ))
   AND (sqlc.narg(last_seen_after)::timestamptz IS NULL OR c.last_seen_at >= sqlc.narg(last_seen_after)::timestamptz)
   AND (sqlc.narg(last_seen_before)::timestamptz IS NULL OR c.last_seen_at < sqlc.narg(last_seen_before)::timestamptz)
   AND (sqlc.narg(created_after)::timestamptz IS NULL OR c.created_at >= sqlc.narg(created_after)::timestamptz)

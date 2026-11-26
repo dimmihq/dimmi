@@ -21,30 +21,32 @@ import (
 )
 
 /*
-Contact is one customer.
+Contact is one customer. Company is their default company; Companies
+are every company they belong to, the default first.
 */
 type Contact struct {
-	ID               string          `json:"id"`
-	Object           string          `json:"object"`
-	Kind             string          `json:"kind"`
-	Name             *string         `json:"name"`
-	Email            *string         `json:"email"`
-	EmailVerified    bool            `json:"email_verified"`
-	ExternalID       *string         `json:"external_id"`
-	Phone            *string         `json:"phone"`
-	AvatarURL        *string         `json:"avatar_url"`
-	Locale           *string         `json:"locale"`
-	Timezone         *string         `json:"timezone"`
-	CustomAttributes json.RawMessage `json:"custom_attributes"`
-	Blocked          bool            `json:"blocked"`
-	Notes            *string         `json:"notes"`
-	Location         json.RawMessage `json:"location"`
-	Company          *CompanySummary `json:"company"`
-	Tags             []Tag           `json:"tags"`
-	FirstSeenAt      *time.Time      `json:"first_seen_at"`
-	LastSeenAt       *time.Time      `json:"last_seen_at"`
-	CreatedAt        time.Time       `json:"created_at"`
-	UpdatedAt        time.Time       `json:"updated_at"`
+	ID               string           `json:"id"`
+	Object           string           `json:"object"`
+	Kind             string           `json:"kind"`
+	Name             *string          `json:"name"`
+	Email            *string          `json:"email"`
+	EmailVerified    bool             `json:"email_verified"`
+	ExternalID       *string          `json:"external_id"`
+	Phone            *string          `json:"phone"`
+	AvatarURL        *string          `json:"avatar_url"`
+	Locale           *string          `json:"locale"`
+	Timezone         *string          `json:"timezone"`
+	CustomAttributes json.RawMessage  `json:"custom_attributes"`
+	Blocked          bool             `json:"blocked"`
+	Notes            *string          `json:"notes"`
+	Location         json.RawMessage  `json:"location"`
+	Company          *CompanySummary  `json:"company"`
+	Companies        []ContactCompany `json:"companies"`
+	Tags             []Tag            `json:"tags"`
+	FirstSeenAt      *time.Time       `json:"first_seen_at"`
+	LastSeenAt       *time.Time       `json:"last_seen_at"`
+	CreatedAt        time.Time        `json:"created_at"`
+	UpdatedAt        time.Time        `json:"updated_at"`
 }
 
 /*
@@ -60,13 +62,13 @@ func NewContact(c models.Contact) Contact {
 		ID: models.PublicID(models.PrefixContact, c.ID), Object: "contact", Kind: c.Kind, Name: c.Name,
 		Email: c.Email, EmailVerified: c.EmailVerified, ExternalID: c.ExternalID, Phone: c.Phone,
 		AvatarURL: c.AvatarUrl, Locale: c.Locale, Timezone: c.Timezone, CustomAttributes: attrs,
-		Blocked: c.BlockedAt != nil, Notes: c.Notes, Location: c.Location, Tags: []Tag{},
+		Blocked: c.BlockedAt != nil, Notes: c.Notes, Location: c.Location, Tags: []Tag{}, Companies: []ContactCompany{},
 		FirstSeenAt: c.FirstSeenAt, LastSeenAt: c.LastSeenAt, CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
 	}
 }
 
 /*
-NewContactDetail shapes the contact with its company and tags.
+NewContactDetail shapes the contact with its companies and tags.
 */
 func NewContactDetail(d contacts.Detail) Contact {
 	out := NewContact(d.Contact)
@@ -76,7 +78,24 @@ func NewContactDetail(d contacts.Detail) Contact {
 		out.Company = new(NewCompanySummary(*d.Company))
 	}
 
+	for _, l := range d.Companies {
+		out.Companies = append(out.Companies, ContactCompany{
+			CompanySummary: NewCompanySummary(l.Company), IsDefault: l.IsDefault, AddedAt: l.LinkedAt,
+		})
+	}
+
 	return out
+}
+
+/*
+ContactCompany is one company a contact belongs to: whether it is their
+default and when it was added to them.
+*/
+type ContactCompany struct {
+	CompanySummary
+
+	IsDefault bool      `json:"is_default"`
+	AddedAt   time.Time `json:"added_at"`
 }
 
 /*

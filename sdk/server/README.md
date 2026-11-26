@@ -8,7 +8,7 @@ npm install @dimmi/server
 
 Set `DIMMI_IDENTITY_SECRET` from Settings > Identity verification. `DIMMI_IDENTITY_KID` is optional for that HS256 secret: without it dimmi tries each of your secrets. For RS256, ES256 or EdDSA set `DIMMI_IDENTITY_PRIVATE_KEY` and `DIMMI_IDENTITY_KID` (required) instead.
 
-Map your user to the fields dimmi knows: `id`, `email`, `emailVerified`, `name`, `phone`, `phoneVerified`, `avatarUrl`, `locale`, `timezone`, `signedUpAt`, `company` and `attributes`. Anything else goes under `attributes`, with snake_case keys that start with a letter; any other field throws `user_field_unknown`, so never pass your user object as is.
+Map your user to the fields dimmi knows: `id`, `email`, `emailVerified`, `name`, `phone`, `phoneVerified`, `avatarUrl`, `locale`, `timezone`, `signedUpAt`, `company`, `companies` (up to 50 more) and `attributes`. Anything else goes under `attributes`, with snake_case keys that start with a letter; any other field throws `user_field_unknown`, so never pass your user object as is.
 
 ```ts
 import { createIdentityHandler, signIdentityToken } from "@dimmi/server";

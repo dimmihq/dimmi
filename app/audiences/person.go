@@ -4,7 +4,7 @@
 |--------------------------------------------------------------------------
 |
 | Every surface that asks "does this person match" reads the same
-| values: the contact, their company, both sets of tags, what they did,
+| values: the contact, their companies, both sets of tags, what they did,
 | and whatever the browser reported about the page. Keeping the lookup in one place
 | means a workflow, a preview and "test a person" never disagree about
 | what contact.email_domain or company.custom.plan is.
@@ -35,10 +35,14 @@ TrustedOnly hides custom attributes the team's own systems did not set,
 for rules that decide access.
 Client holds page, visitor and session values when a browser reported
 them; it is empty for a person read from the database alone.
+Company is the contact's default company and Companies every company
+they belong to, the default first: a company condition holds when any
+of them meets it, and a negative one when all of them do.
 */
 type Person struct {
 	Contact     models.Contact
 	Company     *models.Company
+	Companies   []PersonCompany
 	ContactTags []string
 	CompanyTags []string
 	Events      map[string]eventroll.Summary
@@ -48,8 +52,35 @@ type Person struct {
 }
 
 /*
+PersonCompany is one company a person belongs to, with its tags.
+*/
+type PersonCompany struct {
+	Company models.Company
+	Tags    []string
+}
+
+/*
+LookupEach returns a company field's value for each company the person
+belongs to, when there are several.
+*/
+func (p Person) LookupEach(key string) ([]any, bool) {
+	rest, ok := strings.CutPrefix(key, "company.")
+	if !ok || len(p.Companies) < 2 {
+		return nil, false
+	}
+
+	out := make([]any, 0, len(p.Companies))
+	for _, c := range p.Companies {
+		v, _ := Present(CompanyValue(&c.Company, c.Tags, rest))
+		out = append(out, v)
+	}
+
+	return out, true
+}
+
+/*
 Lookup returns the value of a contact, company, page, visitor or
-session field.
+session field. A company field is the default company's.
 */
 func (p Person) Lookup(key string) (any, bool) {
 	root, rest, _ := strings.Cut(key, ".")
@@ -169,16 +200,12 @@ contacts, in the contacts' order. Callers set Now before evaluating.
 */
 func LoadPeople(ctx context.Context, q *models.Queries, ws ids.UUID, contacts []models.Contact) ([]Person, error) {
 	contactIDs := make([]ids.UUID, 0, len(contacts))
-	var companyIDs []ids.UUID
 
 	for _, c := range contacts {
 		contactIDs = append(contactIDs, c.ID)
-		if c.CompanyID != nil {
-			companyIDs = append(companyIDs, *c.CompanyID)
-		}
 	}
 
-	companies, companyTags, err := loadCompanies(ctx, q, ws, companyIDs)
+	linked, err := loadCompanies(ctx, q, ws, contactIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -200,10 +227,10 @@ func LoadPeople(ctx context.Context, q *models.Queries, ws ids.UUID, contacts []
 
 	out := make([]Person, 0, len(contacts))
 	for _, c := range contacts {
-		p := Person{Contact: c, ContactTags: contactTags[c.ID], Events: events[c.ID]}
-		if c.CompanyID != nil {
-			if company, ok := companies[*c.CompanyID]; ok {
-				p.Company, p.CompanyTags = &company, companyTags[company.ID]
+		p := Person{Contact: c, ContactTags: contactTags[c.ID], Events: events[c.ID], Companies: linked[c.ID]}
+		for i := range p.Companies {
+			if c.CompanyID != nil && p.Companies[i].Company.ID == *c.CompanyID {
+				p.Company, p.CompanyTags = &p.Companies[i].Company, p.Companies[i].Tags
 			}
 		}
 
@@ -214,34 +241,46 @@ func LoadPeople(ctx context.Context, q *models.Queries, ws ids.UUID, contacts []
 }
 
 /*
-loadCompanies reads companies and their tags by id.
+loadCompanies reads the companies each contact belongs to, the default
+first, with their tags.
 */
-func loadCompanies(ctx context.Context, q *models.Queries, ws ids.UUID, companyIDs []ids.UUID,
-) (map[ids.UUID]models.Company, map[ids.UUID][]string, error) {
-	companies, tags := map[ids.UUID]models.Company{}, map[ids.UUID][]string{}
-	if len(companyIDs) == 0 {
-		return companies, tags, nil
+func loadCompanies(ctx context.Context, q *models.Queries, ws ids.UUID, contactIDs []ids.UUID,
+) (map[ids.UUID][]PersonCompany, error) {
+	out := map[ids.UUID][]PersonCompany{}
+	if len(contactIDs) == 0 {
+		return out, nil
 	}
 
-	rows, err := q.CompaniesByIDs(ctx, models.CompaniesByIDsParams{WorkspaceID: ws, Ids: companyIDs})
+	rows, err := q.ListContactCompanies(ctx, models.ListContactCompaniesParams{WorkspaceID: ws, ContactIds: contactIDs})
 	if err != nil {
-		return nil, nil, fmt.Errorf("find companies: %w", err)
+		return nil, fmt.Errorf("find companies: %w", err)
+	}
+
+	companyIDs, seen := make([]ids.UUID, 0, len(rows)), map[ids.UUID]bool{}
+	for _, r := range rows {
+		if !seen[r.Company.ID] {
+			seen[r.Company.ID] = true
+			companyIDs = append(companyIDs, r.Company.ID)
+		}
+	}
+
+	tags := map[ids.UUID][]string{}
+	if len(companyIDs) > 0 {
+		tagRows, err := q.ListCompanyTags(ctx, models.ListCompanyTagsParams{WorkspaceID: ws, CompanyIds: companyIDs})
+		if err != nil {
+			return nil, fmt.Errorf("list company tags: %w", err)
+		}
+
+		for _, r := range tagRows {
+			tags[r.CompanyID] = append(tags[r.CompanyID], models.PublicID(models.PrefixTag, r.Tag.ID))
+		}
 	}
 
 	for _, r := range rows {
-		companies[r.ID] = r
+		out[r.ContactID] = append(out[r.ContactID], PersonCompany{Company: r.Company, Tags: tags[r.Company.ID]})
 	}
 
-	tagRows, err := q.ListCompanyTags(ctx, models.ListCompanyTagsParams{WorkspaceID: ws, CompanyIds: companyIDs})
-	if err != nil {
-		return nil, nil, fmt.Errorf("list company tags: %w", err)
-	}
-
-	for _, r := range tagRows {
-		tags[r.CompanyID] = append(tags[r.CompanyID], models.PublicID(models.PrefixTag, r.Tag.ID))
-	}
-
-	return companies, tags, nil
+	return out, nil
 }
 
 /*

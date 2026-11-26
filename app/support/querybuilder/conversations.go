@@ -224,8 +224,8 @@ func (c Conversations) holders(b *builder) []string {
 	}
 
 	if c.CompanyID != nil {
-		where = append(where, "EXISTS (SELECT 1 FROM contacts ct WHERE ct.workspace_id = c.workspace_id"+
-			" AND ct.id = c.contact_id AND ct.company_id = "+b.add(*c.CompanyID)+")")
+		where = append(where, "EXISTS (SELECT 1 FROM contact_companies lnk WHERE lnk.workspace_id = c.workspace_id"+
+			" AND lnk.contact_id = c.contact_id AND lnk.company_id = "+b.add(*c.CompanyID)+")")
 	}
 
 	return where

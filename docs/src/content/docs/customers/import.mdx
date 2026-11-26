@@ -25,7 +25,7 @@ dimmi auto-maps columns whose headers match standard fields or attribute keys/la
 
 ## How rows match existing records
 
-People match by external ID first, then by verified email. Companies match by external ID first, then by domain. If a person row includes a company name or domain, dimmi finds or creates that company and links them.
+People match by external ID first, then by verified email. Companies match by external ID first, then by domain. If a person row includes a company name or domain, dimmi finds or creates that company and links them. To put someone in several companies, separate them with `;` or `|` in the same cell, for example `Acme; Globex`. The first one becomes their default company, and domains pair with names by position.
 
 Use **When someone is already here** to pick your behavior: **Update them** fills in values from your CSV, while **Leave them as they are** skips matching rows.
 

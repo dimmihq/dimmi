@@ -66,6 +66,7 @@ func schemaTextPartsFromAIAction() []map[string]map[string]string {
 		schemaTextsFromConfigHomeLink(),
 		schemaTextsFromConnectedApp(),
 		schemaTextsFromContact(),
+		schemaTextsFromContactCompany(),
 		schemaTextsFromContactIdentity(),
 		schemaTextsFromContextCompany(),
 		schemaTextsFromConversation(),

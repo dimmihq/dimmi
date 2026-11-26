@@ -80,6 +80,15 @@ def test_camel_case_aliases_and_dataclass():
     assert a["email_verified"] is True and b["company"] == {"id": "c1", "name": "Co"}
 
 
+def test_companies_claim():
+    a = to_claims({"id": "u", "company": {"id": "c1"}, "companies": [{"id": 8, "name": "Beta", "domain": "beta.test"}]})
+    b = to_claims(IdentityUser(id="u", companies=[IdentityCompany(id="c2"), {"id": "c3"}]))
+    assert a["company"] == {"id": "c1"}
+    assert a["companies"] == [{"id": "8", "name": "Beta", "domain": "beta.test"}]
+    assert b["companies"] == [{"id": "c2"}, {"id": "c3"}]
+    assert "companies" not in to_claims({"id": "u", "companies": []})
+
+
 @pytest.mark.parametrize(
     "value,expected",
     [
@@ -112,6 +121,8 @@ def test_signed_up_at(value, expected):
         ({"id": "u", "attributes": {"plan": {"a": 1}}}, "attribute_value_invalid"),
         ({"id": "u", "attributes": {"plan": [1]}}, "attribute_value_invalid"),
         ({"id": "u", "company": {"name": "x"}}, "identify_user_invalid"),
+        ({"id": "u", "companies": [{"id": "c1"}, {"name": "x"}]}, "identify_user_invalid"),
+        ({"id": "u", "companies": [{"id": f"c{i}"} for i in range(51)]}, "company_limit"),
     ],
 )
 def test_claim_errors(user, code):

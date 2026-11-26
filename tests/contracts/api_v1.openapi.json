@@ -16328,6 +16328,16 @@
             "description": "True when the team has blocked this contact.",
             "type": "boolean"
           },
+          "companies": {
+            "description": "Every company the contact belongs to, the default marked with is_default. company_id and company name the default. Empty when the contact has none.",
+            "items": {
+              "$ref": "#/components/schemas/ContactCompany"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "company": {
             "$ref": "#/components/schemas/CompanySummary"
           },
@@ -16456,11 +16466,54 @@
           "notes",
           "location",
           "company",
+          "companies",
           "tags",
           "first_seen_at",
           "last_seen_at",
           "created_at",
           "updated_at"
+        ],
+        "type": "object"
+      },
+      "ContactCompany": {
+        "additionalProperties": false,
+        "properties": {
+          "added_at": {
+            "description": "When the contact was linked to the company.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "domain": {
+            "description": "The company's web domain, such as acme.com. Null when unknown.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "is_default": {
+            "description": "true for the contact's default company, the one company_id and company name.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The company's name.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "is_default",
+          "added_at",
+          "id",
+          "object",
+          "name",
+          "domain"
         ],
         "type": "object"
       },
@@ -17000,6 +17053,9 @@
               "null"
             ]
           },
+          "company": {
+            "$ref": "#/components/schemas/CompanySummary"
+          },
           "contact": {
             "$ref": "#/components/schemas/ContactSummary"
           },
@@ -17149,6 +17205,7 @@
           "channel",
           "inbox",
           "contact",
+          "company",
           "assignee",
           "team",
           "assignment_wait",
@@ -39056,6 +39113,24 @@
         ],
         "type": "object"
       },
+      "StoreContactCompanyRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "company_id": {
+            "description": "Id of the company (cmp_...) to add.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "default": {
+            "description": "true also makes it the contact's default company.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "company_id"
+        ],
+        "type": "object"
+      },
       "StoreContactExportRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -44467,8 +44542,21 @@
             "type": "boolean"
           },
           "company_id": {
-            "description": "Id of the company (cmp_...) to link, or null to unlink.",
+            "description": "Id of the company (cmp_...) to make the default, or null to unlink it.",
             "type": "string"
+          },
+          "company_ids": {
+            "description": "Ids of every company (cmp_...) the contact belongs to, replacing the list. 300 at most.",
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 300,
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "custom_attributes": {
             "additionalProperties": {},
@@ -44640,6 +44728,10 @@
           },
           "assignee_id": {
             "description": "Who the conversation, or each one in a bulk change, goes to: a teammate's id starting with mem_, such as mem_01jx2m8k4t (find it with GET /members), me for yourself, or null to hand it to nobody.",
+            "type": "string"
+          },
+          "company_id": {
+            "description": "Id of the company (cmp_...) the conversation is about, one of its contact's companies. New conversations take the contact's default.",
             "type": "string"
           },
           "inbox_id": {
@@ -46107,6 +46199,11 @@
             "maxLength": 64,
             "type": "string"
           },
+          "company_id": {
+            "description": "Id of the company, starting with cmp_, such as cmp_01jx2m8k4t. Find it with GET /companies.",
+            "maxLength": 64,
+            "type": "string"
+          },
           "description": {
             "description": "The description of the ticket, at most 20000 characters.",
             "maxLength": 20000,
@@ -46350,6 +46447,23 @@
         "properties": {
           "company": {
             "$ref": "#/components/schemas/CompanyBody"
+          },
+          "company_id": {
+            "description": "Id of the company, starting with cmp_, such as cmp_01jx2m8k4t. Find it with GET /companies.",
+            "type": "string"
+          },
+          "company_ids": {
+            "description": "Ids of companys, as a list, such as [\"cmp_01jx2m8k4t\"]. Find them with GET /companies.",
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 300,
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "custom_attributes": {
             "additionalProperties": {},
@@ -58016,6 +58130,163 @@
           }
         },
         "summary": "Update a contact",
+        "x-abilities": [
+          "contacts:write"
+        ]
+      }
+    },
+    "/contacts/{contact}/companies": {
+      "post": {
+        "description": "Links a contact to one more company. A contact can belong to several; one is the default, which conversations and tickets take when they start. The first company becomes the default. Returns the contact as it now is, with all its companies.",
+        "operationId": "contacts.companies.store",
+        "parameters": [
+          {
+            "description": "Id of the contact (a customer or lead), starting with ctc_, such as ctc_01jx2m8k4t. Find it with GET /contacts.",
+            "in": "path",
+            "name": "contact",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreContactCompanyRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceContact"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Add a company to a contact",
+        "x-abilities": [
+          "contacts:write"
+        ]
+      }
+    },
+    "/contacts/{contact}/companies/{company}": {
+      "delete": {
+        "description": "Unlinks a contact from one company. When it was the default, the company linked longest becomes the default, or the contact has none left. Returns the contact as it now is, with all its companies.",
+        "operationId": "contacts.companies.destroy",
+        "parameters": [
+          {
+            "description": "Id of the contact (a customer or lead), starting with ctc_, such as ctc_01jx2m8k4t. Find it with GET /contacts.",
+            "in": "path",
+            "name": "contact",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Id of the company (cmp_...) to remove.",
+            "in": "path",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceContact"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Remove a company from a contact",
+        "x-abilities": [
+          "contacts:write"
+        ]
+      }
+    },
+    "/contacts/{contact}/companies/{company}/default": {
+      "post": {
+        "description": "Makes one of the contact's companies its default: company_id and company on the contact then name it, and new conversations and tickets take it. Past ones keep theirs. Returns the contact as it now is, with all its companies.",
+        "operationId": "contacts.companies.default.store",
+        "parameters": [
+          {
+            "description": "Id of the contact (a customer or lead), starting with ctc_, such as ctc_01jx2m8k4t. Find it with GET /contacts.",
+            "in": "path",
+            "name": "contact",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Id of a company (cmp_...) the contact already belongs to.",
+            "in": "path",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceContact"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Make a company a contact's default",
         "x-abilities": [
           "contacts:write"
         ]

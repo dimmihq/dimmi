@@ -5,7 +5,7 @@
  * empty, and typed attributes keep their type.
  */
 import type { AttributeDefinition } from "@/lib/api/attributes";
-import type { Contact, ContactChanges } from "@/lib/api/customers";
+import type { CompanySummary, Contact, ContactChanges } from "@/lib/api/customers";
 import type { Tag } from "@/lib/api/tags";
 
 /*
@@ -18,12 +18,18 @@ export interface ExtraAttribute {
   value: string;
 }
 
+/*
+ * EditState is the form. Companies are the ones the customer belongs to,
+ * in the order shown, and defaultCompany the id of their default.
+ */
 export interface EditState {
   name: string;
   email: string;
   phone: string;
   notes: string;
   tags: Tag[];
+  companies: CompanySummary[];
+  defaultCompany: string | null;
   typed: Record<string, string>;
   extra: ExtraAttribute[];
 }
@@ -59,11 +65,41 @@ export function editStateOf(contact: Contact, defined: AttributeDefinition[]): E
     phone: contact.phone ?? "",
     notes: contact.notes ?? "",
     tags: contact.tags,
+    companies: companiesOf(contact),
+    defaultCompany: contact.company?.id ?? null,
     typed: Object.fromEntries(defined.map((d) => [d.key, textOf(contact.custom_attributes[d.key], d.data_type)])),
     extra: Object.entries(contact.custom_attributes)
       .filter(([key]) => !keys.has(key))
       .map(([key, value]) => ({ id: key, key, value: textOf(value) })),
   };
+}
+
+/*
+ * companiesOf lists the customer's companies, the default first, for a
+ * server that sends the list or only the default.
+ */
+export function companiesOf(contact: Contact): CompanySummary[] {
+  const listed = contact.companies?.map(({ id, object, name, domain }) => ({ id, object, name, domain }));
+
+  return listed ?? (contact.company ? [contact.company] : []);
+}
+
+/*
+ * companyChanges says what changed in the customer's companies: the full
+ * list when one was added or removed, and the default when it moved.
+ */
+function companyChanges(contact: Contact, state: EditState): Pick<ContactChanges, "company_ids" | "company_id"> {
+  const had = companiesOf(contact).map((c) => c.id);
+  const has = state.companies.map((c) => c.id);
+  const out: Pick<ContactChanges, "company_ids" | "company_id"> = {};
+  if (had.length !== has.length || had.some((id) => !has.includes(id))) {
+    out.company_ids = has;
+  }
+  if (state.defaultCompany !== null && state.defaultCompany !== (contact.company?.id ?? null)) {
+    out.company_id = state.defaultCompany;
+  }
+
+  return out;
 }
 
 /*
@@ -146,7 +182,7 @@ export function changesOf(contact: Contact, defined: AttributeDefinition[], stat
     custom_attributes: attributeChanges(contact, defined, state),
   };
 
-  return Object.fromEntries(
+  const kept = Object.fromEntries(
     Object.entries(fields).filter(([, value]) => {
       if (value === undefined) {
         return false;
@@ -155,4 +191,6 @@ export function changesOf(contact: Contact, defined: AttributeDefinition[], stat
       return typeof value !== "object" || value === null || Object.keys(value).length > 0;
     }),
   ) as ContactChanges;
+
+  return { ...kept, ...companyChanges(contact, state) };
 }

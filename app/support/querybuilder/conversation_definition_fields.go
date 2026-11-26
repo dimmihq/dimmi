@@ -248,8 +248,8 @@ func tagField() field {
 }
 
 func companyField() field {
-	const company = "EXISTS (SELECT 1 FROM contacts ct WHERE ct.workspace_id = c.workspace_id" +
-		" AND ct.id = c.contact_id AND ct.company_id"
+	const company = "EXISTS (SELECT 1 FROM contact_companies lnk WHERE lnk.workspace_id = c.workspace_id" +
+		" AND lnk.contact_id = c.contact_id"
 
-	return existsField("cmp", company+" IS NOT NULL)", company+" = ANY (?::uuid[]))")
+	return existsField("cmp", company+")", company+" AND lnk.company_id = ANY (?::uuid[]))")
 }

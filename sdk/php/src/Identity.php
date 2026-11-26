@@ -28,8 +28,11 @@ final class Identity
 
     private const KNOWN = [
         'id', 'email', 'emailVerified', 'name', 'phone', 'phoneVerified', 'avatarUrl',
-        'locale', 'timezone', 'signedUpAt', 'company', 'attributes',
+        'locale', 'timezone', 'signedUpAt', 'company', 'companies', 'attributes',
     ];
+
+    /** The most companies the companies claim may list. */
+    private const MAX_COMPANIES = 50;
 
     /**
      * Signs a token for the user.
@@ -46,6 +49,7 @@ final class Identity
      *     timezone?: ?string,
      *     signedUpAt?: \DateTimeInterface|int|float|string|null,
      *     company?: ?array{id: string|int, name?: ?string, domain?: ?string, attributes?: array<string, scalar|null>},
+     *     companies?: ?list<array{id: string|int, name?: ?string, domain?: ?string, attributes?: array<string, scalar|null>}>,
      *     attributes?: array<string, scalar|null>,
      * } $user
      * @param int $expiresIn Seconds the token lives: 1 to 3600, 600 unless set.
@@ -139,6 +143,18 @@ final class Identity
         }
         if (!empty($user['company'])) {
             $claims['company'] = self::company($user['company']);
+        }
+        if (!empty($user['companies'])) {
+            if (!is_array($user['companies']) || !array_is_list($user['companies'])) {
+                throw new IdentityException('identify_user_invalid', 'companies must be a list of companies.');
+            }
+            if (count($user['companies']) > self::MAX_COMPANIES) {
+                throw new IdentityException(
+                    'company_limit',
+                    'send at most ' . self::MAX_COMPANIES . ' companies; add others through the API.',
+                );
+            }
+            $claims['companies'] = array_map(self::company(...), $user['companies']);
         }
 
         return $claims;

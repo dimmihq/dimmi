@@ -13,12 +13,16 @@ package requests
 
 /*
 UpsertContactBody adds, to a contact's details, the company a trusted
-caller names.
+caller names, and the ids of companies the contact belongs to. On a
+plain create CompanyID names the default among them; on an upsert the
+companies are added to those the contact has.
 */
 type UpsertContactBody struct {
 	ContactBody
 
-	Company *CompanyBody `json:"company,omitempty"`
+	Company    *CompanyBody `json:"company,omitempty"`
+	CompanyID  *string      `json:"company_id,omitempty"`
+	CompanyIDs []string     `json:"company_ids,omitempty" validate:"omitempty,max=300,dive,min=1,max=64"`
 }
 
 /*

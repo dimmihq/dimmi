@@ -118,6 +118,10 @@ func peopleTables() []ArchiveTable {
 		{Name: "contacts", About: "Customers.", Key: byID()},
 		{Name: "contact_identities", About: "Customers' addresses and handles per channel.", Key: byID()},
 		{Name: "companies", About: "Companies.", Key: byID()},
+		{
+			Name: "contact_companies", About: "The companies each customer belongs to, and their default.",
+			Key: []string{"contact_id", "company_id"},
+		},
 		{Name: "contact_tag", About: "Tags on customers.", Key: []string{"contact_id", "tag_id"}},
 		{Name: "company_tag", About: "Tags on companies.", Key: []string{"company_id", "tag_id"}},
 		{Name: "customer_notes", About: "The team's notes on customers and companies.", Key: byID()},
