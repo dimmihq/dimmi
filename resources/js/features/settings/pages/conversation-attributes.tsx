@@ -562,14 +562,18 @@ function Line({
 
 /*
  * Movable is a row the team drags into a new place by its handle, or
- * moves with the arrow keys on the handle.
+ * moves with the arrow keys on the handle. While a row is dragged, a
+ * line follows the pointer to show where it lands: above the row under
+ * it when moving up, below it when moving down.
  */
 function Movable({
   label,
   movable,
   dragging,
+  line,
   onStart,
   onEnd,
+  onOver,
   onDrop,
   onStep,
   children,
@@ -577,8 +581,10 @@ function Movable({
   label: string;
   movable: boolean;
   dragging: boolean;
+  line: "before" | "after" | null;
   onStart: () => void;
   onEnd: () => void;
+  onOver: () => void;
   onDrop: () => void;
   onStep: (by: number) => void;
   children: ReactNode;
@@ -589,13 +595,26 @@ function Movable({
 
   return (
     <li
-      className={cx("flex items-center", dragging && "opacity-50")}
-      onDragOver={(event: DragEvent) => event.preventDefault()}
+      className={cx("relative flex items-center", dragging && "opacity-50")}
+      onDragOver={(event: DragEvent) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        onOver();
+      }}
       onDrop={(event: DragEvent) => {
         event.preventDefault();
         onDrop();
       }}
     >
+      {line ? (
+        <span
+          aria-hidden
+          className={cx(
+            "pointer-events-none absolute inset-x-0 z-10 h-0.5 rounded-full bg-accent-500",
+            line === "before" ? "-top-px" : "-bottom-px",
+          )}
+        />
+      ) : null}
       <button
         type="button"
         draggable
@@ -686,6 +705,7 @@ function List({
   onArchive: (attribute: ConversationAttribute) => void;
 }) {
   const [dragging, setDragging] = useState<string | null>(null);
+  const [over, setOver] = useState<number | null>(null);
   const ordered = draft.order
     ? [...attributes].sort((a, b) => (draft.order ?? []).indexOf(a.id) - (draft.order ?? []).indexOf(b.id))
     : attributes;
@@ -694,6 +714,13 @@ function List({
     .filter(({ now }) => now.status === tab);
   const added = tab === "active" ? draft.added : [];
   const movable = canManage && tab === "active" && listed.length > 1;
+  const from = listed.findIndex(({ saved }) => saved.id === dragging);
+  const lineAt = (index: number): "before" | "after" | null => {
+    if (dragging === null || over !== index || from === index || from < 0) {
+      return null;
+    }
+    return index < from ? "before" : "after";
+  };
   const move = (id: string, to: number) => {
     const ids = ordered.map((a) => a.id);
     const from = ids.indexOf(id);
@@ -726,9 +753,20 @@ function List({
             label={now.label}
             movable={movable}
             dragging={dragging === saved.id}
+            line={lineAt(index)}
             onStart={() => setDragging(saved.id)}
-            onEnd={() => setDragging(null)}
-            onDrop={() => (dragging ? move(dragging, index) : undefined)}
+            onEnd={() => {
+              setDragging(null);
+              setOver(null);
+            }}
+            onOver={() => setOver(index)}
+            onDrop={() => {
+              if (dragging) {
+                move(dragging, index);
+              }
+              setDragging(null);
+              setOver(null);
+            }}
             onStep={(by) => move(saved.id, index + by)}
           >
             <Line
