@@ -306,7 +306,7 @@ func TestConversationAttributeTeams(t *testing.T) {
 func TestConversationAttributeSettings(t *testing.T) {
 	t.Parallel()
 
-	t.Run("an attribute keeps who fills it, required to close and its teams, and old routes still answer", func(t *testing.T) {
+	t.Run("keeps who fills it, required to close and its teams; old routes still answer", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
 

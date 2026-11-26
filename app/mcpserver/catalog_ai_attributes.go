@@ -52,11 +52,11 @@ func aiAttributeDocs() map[string]Doc {
 }
 
 /*
-conversationAttributeDocs returns the entries for conversation
-attributes, which teammates and the AI both fill.
+conversationAttributeParams describes the arguments of the conversation
+attribute tools.
 */
-func conversationAttributeDocs() map[string]Doc {
-	params := map[string]string{
+func conversationAttributeParams() map[string]string {
+	return map[string]string{
 		"key":   "The attribute's key, lowercase letters, digits and underscores, such as issue_type.",
 		"label": "What the team calls it, up to 80 characters, such as Issue type.",
 		"description": "What it means, up to 500 characters. The AI reads it to decide the value, so say " +
@@ -71,6 +71,14 @@ func conversationAttributeDocs() map[string]Doc {
 		"values": "The values to set, by key, such as {\"issue_type\": \"Billing\"}; null clears one. " +
 			"Each must fit its attribute's type.",
 	}
+}
+
+/*
+conversationAttributeDocs returns the entries for conversation
+attributes, which teammates and the AI both fill.
+*/
+func conversationAttributeDocs() map[string]Doc {
+	params := conversationAttributeParams()
 
 	return map[string]Doc{
 		"conversation-attributes.index": {
@@ -143,7 +151,8 @@ func aiAttributeSchemaTexts() map[string]map[string]string {
 				"an RFC 3339 date and time, an option, a list of options or file ids, or a contact or company " +
 				"id. Null when empty.",
 			"set_by": "Who set the value and when. Null when it was never set.",
-			"files":  "With a file attribute, the files the value holds, each with a short-lived link. Empty otherwise.",
+			"files": "With a file attribute, the files the value holds, each with a short-lived link. " +
+				"Empty otherwise.",
 		},
 		"ConversationAttributeSource": {
 			"by":   "ai, member, workflow or import.",

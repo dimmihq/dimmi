@@ -259,7 +259,7 @@ func (a *Attributes) keep(
 		}
 
 		w := aiWriter(q, tx, a)
-		if _, err := Write(ctx, w, c, sure(r.defs, found), SetByAI); err != nil {
+		if _, err := Write(ctx, w, Writing{Conversation: c, Values: sure(r.defs, found), By: SetByAI}); err != nil {
 			return err
 		}
 

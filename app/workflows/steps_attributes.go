@@ -59,7 +59,9 @@ func runSetConversationAttributes(ctx context.Context, st *state, s workflowspec
 		values[v.Key] = attributeValue(types[v.Key], strings.TrimSpace(text))
 	}
 
-	changes, err := aiattributes.Write(ctx, st.writer(), st.conv, values, aiattributes.SetByWorkflow)
+	changes, err := aiattributes.Write(ctx, st.writer(), aiattributes.Writing{
+		Conversation: st.conv, Values: values, By: aiattributes.SetByWorkflow,
+	})
 	st.subj = nil
 
 	if err != nil && fault.KindOf(err) != fault.Internal {
@@ -94,9 +96,9 @@ func attributeValue(dataType, text string) any {
 }
 
 /*
-dryConversationAttributes records the values a step would set.
+attributes records the values a step would set.
 */
-func (d *dry) conversationAttributes(_ context.Context, s workflowspec.Step) outcome {
+func (d *dry) attributes(_ context.Context, s workflowspec.Step) outcome {
 	values := map[string]any{}
 	for _, v := range settings[workflowspec.SetConversationAttributesSettings](s).Attributes {
 		values[v.Key] = v.Value

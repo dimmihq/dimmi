@@ -28,10 +28,12 @@ import (
 aiAttributesDeprecation is when the AI conversation attribute routes
 gave way to the conversation attribute routes, and when they end.
 */
-var aiAttributesDeprecation = routing.Deprecation{
-	Since:  time.Date(2026, time.November, 26, 0, 0, 0, 0, time.UTC),
-	Sunset: time.Date(2027, time.December, 1, 0, 0, 0, 0, time.UTC),
-	Link:   "https://trydimmi.com/docs/inbox/conversation-attributes",
+func aiAttributesDeprecation() routing.Deprecation {
+	return routing.Deprecation{
+		Since:  time.Date(2026, time.November, 26, 0, 0, 0, 0, time.UTC),
+		Sunset: time.Date(2027, time.December, 1, 0, 0, 0, 0, time.UTC),
+		Link:   "https://trydimmi.com/docs/inbox/conversation-attributes",
+	}
 }
 
 /*
@@ -48,13 +50,13 @@ func aiAttributeRoutes(workspace *routing.Router, a *app.App) {
 	all, one := "/ai/conversation-attributes", "/ai/conversation-attributes/{attribute}"
 
 	routing.Get(workspace, all, "ai.conversation-attributes.index", c.Index).Ability("conversations:read").
-		Deprecated(aiAttributesDeprecation)
+		Deprecated(aiAttributesDeprecation())
 	routing.Post(workspace, all, "ai.conversation-attributes.store", c.Store).Ability("ai:write").
-		Status(fhttp.StatusCreated).Deprecated(aiAttributesDeprecation)
+		Status(fhttp.StatusCreated).Deprecated(aiAttributesDeprecation())
 	routing.Patch(workspace, one, "ai.conversation-attributes.update", c.Update).Ability("ai:write").
-		Deprecated(aiAttributesDeprecation)
+		Deprecated(aiAttributesDeprecation())
 	routing.Get(workspace, "/conversations/{conversation}/ai-attributes", "conversations.ai-attributes.index",
-		c.Conversation).Ability("conversations:read").Deprecated(aiAttributesDeprecation)
+		c.Conversation).Ability("conversations:read").Deprecated(aiAttributesDeprecation())
 }
 
 /*

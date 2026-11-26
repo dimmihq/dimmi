@@ -124,9 +124,9 @@ func workflowCreateDoc() Doc {
 			"trigger": "conversation.opener, conversation.first_message, conversation.customer_reopened, " +
 				"message.customer, conversation.customer_quiet, conversation.rated, message.teammate, " +
 				"note.created, conversation.assignment_changed, conversation.status_changed, " +
-				"conversation.teammate_quiet, conversation.attribute_changed, conversation.ai_attribute_changed, " +
-				"dimmi.handed_over, dimmi.resolved, agent.transferred, sla.warning, sla.breached, the ticket triggers " +
-				"or reusable (called from other workflows).",
+				"conversation.teammate_quiet, conversation.attribute_changed, " +
+				"conversation.ai_attribute_changed, dimmi.handed_over, dimmi.resolved, agent.transferred, " +
+				"sla.warning, sla.breached, the ticket triggers or reusable (called from other workflows).",
 			"spec": "A whole definition to start from, in the shape dimmi_get_workflow_by_id returns.",
 		},
 	}

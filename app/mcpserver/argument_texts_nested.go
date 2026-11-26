@@ -124,8 +124,8 @@ func nestedTextsFromCreateContactEvent() map[string]map[string]string {
 		},
 		"create_conversation": {
 			"attributes": "Object of conversation attribute values to set, by key, such as " +
-				"{\"issue_type\": \"Billing\"}. Each must fit its attribute's type; dimmi_list_conversation_attributes " +
-				"lists the keys. An import sets even what only the AI fills.",
+				"{\"issue_type\": \"Billing\"}. Each must fit its attribute's type; " +
+				"dimmi_list_conversation_attributes lists the keys. An import sets even what only the AI fills.",
 			"contact.email": "The customer's email address, at most 320 characters, such as ana@example.com. " +
 				"Used to find them when no id or external_id is given; a new contact is added when none " +
 				"matches.",

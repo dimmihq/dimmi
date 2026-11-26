@@ -37,8 +37,7 @@ func dryActions() map[string]dryAction {
 		workflowspec.KindTag: (*dry).tag, workflowspec.KindUntag: (*dry).untag,
 		workflowspec.KindPriority: (*dry).priority, workflowspec.KindUnassign: (*dry).unassign,
 		workflowspec.KindNote: (*dry).note, workflowspec.KindUpdateContact: (*dry).updateContact,
-		workflowspec.KindSetConversationAttributes: (*dry).conversationAttributes,
-		workflowspec.KindAssign:                    func(d *dry, _ context.Context, s workflowspec.Step) outcome { return d.assign(s) },
+		workflowspec.KindAssign: func(d *dry, _ context.Context, s workflowspec.Step) outcome { return d.assign(s) },
 		workflowspec.KindSnooze: func(d *dry, _ context.Context, s workflowspec.Step) outcome {
 			d.conv.Status = "snoozed"
 			return d.act(s, "Would snooze the conversation", nil)
@@ -51,6 +50,7 @@ func dryActions() map[string]dryAction {
 			id := settings[workflowspec.ApplySLASettings](s).SLAPolicyID
 			return d.act(s, "Would apply an SLA policy", map[string]any{"sla_policy_id": id})
 		},
+		workflowspec.KindSetConversationAttributes: (*dry).attributes,
 	}
 }
 

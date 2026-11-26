@@ -25,25 +25,28 @@ func TestApplyKeepsWhatTeammatesSet(t *testing.T) {
 		"mood":  {By: SetByAI, At: at},
 	}
 
-	next, changes := apply(defs, kept, sources, map[string]any{"issue": "Bug", "plan": "Team", "mood": "upset"}, SetByAI)
+	held := stored{defs: defs, values: kept, sources: sources}
+
+	next, changes := held.apply(map[string]any{"issue": "Bug", "plan": "Team", "mood": "upset"}, SetByAI)
 	assert.Equal(t, "Billing", next["issue"], "the AI never replaces a teammate's value")
 	assert.Equal(t, "Pro", next["plan"], "nor a workflow's")
 	assert.Equal(t, "upset", next["mood"], "but replaces its own")
 	assert.Equal(t, []Change{{Key: "mood", Label: "Mood", From: "calm", To: "upset"}}, changes)
 
-	next, changes = apply(defs, kept, sources, map[string]any{"issue": "Bug", "plan": nil}, SetByMember)
+	next, changes = held.apply(map[string]any{"issue": "Bug", "plan": nil}, SetByMember)
 	assert.Equal(t, "Bug", next["issue"], "a teammate replaces anyone's value")
 	assert.NotContains(t, next, "plan", "and clears one")
 	assert.Len(t, changes, 2)
 
-	_, changes = apply(defs, kept, sources, map[string]any{"issue": "Billing", "nope": "x"}, SetByMember)
+	_, changes = held.apply(map[string]any{"issue": "Billing", "nope": "x"}, SetByMember)
 	assert.Empty(t, changes, "the same value changes nothing")
 }
 
 func TestAIFillsOnlyWhatItCanRead(t *testing.T) {
 	t.Parallel()
 
-	for _, dataType := range []string{TypeText, TypeLongText, TypeNumber, TypeDecimal, TypeBoolean, TypeDate, TypeChoice} {
+	fillable := []string{TypeText, TypeLongText, TypeNumber, TypeDecimal, TypeBoolean, TypeDate, TypeChoice}
+	for _, dataType := range fillable {
 		assert.True(t, AIFillable(dataType), dataType)
 	}
 
@@ -65,5 +68,6 @@ func TestSureKeepsOnlyValuesThatFit(t *testing.T) {
 	}
 
 	got := sure(defs, map[string]any{"seats": 2.5, "refund": 2.5, "issue": "Other"})
-	assert.Equal(t, map[string]any{"refund": 2.5}, got, "a fraction is no whole number, and a choice must be listed")
+	assert.Equal(t, map[string]any{"refund": 2.5}, got,
+		"a fraction is no whole number, and a choice must be listed")
 }
