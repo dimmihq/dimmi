@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connect dimmi-migrate</title>
+<style>
+  :root { --bg:#f4f4f2; --card:#fff; --text:#161616; --muted:#5d5d5a; --line:#e3e3df; --accent:#161616; --ok:#1f7a3d; --bad:#b42318; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141414; --card:#1d1d1c; --text:#f2f2f0; --muted:#a3a39f; --line:#2f2f2d; --accent:#f2f2f0; --ok:#4ec27a; --bad:#ff7a6e; } }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+  main { max-width:680px; margin:0 auto; padding:40px 16px 64px; }
+  h1 { font-size:24px; margin:0 0 6px; letter-spacing:-0.01em }
+  .lead { color:var(--muted); margin:0 0 28px }
+  section { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px; margin-bottom:16px }
+  h2 { font-size:16px; margin:0 0 4px; display:flex; gap:10px; align-items:center }
+  .n { width:24px; height:24px; border-radius:50%; border:1px solid var(--line); display:inline-grid; place-items:center; font-size:13px; flex:none }
+  .done .n { background:var(--ok); border-color:var(--ok); color:#fff }
+  p, li { color:var(--muted) }
+  ol { padding-left:20px; margin:12px 0 }
+  li { margin:6px 0 }
+  li b, p b { color:var(--text) }
+  code { font:13px ui-monospace, SFMono-Regular, Menlo, monospace; background:var(--bg); padding:1px 5px; border-radius:5px }
+  label { display:block; font-weight:600; margin:14px 0 6px; font-size:14px }
+  select, input[type=password] { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:9px; font:inherit; background:var(--card); color:var(--text) }
+  .btn { display:inline-block; margin-top:16px; padding:10px 16px; border-radius:9px; border:0; background:var(--accent); color:var(--bg); font:600 14px/1 inherit; font-family:inherit; text-decoration:none; cursor:pointer }
+  .status { color:var(--ok); font-weight:600; margin:8px 0 0 }
+  .error { border-color:var(--bad); color:var(--bad); background:var(--card) }
+  .note { font-size:13px }
+</style>
+</head>
+<body>
+<main>
+  {{if .Finished}}
+  <h1>You're connected</h1>
+  <p class="lead">You can close this tab. dimmi-migrate is ready: go back to your terminal or your AI agent.</p>
+  {{else}}
+  <h1>Connect dimmi-migrate</h1>
+  <p class="lead">Two keys, saved in this computer's keychain. They never appear in your terminal or your AI agent's chat.</p>
+
+  {{if .Error}}<section class="error" role="alert">{{.Error}}</section>{{end}}
+
+  <section class="{{if .DimmiDone}}done{{end}}">
+    <h2><span class="n">{{if .DimmiDone}}✓{{else}}1{{end}}</span> Sign in to dimmi</h2>
+    {{if .DimmiDone}}
+      <p class="status">Signed in to {{.DimmiURL}}.</p>
+    {{else}}
+      <p>Sign in at <b>{{.DimmiURL}}</b> and pick the workspace to move into. dimmi-migrate asks only to manage imports.</p>
+      <a class="btn" href="{{.Base}}/dimmi">Sign in to dimmi</a>
+    {{end}}
+  </section>
+
+  <section class="{{if .SourceDone}}done{{end}}">
+    <h2><span class="n">{{if .SourceDone}}✓{{else}}2{{end}}</span> Connect {{.Tool}}</h2>
+    {{if .SourceDone}}
+      <p class="status">Connected to {{.Account}}.</p>
+      <p class="note">To use another token, paste it below.</p>
+    {{else}}
+      {{.Help}}
+    {{end}}
+    <form method="post" action="{{.Base}}/source" autocomplete="off">
+      {{if .Regions}}
+      <label for="region">Where your {{.Tool}} workspace is hosted</label>
+      <select id="region" name="region">
+        {{range .Regions}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
+      </select>
+      {{end}}
+      <label for="token">Access token</label>
+      <input id="token" name="token" type="password" spellcheck="false" autocomplete="off" required>
+      <button class="btn" type="submit">Check and save</button>
+    </form>
+  </section>
+
+  {{if .AllDone}}
+  <section>
+    <h2><span class="n">3</span> Done</h2>
+    <p>Both keys are saved. Finish here, then go back to your terminal.</p>
+    <form method="post" action="{{.Base}}/finish"><button class="btn" type="submit">Finish</button></form>
+  </section>
+  {{end}}
+  {{end}}
+</main>
+</body>
+</html>

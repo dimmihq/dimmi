@@ -93,6 +93,7 @@ require (
 	github.com/wneessen/go-mail v0.8.1
 	github.com/yosida95/uritemplate/v3 v3.0.2
 	github.com/yuin/goldmark v1.8.7
+	github.com/zalando/go-keyring v0.2.6
 	go.abhg.dev/goldmark/frontmatter v0.3.0
 	go.abhg.dev/goldmark/toc v0.12.0
 	go.jetify.com/typeid v1.3.0
@@ -113,6 +114,12 @@ require (
 	golang.org/x/text v0.43.0
 	golang.org/x/time v0.16.0
 	resty.dev/v3 v3.0.0-rc.4
+)
+
+require (
+	al.essio.dev/pkg/shellescape v1.5.1 // indirect
+	github.com/danieljoos/wincred v1.2.2 // indirect
+	github.com/godbus/dbus/v5 v5.1.0 // indirect
 )
 
 require (
