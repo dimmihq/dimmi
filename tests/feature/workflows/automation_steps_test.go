@@ -190,7 +190,9 @@ func TestAIConversationAttributes(t *testing.T) {
 	t.Run("detects an attribute, keeps it on the conversation and starts workflows on it", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
-		llm := fake.New(contracts.LLMProviderAnthropic).Script(fake.Step{Text: `{"intent":"refund","_reasons":{"intent":"The customer asks for their money back."}}`})
+		llm := fake.New(contracts.LLMProviderAnthropic).Script(fake.Step{
+			Text: `{"intent":"refund","_reasons":{"intent":"The customer asks for their money back."}}`,
+		})
 		classifyingModel(t, d, llm)
 
 		d.Owner.PostJSON("/api/v1/ai/conversation-attributes", testkit.JSON{
@@ -242,7 +244,9 @@ func TestAIConversationAttributes(t *testing.T) {
 	t.Run("never replaces a value a teammate set, and starts workflows on any change", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
-		llm := fake.New(contracts.LLMProviderAnthropic).Script(fake.Step{Text: `{"intent":"refund","_reasons":{"intent":"The customer asks for their money back."}}`})
+		llm := fake.New(contracts.LLMProviderAnthropic).Script(fake.Step{
+			Text: `{"intent":"refund","_reasons":{"intent":"The customer asks for their money back."}}`,
+		})
 		classifyingModel(t, d, llm)
 
 		d.Owner.PostJSON("/api/v1/conversation-attributes", testkit.JSON{
@@ -334,7 +338,7 @@ func TestAIConversationAttributes(t *testing.T) {
 
 		d.Owner.GetJSON("/api/v1/conversation-attributes/"+used+"/usage").AssertOK().
 			AssertJSONPath("data.deletable", false).AssertJSONPath("data.workflows.0.name", "Billing triage")
-		d.Owner.Delete("/api/v1/conversation-attributes/" + used).AssertStatus(409).
+		d.Owner.Delete("/api/v1/conversation-attributes/"+used).AssertStatus(409).
 			AssertJSONPath("code", "attribute_in_use").AssertJSONPath("workflows.0", "Billing triage")
 
 		d.Owner.GetJSON("/api/v1/conversation-attributes/"+held+"/usage").AssertOK().

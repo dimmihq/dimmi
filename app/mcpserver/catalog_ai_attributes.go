@@ -11,6 +11,8 @@
 
 package mcpserver
 
+import "maps"
+
 /*
 aiAttributeDocs returns the entries for AI conversation attributes.
 */
@@ -82,8 +84,9 @@ attributes, which teammates and the AI both fill.
 */
 func conversationAttributeDocs() map[string]Doc {
 	params := conversationAttributeParams()
+	out := conversationValueDocs(params)
 
-	return map[string]Doc{
+	maps.Copy(out, map[string]Doc{
 		"conversation-attributes.index": {
 			Title:   "List conversation attributes",
 			Use:     "Lists the attributes teammates and the AI fill on every conversation, active and archived.",
@@ -122,21 +125,9 @@ func conversationAttributeDocs() map[string]Doc {
 			Returns: "the attributes in their new order.",
 			Params:  params,
 		},
-		"conversations.attributes.index": {
-			Name:    "get_conversation_attribute_values",
-			Title:   "Get a conversation's attributes",
-			Use:     "Reads a conversation's attribute values and who set each.",
-			Returns: "each active attribute with its value, null when empty, and who set it.",
-		},
-		"conversations.attributes.update": {
-			Name:  "set_conversation_attribute_values",
-			Title: "Set a conversation's attributes",
-			Use: "Sets or clears some of a conversation's attribute values. A value set here is never " +
-				"replaced by the AI.",
-			Returns: "the conversation's attributes as they now are.",
-			Params:  params,
-		},
-	}
+	})
+
+	return out
 }
 
 /*
@@ -156,6 +147,42 @@ func aiAttributeSchemaTexts() map[string]map[string]string {
 			"value": "What the AI found, in the attribute's type: text, a number, a YYYY-MM-DD date, " +
 				"true or false, or one of its options.",
 		},
+		"ConversationAIAttributes": {
+			"checked_at": "When the AI last read the conversation. Null when it never has.",
+			"values":     "Each value found, with its attribute. An attribute with nothing found is left out.",
+		},
+	}
+}
+
+/*
+conversationValueDocs returns the entries for a conversation's
+attribute values.
+*/
+func conversationValueDocs(params map[string]string) map[string]Doc {
+	return map[string]Doc{
+		"conversations.attributes.index": {
+			Name:    "get_conversation_attribute_values",
+			Title:   "Get a conversation's attributes",
+			Use:     "Reads a conversation's attribute values and who set each.",
+			Returns: "each active attribute with its value, null when empty, and who set it.",
+		},
+		"conversations.attributes.update": {
+			Name:  "set_conversation_attribute_values",
+			Title: "Set a conversation's attributes",
+			Use: "Sets or clears some of a conversation's attribute values. A value set here is never " +
+				"replaced by the AI.",
+			Returns: "the conversation's attributes as they now are.",
+			Params:  params,
+		},
+	}
+}
+
+/*
+conversationAttributeSchemaTexts returns the texts of conversation
+attributes, their values and their usage.
+*/
+func conversationAttributeSchemaTexts() map[string]map[string]string {
+	return map[string]map[string]string{
 		"ConversationAttribute": {
 			"data_type": "What the value is: text, long_text, number, decimal, choice, multiple_choice, " +
 				"boolean, date, datetime, file, contact or company.",
@@ -199,10 +226,6 @@ func aiAttributeSchemaTexts() map[string]map[string]string {
 		"ConversationAttributeValues": {
 			"checked_at": "When the AI last read the conversation. Null when it never has.",
 			"values":     "Each active attribute with its value, and each archived one that still holds one.",
-		},
-		"ConversationAIAttributes": {
-			"checked_at": "When the AI last read the conversation. Null when it never has.",
-			"values":     "Each value found, with its attribute. An attribute with nothing found is left out.",
 		},
 	}
 }

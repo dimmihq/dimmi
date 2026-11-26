@@ -176,7 +176,9 @@ func usageOf(ctx context.Context, q *models.Queries, attr models.AiConversationA
 		}
 	}
 
-	views, err := q.ListViewsUsingAttribute(ctx, models.ListViewsUsingAttributeParams{WorkspaceID: ws, Field: field + `"`})
+	views, err := q.ListViewsUsingAttribute(ctx, models.ListViewsUsingAttributeParams{
+		WorkspaceID: ws, Field: field + `"`,
+	})
 	if err != nil {
 		return Usage{}, fmt.Errorf("list views using attribute: %w", err)
 	}

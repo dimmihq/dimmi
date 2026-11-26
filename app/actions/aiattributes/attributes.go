@@ -175,7 +175,7 @@ func (a *Attributes) Create(ctx context.Context, in CreateInput) (models.AiConve
 		return models.AiConversationAttribute{}, err
 	}
 
-	described, err := describe(trimmed(in.Options), in.Descriptions, true)
+	described, err := describe(trimmed(in.Options), in.Descriptions)
 	if err != nil {
 		return models.AiConversationAttribute{}, err
 	}
@@ -308,12 +308,11 @@ func changed(cur models.AiConversationAttribute, in UpdateInput) (models.AiConve
 		return next, ErrStatus
 	}
 
-	descriptions, strict := OptionDescriptions(cur), in.Descriptions != nil
-	if strict {
-		descriptions = *in.Descriptions
+	described, err := keepDescribed(next.Options, OptionDescriptions(cur))
+	if in.Descriptions != nil {
+		described, err = describe(next.Options, *in.Descriptions)
 	}
 
-	described, err := describe(next.Options, descriptions, strict)
 	if err != nil {
 		return next, err
 	}

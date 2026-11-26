@@ -54,10 +54,24 @@ func OptionDescriptions(a models.AiConversationAttribute) map[string]string {
 }
 
 /*
-describe keeps the descriptions of the options a list has, trimmed and
+describe keeps the descriptions sent for a list's options, trimmed and
 without empty ones, refusing one of another option or too long.
 */
-func describe(options []string, descriptions map[string]string, strict bool) (json.RawMessage, error) {
+func describe(options []string, descriptions map[string]string) (json.RawMessage, error) {
+	for option := range descriptions {
+		if !slices.Contains(options, option) {
+			return nil, ErrOptionDescriptions
+		}
+	}
+
+	return keepDescribed(options, descriptions)
+}
+
+/*
+keepDescribed keeps the descriptions of the options a list still has,
+trimmed and without empty ones, refusing one too long.
+*/
+func keepDescribed(options []string, descriptions map[string]string) (json.RawMessage, error) {
 	out := map[string]string{}
 
 	for option, text := range descriptions {
@@ -65,9 +79,6 @@ func describe(options []string, descriptions map[string]string, strict bool) (js
 
 		switch {
 		case !slices.Contains(options, option):
-			if strict {
-				return nil, ErrOptionDescriptions
-			}
 		case utf8.RuneCountInString(text) > maxOptionDescription:
 			return nil, ErrOptionDescriptions
 		case text != "":
@@ -97,7 +108,8 @@ func (a *Attributes) Reorder(ctx context.Context, m authz.Membership, order []id
 
 		for i, id := range order {
 			if err := q.MoveConversationAttribute(ctx, models.MoveConversationAttributeParams{
-				Position: int32(i - len(order)), Now: now, WorkspaceID: m.Workspace.ID, ID: id, //nolint:gosec // short list
+				Position: int32(i - len(order)), //nolint:gosec // a short list
+				Now:      now, WorkspaceID: m.Workspace.ID, ID: id,
 			}); err != nil {
 				return fmt.Errorf("move conversation attribute: %w", err)
 			}
