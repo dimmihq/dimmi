@@ -20,11 +20,9 @@ type IntegrationProvider string
 The providers the product ships.
 */
 const (
-	IntegrationProviderSlack    IntegrationProvider = "slack"
-	IntegrationProviderNotion   IntegrationProvider = "notion"
-	IntegrationProviderIntercom IntegrationProvider = "intercom"
-	IntegrationProviderZendesk  IntegrationProvider = "zendesk"
-	IntegrationProviderGitHub   IntegrationProvider = "github"
+	IntegrationProviderSlack  IntegrationProvider = "slack"
+	IntegrationProviderNotion IntegrationProvider = "notion"
+	IntegrationProviderGitHub IntegrationProvider = "github"
 )
 
 /*
@@ -32,7 +30,6 @@ IntegrationProviders returns every provider, in display order.
 */
 func IntegrationProviders() []IntegrationProvider {
 	return []IntegrationProvider{
-		IntegrationProviderSlack, IntegrationProviderNotion, IntegrationProviderIntercom, IntegrationProviderZendesk,
-		IntegrationProviderGitHub,
+		IntegrationProviderSlack, IntegrationProviderNotion, IntegrationProviderGitHub,
 	}
 }

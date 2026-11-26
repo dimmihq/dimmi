@@ -1,6 +1,6 @@
 /*
  * The tools the workspace connects, grouped by what they are for:
- * messaging, help desks and CRMs, issue trackers, incident tools and
+ * messaging, issue trackers, incident tools and
  * knowledge. A tool is installed once and every feature shares it. Each
  * tool is one row: a filled check when it is connected, an empty one
  * when it is not, a warning when it needs attention. A connected row
@@ -13,16 +13,12 @@ import {
   RiCheckboxBlankCircleLine,
   RiCheckboxCircleFill,
   RiErrorWarningFill,
-  RiLink,
   RiWhatsappLine,
 } from "@remixicon/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { Button } from "@/components/base/buttons/button";
-import { Input } from "@/components/base/input/input";
-import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { Spinner } from "@/components/base/spinner/spinner";
 import { toast } from "@/components/base/toast/toast";
 import { KeyConnectDialog } from "@/features/tickets/issues/key-connect";
@@ -52,11 +48,6 @@ const messaging = "Messaging";
 
 const groups: { title: string; description: string; providers: string[] }[] = [
   { title: messaging, description: "Answer customers and alert your team where they talk.", providers: ["slack"] },
-  {
-    title: "Help desks and CRMs",
-    description: "Answer from the help center articles you already keep there.",
-    providers: ["intercom", "zendesk"],
-  },
   {
     title: "Issue trackers",
     description: "Link tickets to engineering issues; their status moves the ticket.",
@@ -107,50 +98,6 @@ function State({ installation }: { installation: Integration | undefined }) {
 }
 
 /*
- * hosted names the tools hosted per customer, which need the
- * customer's subdomain before their consent screen.
- */
-const hosted: Record<string, string> = { zendesk: "zendesk.com" };
-
-/*
- * SubdomainDialog asks for the subdomain of a tool hosted per customer.
- */
-function SubdomainDialog({
-  label,
-  domain,
-  isOpen,
-  busy,
-  onOpenChange,
-  onConnect,
-}: {
-  label: string;
-  domain: string;
-  isOpen: boolean;
-  busy: boolean;
-  onOpenChange: (open: boolean) => void;
-  onConnect: (subdomain: string) => void;
-}) {
-  const [subdomain, setSubdomain] = useState("");
-
-  return (
-    <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
-      <ModalHeader icon={RiLink} title={`Connect ${label}`} description={`The part before .${domain}`} />
-      <ModalBody>
-        <Input label="Subdomain" placeholder="your-subdomain" value={subdomain} onChange={setSubdomain} autoFocus />
-      </ModalBody>
-      <ModalFooter>
-        <Button variant="secondary" onClick={() => onOpenChange(false)}>
-          Cancel
-        </Button>
-        <Button disabled={subdomain.trim() === ""} loading={busy} onClick={() => onConnect(subdomain.trim())}>
-          Connect
-        </Button>
-      </ModalFooter>
-    </Modal>
-  );
-}
-
-/*
  * ProviderRow is one tool. The whole row opens the tool's page, or
  * connects it when it has no installation yet.
  */
@@ -169,8 +116,7 @@ function ProviderRow({
   const look = providerLook(provider.name);
   const [asking, setAsking] = useState(false);
   const start = useMutation({
-    mutationFn: (account?: string) =>
-      startInstallation(workspace, provider.name, { return_to: window.location.pathname, account }),
+    mutationFn: () => startInstallation(workspace, provider.name, { return_to: window.location.pathname }),
     onSuccess: ({ authorize_url }) => window.location.assign(authorize_url),
     onError: (error) => toast.error(error.message),
   });
@@ -186,10 +132,10 @@ function ProviderRow({
   const open = () => {
     if (installation) {
       void navigate({ to: "/d/settings/integrations/$integration", params: { integration: installation.id } });
-    } else if (provider.connect === "api_key" || hosted[provider.name]) {
+    } else if (provider.connect === "api_key") {
       setAsking(true);
     } else {
-      start.mutate(undefined);
+      start.mutate();
     }
   };
 
@@ -225,16 +171,6 @@ function ProviderRow({
       </button>
       {provider.connect === "api_key" ? (
         <KeyConnectDialog workspace={workspace} provider={provider.name} isOpen={asking} onOpenChange={setAsking} />
-      ) : null}
-      {hosted[provider.name] ? (
-        <SubdomainDialog
-          label={provider.label}
-          domain={hosted[provider.name]}
-          isOpen={asking}
-          busy={start.isPending}
-          onOpenChange={setAsking}
-          onConnect={(subdomain) => start.mutate(subdomain)}
-        />
       ) : null}
     </>
   );

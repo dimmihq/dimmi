@@ -1,16 +1,23 @@
 /*
  * The composer's writing field. The formatting editor loads on its own;
  * until it arrives, and should it fail to, a plain field takes the same
- * Markdown, so the person can start typing at once.
+ * Markdown, so the person can start typing at once. A field opened
+ * after the editor arrived uses it straight away; the choice is kept for
+ * the field's life, so the editor never remounts under the person.
  */
-import { lazy, Suspense, useCallback } from "react";
+import { lazy, Suspense, useCallback, useState } from "react";
 
-import { loadEditor } from "./load-editor";
+import { loadEditor, loadedEditor } from "./load-editor";
 import type { RichEditorProps } from "./rich-editor";
 
 const RichEditor = lazy(() => loadEditor().catch(() => ({ default: PlainField })));
 
 export function ComposerField(props: RichEditorProps) {
+  const [Ready] = useState(loadedEditor);
+  if (Ready) {
+    return <Ready key={props.label} {...props} />;
+  }
+
   return (
     <Suspense fallback={<PlainField {...props} />}>
       <RichEditor key={props.label} {...props} />

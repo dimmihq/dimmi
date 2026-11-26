@@ -109,8 +109,7 @@ func schemaTextsFromKnowledgeSource() map[string]map[string]string {
 				"paused.",
 			"targets": "Who reads the source's documents: any of agent (the AI agent), operator and " +
 				"help_center.",
-			"type": "What kind of source it is, such as website, notion, github, markdown_upload, " +
-				"zendesk_help_center or intercom_help_center.",
+			"type": "What kind of source it is, such as website, notion, github or markdown_upload.",
 		},
 		"KnowledgeSourcePreview": {
 			"account": "The account reached at the source's service, as it names itself. Empty when " +

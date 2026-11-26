@@ -124,10 +124,9 @@ func schemaTextsFromIntegration() map[string]map[string]string {
 				"installation.",
 			"metadata": "Provider-specific facts kept about the installation; its keys differ per " +
 				"provider and it is {} when empty.",
-			"name": "The installation's name, usually the connected account's name at the provider.",
-			"provider": "The tool connected, such as linear, jira, github, notion, intercom or " +
-				"zendesk.",
-			"scopes": "The permission scopes the provider granted to this installation.",
+			"name":     "The installation's name, usually the connected account's name at the provider.",
+			"provider": "The tool connected, such as linear, jira, github or notion.",
+			"scopes":   "The permission scopes the provider granted to this installation.",
 			"source": "How it was connected: oauth through the provider's approval page, or manual " +
 				"with pasted tokens or a key.",
 			"status": "The connection's health: active, error (see last_error) or disconnected.",

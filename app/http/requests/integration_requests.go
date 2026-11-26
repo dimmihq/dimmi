@@ -33,7 +33,7 @@ type IntegrationRequest struct {
 /*
 IntegrationInstallationBody says which features an install is for,
 every feature when empty, the page to come back to, and for a service
-hosted per customer, such as Zendesk, the account to connect.
+hosted per customer, the account to connect.
 */
 type IntegrationInstallationBody struct {
 	Features []string `json:"features,omitempty"  validate:"omitempty,max=20,dive,min=1,max=40"`

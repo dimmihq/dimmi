@@ -56,14 +56,13 @@ func (a *App) configureOAuthClient(cfg *foundation.Config) {
 
 /*
 knowledgeClients are the OAuth clients of the services knowledge
-sources read, those with credentials set: Notion, Intercom and GitHub
-follow the standard, Zendesk lives on each customer's own subdomain.
+sources read, those with credentials set: Notion and GitHub.
 */
 func knowledgeClients(s appconfig.ServicesConfig) map[string]config.Section {
 	out := map[string]config.Section{}
 
 	if c := s.Notion; c.ClientID != "" && c.ClientSecret != "" {
-		out["notion"] = oauthSection("generic", c, endpoints{
+		out["notion"] = oauthSection(c, endpoints{
 			authorize: "https://api.notion.com/v1/oauth/authorize",
 			exchange:  "https://api.notion.com/v1/oauth/token",
 		})
@@ -71,30 +70,14 @@ func knowledgeClients(s appconfig.ServicesConfig) map[string]config.Section {
 		out["notion"]["pkce"] = false
 	}
 
-	if c := s.Intercom; c.ClientID != "" && c.ClientSecret != "" {
-		out["intercom"] = oauthSection("generic", c, endpoints{
-			authorize: "https://app.intercom.com/oauth",
-			exchange:  "https://api.intercom.io/auth/eagle/token",
-		})
-		out["intercom"]["pkce"] = false
-	}
-
 	if c := s.GitHub; c.ClientID != "" && c.ClientSecret != "" {
-		out["github"] = oauthSection("generic", c, endpoints{
+		out["github"] = oauthSection(c, endpoints{
 			authorize: "https://github.com/login/oauth/authorize",
 			exchange:  "https://github.com/login/oauth/access_token",
 		})
 	}
 
 	trackerClients(s, out)
-
-	if c := s.Zendesk; c.ClientID != "" {
-		out["zendesk"] = oauthSection("hosted", c, endpoints{
-			authorize: "https://{account}.zendesk.com/oauth/authorizations/new",
-			exchange:  "https://{account}.zendesk.com/oauth/tokens",
-		})
-		out["zendesk"]["scopes"] = []string{"read"}
-	}
 
 	return out
 }
@@ -107,7 +90,7 @@ token comes back.
 */
 func trackerClients(s appconfig.ServicesConfig, out map[string]config.Section) {
 	if c := s.Linear; c.Configured() {
-		out["linear"] = oauthSection("generic", appconfig.OAuthServiceConfig{
+		out["linear"] = oauthSection(appconfig.OAuthServiceConfig{
 			ClientID:     c.ClientID,
 			ClientSecret: c.ClientSecret,
 		}, endpoints{
@@ -118,7 +101,7 @@ func trackerClients(s appconfig.ServicesConfig, out map[string]config.Section) {
 	}
 
 	if c := s.Jira; c.Configured() {
-		out["jira"] = oauthSection("generic", appconfig.OAuthServiceConfig{
+		out["jira"] = oauthSection(appconfig.OAuthServiceConfig{
 			ClientID:     c.ClientID,
 			ClientSecret: c.ClientSecret,
 		}, endpoints{
@@ -138,11 +121,12 @@ type endpoints struct {
 }
 
 /*
-oauthSection is the provider config of a service's OAuth client.
+oauthSection is the provider config of a service's standard OAuth
+client.
 */
-func oauthSection(driver string, c appconfig.OAuthServiceConfig, e endpoints) config.Section {
+func oauthSection(c appconfig.OAuthServiceConfig, e endpoints) config.Section {
 	return config.Section{
-		"driver": driver, "client_id": c.ClientID, "client_secret": c.ClientSecret,
+		"driver": "generic", "client_id": c.ClientID, "client_secret": c.ClientSecret,
 		"auth_url": e.authorize, "token_url": e.exchange,
 	}
 }

@@ -29,9 +29,8 @@ import (
 ServicesConfig holds the credentials of the apps dimmi has registered at
 other services. Slack is the shared Slack app, WhatsApp the Meta app
 WhatsApp numbers connect through, Meta the same app for Messenger and
-Instagram with each one's login; Notion, Intercom,
-Zendesk and GitHub are the OAuth clients knowledge sources connect
-through.
+Instagram with each one's login; Notion and GitHub are the OAuth
+clients knowledge sources connect through.
 */
 type ServicesConfig struct {
 	Slack     SlackServiceConfig    `koanf:"slack"`
@@ -40,8 +39,6 @@ type ServicesConfig struct {
 	Facebook  SocialServiceConfig   `koanf:"facebook"`
 	Instagram SocialServiceConfig   `koanf:"instagram"`
 	Notion    OAuthServiceConfig    `koanf:"notion"`
-	Intercom  OAuthServiceConfig    `koanf:"intercom"`
-	Zendesk   OAuthServiceConfig    `koanf:"zendesk"`
 	GitHub    OAuthServiceConfig    `koanf:"github"`
 	Linear    TrackerServiceConfig  `koanf:"linear"`
 	Jira      TrackerServiceConfig  `koanf:"jira"`
@@ -126,7 +123,7 @@ token is renewed, and HealthInterval how often each installation is
 checked.
 */
 type IntegrationsConfig struct {
-	Enabled        []string      `default:"[\"slack\",\"notion\",\"intercom\",\"zendesk\",\"github\",\"linear\",\"jira\",\"incident_io\",\"rootly\",\"pagerduty\"]" koanf:"enabled"` //nolint:lll // one default list
+	Enabled        []string      `default:"[\"slack\",\"notion\",\"github\",\"linear\",\"jira\",\"incident_io\",\"rootly\",\"pagerduty\"]" koanf:"enabled"` //nolint:lll // one default list
 	RefreshSkew    time.Duration `default:"5m"          koanf:"refresh_skew"`
 	HealthInterval time.Duration `default:"24h"         koanf:"health_interval"`
 }

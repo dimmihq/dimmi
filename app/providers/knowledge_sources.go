@@ -21,11 +21,9 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/knowledgesources"
 	"github.com/dimmihq/dimmi/app/integrations/knowledge/sources"
 	"github.com/dimmihq/dimmi/app/integrations/knowledge/sources/github"
-	"github.com/dimmihq/dimmi/app/integrations/knowledge/sources/intercom"
 	"github.com/dimmihq/dimmi/app/integrations/knowledge/sources/notion"
 	"github.com/dimmihq/dimmi/app/integrations/knowledge/sources/upload"
 	"github.com/dimmihq/dimmi/app/integrations/knowledge/sources/website"
-	"github.com/dimmihq/dimmi/app/integrations/knowledge/sources/zendesk"
 	appmail "github.com/dimmihq/dimmi/app/mail"
 )
 
@@ -36,8 +34,6 @@ dashboard's gallery shows them.
 func sourceDrivers(a *app.App) []sources.Driver {
 	drivers := []sources.Driver{
 		siteDriver(a),
-		intercom.New(a.HTTP),
-		zendesk.New(a.HTTP),
 		github.New(a.HTTP),
 		notion.New(a.HTTP),
 	}
