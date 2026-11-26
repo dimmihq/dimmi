@@ -295,7 +295,7 @@ func (h *HelpCenters) Update(ctx context.Context, in HelpCenterChange) (models.H
 		if in.Locale == nil && in.Locales == nil {
 			return nil
 		}
-		out, err = setLanguages(ctx, q, out, LanguagesChange{Default: in.Locale, Locales: in.Locales}, h.Clock.Now)
+		out, err = setLanguages(ctx, q, out, LanguagesChange{Default: in.Locale, Locales: in.Locales, now: h.Clock.Now})
 		return err
 	})
 	return out, err

@@ -128,15 +128,25 @@ type shelf struct {
 }
 
 /*
-in returns what readers of the language see. With originals, an article
-not translated into the language is shown in the default one, and a
-collection holding one shows under its own name when it has no
-translated one; without, both stay hidden.
+in returns what readers of the language see. Unless untranslated
+articles are hidden, an article not translated into the language is
+shown in the default one, and a collection holding one shows under its
+own name when it has no translated one.
 */
-func (s shelves) in(locale string, originals bool) shelf {
+func (s shelves) in(locale, untranslated string) shelf {
 	if locale == s.center.Locale {
 		return shelf{collections: s.collections, articles: s.articles}
 	}
+	out := s.articlesIn(locale, untranslated)
+	out.collections = s.collectionsIn(locale, untranslated, out.articles)
+	return out
+}
+
+/*
+articlesIn lists the articles readers of the language see, in the
+source's order, then those translated whose source is not published.
+*/
+func (s shelves) articlesIn(locale, untranslated string) shelf {
 	translated := map[ids.UUID]models.ListPublishedArticlesRow{}
 	var order []ids.UUID
 	for _, t := range s.translated {
@@ -147,10 +157,12 @@ func (s shelves) in(locale string, originals bool) shelf {
 	}
 	out := shelf{originals: map[ids.UUID]bool{}}
 	for _, a := range s.articles {
-		if t, ok := translated[a.ID]; ok {
+		t, ok := translated[a.ID]
+		switch {
+		case ok:
 			out.articles = append(out.articles, t)
 			delete(translated, a.ID)
-		} else if originals {
+		case untranslated != UntranslatedHide:
 			out.articles, out.originals[a.ID] = append(out.articles, a), true
 		}
 	}
@@ -160,27 +172,45 @@ func (s shelves) in(locale string, originals bool) shelf {
 		}
 	}
 	out.articles = refreshed(out.articles)
+	return out
+}
+
+/*
+collectionsIn lists the collections readers of the language see, with
+their names in it where translated.
+*/
+func (s shelves) collectionsIn(locale, untranslated string, articles []models.ListPublishedArticlesRow,
+) []models.Collection {
 	named := map[ids.UUID]models.ListCollectionTranslationsRow{}
 	for _, t := range s.translations {
 		if t.Locale == locale {
 			named[t.CollectionID] = t
 		}
 	}
-	holding := s.holding(out.articles)
+	holding := s.holding(articles)
+	var out []models.Collection
 	for _, c := range s.collections {
 		t, ok := named[c.ID]
-		if !holding[c.ID] || (!ok && !originals) {
+		if !holding[c.ID] || (!ok && untranslated == UntranslatedHide) {
 			continue
 		}
 		if ok {
-			c.Name, c.Slug, c.Description = t.Name, t.Slug, t.Description
-			if t.UpdatedAt.After(c.UpdatedAt) {
-				c.UpdatedAt = t.UpdatedAt
-			}
+			c = namedIn(c, t)
 		}
-		out.collections = append(out.collections, c)
+		out = append(out, c)
 	}
 	return out
+}
+
+/*
+namedIn writes a collection's translation over it.
+*/
+func namedIn(c models.Collection, t models.ListCollectionTranslationsRow) models.Collection {
+	c.Name, c.Slug, c.Description = t.Name, t.Slug, t.Description
+	if t.UpdatedAt.After(c.UpdatedAt) {
+		c.UpdatedAt = t.UpdatedAt
+	}
+	return c
 }
 
 /*
@@ -220,7 +250,7 @@ func (s shelves) alternates() Alternates {
 		put(out.Collections, c.ID, s.center.Locale, c.Slug)
 	}
 	for _, locale := range LocalesOf(s.center)[1:] {
-		read := s.in(locale, false)
+		read := s.in(locale, UntranslatedHide)
 		for _, a := range read.articles {
 			put(out.Articles, a.ID, locale, a.Slug)
 		}
@@ -273,7 +303,16 @@ func searchIn(ctx context.Context, q *models.Queries, f Find) ([]models.SearchPu
 	if !SettingsOf(h).ShowsOriginals() {
 		return out, nil
 	}
-	return withOriginals(ctx, q, f, locale, out, source)
+	return withOriginals(ctx, q, searchedIn{search: f, locale: locale, rows: out}, source)
+}
+
+/*
+searchedIn is what a search of one language found so far.
+*/
+type searchedIn struct {
+	search Find
+	locale string
+	rows   []models.SearchPublishedArticlesRow
 }
 
 /*
@@ -281,9 +320,10 @@ withOriginals adds to a search of one language the articles found in the
 default language that are not translated into it, after the translated
 ones.
 */
-func withOriginals(ctx context.Context, q *models.Queries, f Find, locale string,
-	out []models.SearchPublishedArticlesRow, source func() ([]models.SearchPublishedArticlesRow, error),
+func withOriginals(ctx context.Context, q *models.Queries, so searchedIn,
+	source func() ([]models.SearchPublishedArticlesRow, error),
 ) ([]models.SearchPublishedArticlesRow, error) {
+	f, locale, out := so.search, so.locale, so.rows
 	translated, err := q.ListTranslatedArticleIDs(ctx, models.ListTranslatedArticleIDsParams{
 		WorkspaceID: f.Center.WorkspaceID, HelpCenterID: f.Center.ID, Locale: locale,
 	})

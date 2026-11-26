@@ -71,16 +71,13 @@ function formOf(center: HelpCenter): Form {
 }
 
 /*
- * changeOf is the update a save sends: only what the form changed from
- * the help center as it is, text trimmed. The settings go whole, with
- * the changed ones laid over them, since the server keeps what it is
- * sent.
+ * settingsChangeOf is the settings a save changes: only those the form
+ * changed, text trimmed.
  */
-function changeOf(center: HelpCenter, form: Form): Parameters<typeof updateHelpCenter>[2] {
-  const was = formOf(center);
+function settingsChangeOf(form: Form, was: Form): HelpCenterSettings {
   const differs = (key: keyof Form) => form[key] !== was[key];
   const text = (key: "title" | "subtitle" | "footer" | "contact" | "login") => form[key].trim();
-  const settings: HelpCenterSettings = {
+  return {
     ...(differs("color") ? { primary_color: form.color } : {}),
     ...(differs("title") ? { home_title: text("title") } : {}),
     ...(differs("subtitle") ? { home_subtitle: text("subtitle") } : {}),
@@ -92,6 +89,18 @@ function changeOf(center: HelpCenter, form: Form): Parameters<typeof updateHelpC
     ...(differs("messengerId") ? { messenger_id: form.messengerId } : {}),
     ...(differs("untranslated") ? { untranslated_articles: form.untranslated } : {}),
   };
+}
+
+/*
+ * changeOf is the update a save sends: only what the form changed from
+ * the help center as it is, text trimmed. The settings go whole, with
+ * the changed ones laid over them, since the server keeps what it is
+ * sent.
+ */
+function changeOf(center: HelpCenter, form: Form): Parameters<typeof updateHelpCenter>[2] {
+  const was = formOf(center);
+  const differs = (key: keyof Form) => form[key] !== was[key];
+  const settings = settingsChangeOf(form, was);
   const languages = form.defaultLocale !== was.defaultLocale || form.locales.join() !== was.locales.join();
 
   return {

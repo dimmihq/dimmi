@@ -123,7 +123,7 @@ func (p *Public) LoadIn(ctx context.Context, subdomain, locale string) (Snapshot
 			out = cached
 			return nil
 		}
-		out, err = load(ctx, q, h, key.locale, p.Clock.Now)
+		out, err = load(ctx, q, h, reading{locale: key.locale, now: p.Clock.Now})
 		if err == nil {
 			p.snapshots.Set(key, out)
 		}
@@ -173,15 +173,15 @@ messenger knows sees it, for the messenger's Help tab. It is never
 cached either.
 */
 func (p *Public) LoadByIDFor(ctx context.Context, workspaceID, id, contact ids.UUID) (Snapshot, error) {
-	return p.LoadByIDForIn(ctx, workspaceID, id, "", contact)
+	return p.LoadByIDForIn(ctx, models.FindHelpCenterParams{WorkspaceID: workspaceID, ID: id}, "", contact)
 }
 
 /*
 LoadByIDForIn is LoadByIDFor in one language.
 */
-func (p *Public) LoadByIDForIn(ctx context.Context, workspaceID, id ids.UUID, locale string, contact ids.UUID,
+func (p *Public) LoadByIDForIn(ctx context.Context, find models.FindHelpCenterParams, locale string, contact ids.UUID,
 ) (Snapshot, error) {
-	return p.readFor(ctx, models.FindHelpCenterParams{WorkspaceID: workspaceID, ID: id}, locale, contact)
+	return p.readFor(ctx, find, locale, contact)
 }
 
 /*
@@ -240,13 +240,12 @@ func (p *Public) reader(ctx context.Context, q *models.Queries, ws ids.UUID, con
 load reads a help center's collections and published articles, those an
 anonymous reader may see.
 */
-func load(ctx context.Context, q *models.Queries, h models.HelpCenter, locale string, now nowFunc,
-) (Snapshot, error) {
-	out, err := loadAll(ctx, q, h, locale)
+func load(ctx context.Context, q *models.Queries, h models.HelpCenter, at reading) (Snapshot, error) {
+	out, err := loadAll(ctx, q, h, at.locale)
 	if err != nil {
 		return out, err
 	}
-	return readable(ctx, q, out, audiences.Reader{WorkspaceID: h.WorkspaceID, Now: now()})
+	return readable(ctx, q, out, audiences.Reader{WorkspaceID: h.WorkspaceID, Now: at.now()})
 }
 
 /*
@@ -259,7 +258,7 @@ func loadAll(ctx context.Context, q *models.Queries, h models.HelpCenter, locale
 	if err != nil {
 		return out, err
 	}
-	shown := read.in(locale, SettingsOf(h).ShowsOriginals())
+	shown := read.in(locale, SettingsOf(h).UntranslatedArticles)
 	out.Collections, out.Articles, out.Originals = shown.collections, shown.articles, shown.originals
 	out.Alternates = read.alternates()
 	out.Messenger, err = messengerOf(ctx, q, h)
@@ -270,6 +269,15 @@ func loadAll(ctx context.Context, q *models.Queries, h models.HelpCenter, locale
 nowFunc gives the current time.
 */
 type nowFunc func() time.Time
+
+/*
+reading is the language a snapshot is read in, and the clock its
+audiences are judged by.
+*/
+type reading struct {
+	locale string
+	now    nowFunc
+}
 
 /*
 Find is one search of a help center: the help center, the words, how
@@ -371,7 +379,7 @@ func (p *Public) LoadByIDIn(ctx context.Context, workspaceID, id ids.UUID, local
 			out = cached
 			return nil
 		}
-		out, err = load(ctx, q, h, key.locale, p.Clock.Now)
+		out, err = load(ctx, q, h, reading{locale: key.locale, now: p.Clock.Now})
 		if err == nil {
 			p.snapshots.Set(key, out)
 		}

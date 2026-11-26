@@ -24,7 +24,6 @@ import (
 	"context"
 	"net/url"
 	"strings"
-	"time"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 
@@ -37,6 +36,12 @@ import (
 languageCookie keeps the language a reader picked.
 */
 const languageCookie = "dimmi_hc_lang"
+
+/*
+languageCookieAge is how long a picked language is kept, in seconds: a
+year.
+*/
+const languageCookieAge = 365 * 24 * 60 * 60
 
 /*
 readingKey marks a request read in a language other than the default,
@@ -145,6 +150,27 @@ pageIn gives a page's path in a language, and whether it exists there.
 type pageIn func(locale string) (string, bool)
 
 /*
+languagePage is a page in every language, and whether search engines
+should know it in each.
+*/
+type languagePage struct {
+	in         pageIn
+	alternates bool
+}
+
+/*
+indexed is a page search engines should know in every language it
+exists in.
+*/
+func indexed(page pageIn) languagePage { return languagePage{in: page, alternates: true} }
+
+/*
+unindexed is a page only the language menu leads to in other
+languages.
+*/
+func unindexed(page pageIn) languagePage { return languagePage{in: page} }
+
+/*
 samePage is a page that reads the same in every language, such as the
 changelog: the language picker keeps the reader on it.
 */
@@ -157,7 +183,7 @@ localize gives the page its language, its language picker and, for a
 page search engines should know in every language, its alternates.
 Root is the help center's canonical address, base its address here.
 */
-func localize(center *helpcenter.Center, snap helpcenters.Snapshot, at pageAt, page pageIn, alternates bool) {
+func localize(center *helpcenter.Center, snap helpcenters.Snapshot, at pageAt, page languagePage) {
 	h := snap.HelpCenter
 	center.Locale, center.Languages, center.Alternates = snap.Locale, nil, nil
 	locales := helpcenters.LocalesOf(h)
@@ -165,7 +191,7 @@ func localize(center *helpcenter.Center, snap helpcenters.Snapshot, at pageAt, p
 		return
 	}
 	for _, l := range locales {
-		path, ok := page(l)
+		path, ok := page.in(l)
 		if !ok {
 			path = "/"
 		}
@@ -180,7 +206,7 @@ func localize(center *helpcenter.Center, snap helpcenters.Snapshot, at pageAt, p
 		center.Languages = append(center.Languages, helpcenter.LanguageLink{
 			Code: l, Name: lang.Native, URL: to + "?lang=" + url.QueryEscape(l), Current: l == snap.Locale,
 		})
-		if alternates && ok {
+		if page.alternates && ok {
 			center.Alternates = append(center.Alternates, helpcenter.Alternate{
 				Lang: l, URL: strings.TrimSuffix(at.root+prefixOf(h, l)+path, "/"),
 			})
@@ -213,7 +239,7 @@ func keepLanguage(w fhttp.ResponseWriter, r *fhttp.Request, h models.HelpCenter,
 	}
 	cookie := fhttp.Cookie{
 		Name: languageCookie, Value: picked, Path: cookiePath(base), HttpOnly: true, Secure: r.TLS != nil,
-		SameSite: fhttp.SameSiteLaxMode, Expires: time.Now().AddDate(1, 0, 0),
+		SameSite: fhttp.SameSiteLaxMode, MaxAge: languageCookieAge,
 	}
 	w.Header().Add("Set-Cookie", cookie.String())
 }

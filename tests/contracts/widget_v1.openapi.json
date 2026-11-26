@@ -3627,12 +3627,11 @@
         "operationId": "widget.apps.help.show",
         "parameters": [
           {
-            "description": "The language to read the help center in, such as fr. Defaults to the first of the visitor's browser languages the help center offers.",
+            "description": "A language code, such as en or pt-BR.",
             "explode": false,
             "in": "query",
             "name": "locale",
             "schema": {
-              "description": "The language to read the help center in, such as fr. Defaults to the first of the visitor's browser languages the help center offers.",
               "maxLength": 16,
               "type": "string"
             }
@@ -4554,12 +4553,11 @@
         "operationId": "widget.help.show",
         "parameters": [
           {
-            "description": "The language to read the help center in, such as fr. Defaults to the first of the visitor's browser languages the help center offers.",
+            "description": "A language code, such as en or pt-BR.",
             "explode": false,
             "in": "query",
             "name": "locale",
             "schema": {
-              "description": "The language to read the help center in, such as fr. Defaults to the first of the visitor's browser languages the help center offers.",
               "maxLength": 16,
               "type": "string"
             }

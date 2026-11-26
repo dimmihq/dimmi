@@ -45,13 +45,13 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 	base string,
 ) (helpcenter.Center, HelpLibrary, bool) {
 	h, prefix := snap.HelpCenter, prefixOf(snap.HelpCenter, snap.Locale)
-	center := centerOf(h, base+prefix)
+	center := c.centerOf(h, base+prefix)
 	center.Origin = origin(r)
 	center.Canonical = c.canonical(r, h)
 	c.withMessenger(&center, snap)
 	at := pageAt{root: c.Addresses.Root(h), base: base}
 	rest := strings.TrimPrefix(r.URL.Path, "/hc/"+r.PathValue("center"))
-	localize(&center, snap, at, samePage(cmp.Or(rest, "/")), false)
+	localize(&center, snap, at, unindexed(samePage(cmp.Or(rest, "/"))))
 
 	updates := c.announce(r, h, &center)
 	contact, until, signed := c.readerOf(r, h)

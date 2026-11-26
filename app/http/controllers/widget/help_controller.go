@@ -141,7 +141,8 @@ func (c *HelpController) answer(ctx context.Context, resolved actions.Resolved, 
 		snap, err = c.Public.LoadByIDIn(ctx, ws, id, locale)
 	}
 	if err == nil && contact != nil {
-		snap, err = c.Public.LoadByIDForIn(ctx, ws, id, snap.Locale, *contact)
+		find := models.FindHelpCenterParams{WorkspaceID: ws, ID: id}
+		snap, err = c.Public.LoadByIDForIn(ctx, find, snap.Locale, *contact)
 	}
 
 	if errors.Is(err, helpcenters.ErrNoHelpCenter) {

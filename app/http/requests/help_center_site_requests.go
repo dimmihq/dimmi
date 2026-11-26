@@ -68,6 +68,6 @@ ShowWidgetHelpRequest is the input of the messenger's Help tab: the
 language to read it in, else the visitor's browser languages.
 */
 type ShowWidgetHelpRequest struct {
-	Locale         string `query:"locale"          maxLength:"16" doc:"The language to read the help center in, such as fr. Defaults to the first of the visitor's browser languages the help center offers."`
+	Locale         string `query:"locale"          maxLength:"16"`
 	AcceptLanguage string `header:"Accept-Language" maxLength:"512"`
 }

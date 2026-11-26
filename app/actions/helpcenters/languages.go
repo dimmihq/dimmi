@@ -65,36 +65,67 @@ type Language struct {
 languages are the languages the editor offers, in the order it lists
 them. Any well-formed tag is accepted; these are the ones with names.
 */
-var languages = []Language{
-	{"ar", "Arabic", "العربية"}, {"bg", "Bulgarian", "Български"}, {"bn", "Bengali", "বাংলা"},
-	{"ca", "Catalan", "Català"}, {"cs", "Czech", "Čeština"}, {"da", "Danish", "Dansk"},
-	{"de", "German", "Deutsch"}, {"el", "Greek", "Ελληνικά"}, {"en", "English", "English"},
-	{"en-GB", "English (UK)", "English (UK)"}, {"es", "Spanish", "Español"},
-	{"es-MX", "Spanish (Mexico)", "Español (México)"}, {"et", "Estonian", "Eesti"},
-	{"fa", "Persian", "فارسی"}, {"fi", "Finnish", "Suomi"}, {"fr", "French", "Français"},
-	{"fr-CA", "French (Canada)", "Français (Canada)"}, {"he", "Hebrew", "עברית"}, {"hi", "Hindi", "हिन्दी"},
-	{"hr", "Croatian", "Hrvatski"}, {"hu", "Hungarian", "Magyar"}, {"id", "Indonesian", "Bahasa Indonesia"},
-	{"it", "Italian", "Italiano"}, {"ja", "Japanese", "日本語"}, {"ko", "Korean", "한국어"},
-	{"lt", "Lithuanian", "Lietuvių"}, {"lv", "Latvian", "Latviešu"}, {"ms", "Malay", "Bahasa Melayu"},
-	{"nb", "Norwegian", "Norsk bokmål"}, {"nl", "Dutch", "Nederlands"}, {"pl", "Polish", "Polski"},
-	{"pt", "Portuguese", "Português"}, {"pt-BR", "Portuguese (Brazil)", "Português (Brasil)"},
-	{"ro", "Romanian", "Română"}, {"ru", "Russian", "Русский"}, {"sk", "Slovak", "Slovenčina"},
-	{"sl", "Slovenian", "Slovenščina"}, {"sr", "Serbian", "Српски"}, {"sv", "Swedish", "Svenska"},
-	{"sw", "Swahili", "Kiswahili"}, {"th", "Thai", "ไทย"}, {"tr", "Turkish", "Türkçe"},
-	{"uk", "Ukrainian", "Українська"}, {"vi", "Vietnamese", "Tiếng Việt"},
-	{"zh-CN", "Chinese (Simplified)", "简体中文"}, {"zh-TW", "Chinese (Traditional)", "繁體中文"},
+func catalog() []Language {
+	return []Language{
+		{"ar", "Arabic", "العربية"},
+		{"bg", "Bulgarian", "Български"},
+		{"bn", "Bengali", "বাংলা"},
+		{"ca", "Catalan", "Català"},
+		{"cs", "Czech", "Čeština"},
+		{"da", "Danish", "Dansk"},
+		{"de", "German", "Deutsch"},
+		{"el", "Greek", "Ελληνικά"},
+		{"en", "English", "English"},
+		{"en-GB", "English (UK)", "English (UK)"},
+		{"es", "Spanish", "Español"},
+		{"es-MX", "Spanish (Mexico)", "Español (México)"},
+		{"et", "Estonian", "Eesti"},
+		{"fa", "Persian", "فارسی"},
+		{"fi", "Finnish", "Suomi"},
+		{"fr", "French", "Français"},
+		{"fr-CA", "French (Canada)", "Français (Canada)"},
+		{"he", "Hebrew", "עברית"},
+		{"hi", "Hindi", "हिन्दी"},
+		{"hr", "Croatian", "Hrvatski"},
+		{"hu", "Hungarian", "Magyar"},
+		{"id", "Indonesian", "Bahasa Indonesia"},
+		{"it", "Italian", "Italiano"},
+		{"ja", "Japanese", "日本語"},
+		{"ko", "Korean", "한국어"},
+		{"lt", "Lithuanian", "Lietuvių"},
+		{"lv", "Latvian", "Latviešu"},
+		{"ms", "Malay", "Bahasa Melayu"},
+		{"nb", "Norwegian", "Norsk bokmål"},
+		{"nl", "Dutch", "Nederlands"},
+		{"pl", "Polish", "Polski"},
+		{"pt", "Portuguese", "Português"},
+		{"pt-BR", "Portuguese (Brazil)", "Português (Brasil)"},
+		{"ro", "Romanian", "Română"},
+		{"ru", "Russian", "Русский"},
+		{"sk", "Slovak", "Slovenčina"},
+		{"sl", "Slovenian", "Slovenščina"},
+		{"sr", "Serbian", "Српски"},
+		{"sv", "Swedish", "Svenska"},
+		{"sw", "Swahili", "Kiswahili"},
+		{"th", "Thai", "ไทย"},
+		{"tr", "Turkish", "Türkçe"},
+		{"uk", "Ukrainian", "Українська"},
+		{"vi", "Vietnamese", "Tiếng Việt"},
+		{"zh-CN", "Chinese (Simplified)", "简体中文"},
+		{"zh-TW", "Chinese (Traditional)", "繁體中文"},
+	}
 }
 
 /*
 Languages returns the languages the editor offers.
 */
-func Languages() []Language { return slices.Clone(languages) }
+func Languages() []Language { return catalog() }
 
 /*
 LanguageOf names a language tag, falling back to the tag itself.
 */
 func LanguageOf(code string) Language {
-	for _, l := range languages {
+	for _, l := range catalog() {
 		if strings.EqualFold(l.Code, code) {
 			return l
 		}
@@ -108,7 +139,7 @@ be added beside a default, since each becomes the first part of an
 address and must never be mistaken for a page.
 */
 func Listed(code string) bool {
-	return slices.ContainsFunc(languages, func(l Language) bool { return l.Code == code })
+	return slices.ContainsFunc(catalog(), func(l Language) bool { return l.Code == code })
 }
 
 /*
@@ -116,7 +147,7 @@ LocaleOfSegment reads the first part of a help center address as a
 language the editor offers, written as it is stored.
 */
 func LocaleOfSegment(seg string) (string, bool) {
-	for _, l := range languages {
+	for _, l := range catalog() {
 		if strings.EqualFold(l.Code, seg) {
 			return l.Code, true
 		}
@@ -199,6 +230,7 @@ type LanguagesChange struct {
 	ID         ids.UUID
 	Default    *string
 	Locales    *[]string
+	now        nowFunc
 }
 
 /*
@@ -216,7 +248,8 @@ func (h *HelpCenters) SetLanguages(ctx context.Context, in LanguagesChange) (mod
 		if err != nil {
 			return err
 		}
-		out, err = setLanguages(ctx, q, current, in, h.Clock.Now)
+		in.now = h.Clock.Now
+		out, err = setLanguages(ctx, q, current, in)
 		return err
 	})
 	return out, err
@@ -227,7 +260,7 @@ setLanguages checks and writes a change to the help center's languages.
 A new default given alone takes the old default's place, as a help
 center with one language always did.
 */
-func setLanguages(ctx context.Context, q *models.Queries, c models.HelpCenter, in LanguagesChange, now nowFunc,
+func setLanguages(ctx context.Context, q *models.Queries, c models.HelpCenter, in LanguagesChange,
 ) (models.HelpCenter, error) {
 	def := c.Locale
 	if in.Default != nil {
@@ -236,13 +269,37 @@ func setLanguages(ctx context.Context, q *models.Queries, c models.HelpCenter, i
 			return c, ErrLocaleInvalid
 		}
 	}
+	locales, err := localesWanted(c, in, def)
+	if err != nil {
+		return c, err
+	}
+	if err := checkNewDefault(ctx, q, c, def); err != nil {
+		return c, err
+	}
+	if def == c.Locale && slices.Equal(locales, LocalesOf(c)) && len(c.Locales) > 0 {
+		return c, nil
+	}
+	out, err := q.SetHelpCenterLocales(ctx, models.SetHelpCenterLocalesParams{
+		Locale: def, Locales: locales, Now: in.now(), WorkspaceID: c.WorkspaceID, ID: c.ID,
+	})
+	if err != nil {
+		return c, fmt.Errorf("set help center languages: %w", err)
+	}
+	return out, nil
+}
+
+/*
+localesWanted is every language the change leaves the help center
+offering, the default first, each once.
+*/
+func localesWanted(c models.HelpCenter, in LanguagesChange, def string) ([]string, error) {
 	wanted := slices.DeleteFunc(LocalesOf(c), func(l string) bool { return l == c.Locale })
 	if in.Locales != nil {
 		wanted = nil
 		for _, raw := range *in.Locales {
 			l, ok := NormalizeLocale(raw)
 			if !ok || (l != def && !Listed(l)) {
-				return c, fault.New(fault.Invalid, "locale_invalid",
+				return nil, fault.New(fault.Invalid, "locale_invalid",
 					"Pick languages from the list, such as fr or pt-BR.").OnField("locales")
 			}
 			wanted = append(wanted, l)
@@ -255,29 +312,29 @@ func setLanguages(ctx context.Context, q *models.Queries, c models.HelpCenter, i
 		}
 	}
 	if len(locales) > MaxLocales {
-		return c, ErrTooManyLocales
+		return nil, ErrTooManyLocales
 	}
-	if def != c.Locale {
-		n, err := q.CountTranslationsInLocale(ctx, models.CountTranslationsInLocaleParams{
-			WorkspaceID: c.WorkspaceID, HelpCenterID: c.ID, Locale: def,
-		})
-		if err != nil {
-			return c, fmt.Errorf("count translations: %w", err)
-		}
-		if n > 0 {
-			return c, ErrDefaultLocaleTranslated
-		}
+	return locales, nil
+}
+
+/*
+checkNewDefault refuses a new default language articles are already
+translated into.
+*/
+func checkNewDefault(ctx context.Context, q *models.Queries, c models.HelpCenter, def string) error {
+	if def == c.Locale {
+		return nil
 	}
-	if def == c.Locale && slices.Equal(locales, LocalesOf(c)) && len(c.Locales) > 0 {
-		return c, nil
-	}
-	out, err := q.SetHelpCenterLocales(ctx, models.SetHelpCenterLocalesParams{
-		Locale: def, Locales: locales, Now: now(), WorkspaceID: c.WorkspaceID, ID: c.ID,
+	n, err := q.CountTranslationsInLocale(ctx, models.CountTranslationsInLocaleParams{
+		WorkspaceID: c.WorkspaceID, HelpCenterID: c.ID, Locale: def,
 	})
 	if err != nil {
-		return c, fmt.Errorf("set help center languages: %w", err)
+		return fmt.Errorf("count translations: %w", err)
 	}
-	return out, nil
+	if n > 0 {
+		return ErrDefaultLocaleTranslated
+	}
+	return nil
 }
 
 /*

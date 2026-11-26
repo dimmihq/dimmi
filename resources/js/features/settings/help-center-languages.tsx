@@ -15,24 +15,14 @@ import { RadioCard } from "@/components/base/radio/radio-card";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { type Language, languagesQuery } from "@/lib/api/translations";
 
+import { languageName } from "./language-names";
+
 import { Row, Section } from "./layout";
 
 export interface LanguagesForm {
   defaultLocale: string;
   locales: string[];
   untranslated: "original" | "hide";
-}
-
-/*
- * languageName names a language in English and in itself, such as
- * "French · Français".
- */
-export function languageName(languages: Language[], code: string): string {
-  const found = languages.find((l) => l.code === code);
-  if (!found) {
-    return code;
-  }
-  return found.name === found.native_name ? found.name : `${found.name} · ${found.native_name}`;
 }
 
 export function LanguagesSection({
@@ -52,7 +42,10 @@ export function LanguagesSection({
 
   return (
     <Section title="Languages" description="Readers pick a language from the help center's header.">
-      <Row label="Default language" description="The language your articles are written in. Its pages keep their address.">
+      <Row
+        label="Default language"
+        description="The language your articles are written in. Its pages keep their address."
+      >
         <Select
           aria-label="Default language"
           size="sm"
@@ -132,7 +125,11 @@ export function LanguagesSection({
               title={`Show in ${languageName(languages, form.defaultLocale).split(" · ")[0]}`}
               description="Readers get the original, with a note that it isn't translated yet."
             />
-            <RadioCard value="hide" title="Hide" description="Readers only see what is translated into their language." />
+            <RadioCard
+              value="hide"
+              title="Hide"
+              description="Readers only see what is translated into their language."
+            />
           </RadioGroup>
         </div>
       ) : null}

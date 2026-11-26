@@ -24,12 +24,12 @@ func (c center) speaks(t *testing.T, locales ...string) {
 }
 
 /*
-translate saves and publishes an article's translation.
+french saves and publishes an article's French translation.
 */
-func (c center) translate(t *testing.T, article, locale string, body testkit.JSON) *testkit.Response {
+func (c center) french(t *testing.T, article string, body testkit.JSON) {
 	t.Helper()
-	c.d.Owner.PutJSON("/api/v1/articles/"+article+"/translations/"+locale, body).AssertOK()
-	return c.d.Owner.PostJSON("/api/v1/articles/"+article+"/translations/"+locale+"/publications", nil).AssertOK()
+	c.d.Owner.PutJSON("/api/v1/articles/"+article+"/translations/fr", body).AssertOK()
+	c.d.Owner.PostJSON("/api/v1/articles/"+article+"/translations/fr/publications", nil).AssertOK()
 }
 
 /*
@@ -61,7 +61,7 @@ func TestHelpCenterLanguages(t *testing.T) {
 			AssertStatus(fhttp.StatusUnprocessableEntity).AssertJSONPath("code", "locale_invalid")
 
 		id := c.published(t, testkit.JSON{"title": "Billing", "body_markdown": "Pay monthly."})
-		c.translate(t, id, "fr", testkit.JSON{"title": "Facturation", "body_markdown": "Payez chaque mois."})
+		c.french(t, id, testkit.JSON{"title": "Facturation", "body_markdown": "Payez chaque mois."})
 		c.d.Owner.PatchJSON(one, testkit.JSON{"default_locale": "fr"}).
 			AssertStatus(fhttp.StatusConflict).AssertJSONPath("code", "default_locale_translated")
 
@@ -84,7 +84,8 @@ func TestHelpCenterLanguages(t *testing.T) {
 
 		c.d.Owner.PutJSON(tr, testkit.JSON{
 			"title": "Réinitialiser votre mot de passe", "body_markdown": "Ouvrez les réglages.",
-		}).AssertOK().AssertJSONPath("data.status", "draft").AssertJSONPath("data.slug", "reinitialiser-votre-mot-de-passe").
+		}).AssertOK().AssertJSONPath("data.status", "draft").
+			AssertJSONPath("data.slug", "reinitialiser-votre-mot-de-passe").
 			AssertJSONPath("data.outdated", false)
 		c.d.Owner.PutJSON(tr, testkit.JSON{"title": "Plus tard", "lock_version": 99}).
 			AssertStatus(fhttp.StatusConflict).AssertJSONPath("code", "translation_changed")
@@ -121,7 +122,7 @@ func TestHelpCenterLanguages(t *testing.T) {
 		c := newCenter(t)
 		c.speaks(t, "fr")
 		id := c.published(t, testkit.JSON{"title": "Private", "body_markdown": "Ours."})
-		c.translate(t, id, "fr", testkit.JSON{"title": "Privé", "body_markdown": "À nous."})
+		c.french(t, id, testkit.JSON{"title": "Privé", "body_markdown": "À nous."})
 
 		other := tests.NewDesk(t)
 		other.Owner.GetJSON("/api/v1/articles/" + id + "/translations/fr").AssertNotFound()
@@ -141,11 +142,16 @@ func TestHelpCenterLanguages(t *testing.T) {
 		reset := c.published(t, testkit.JSON{
 			"title": "Reset your password", "body_markdown": "Open settings.", "collection_id": col,
 		})
-		c.published(t, testkit.JSON{"title": "Close your account", "body_markdown": "Write to us.", "collection_id": col})
-		c.translate(t, reset, "fr", testkit.JSON{"title": "Réinitialiser le mot de passe", "body_markdown": "Ouvrez les réglages."})
+		c.published(t, testkit.JSON{
+			"title": "Close your account", "body_markdown": "Write to us.", "collection_id": col,
+		})
+		c.french(t, reset, testkit.JSON{
+			"title": "Réinitialiser le mot de passe", "body_markdown": "Ouvrez les réglages.",
+		})
 		c.d.Owner.PutJSON("/api/v1/collections/"+col+"/translations/fr", testkit.JSON{"name": "Compte"}).AssertOK().
 			AssertJSONPath("data.slug", "compte")
-		c.d.Owner.PutJSON("/api/v1/collections/"+empty+"/translations/fr", testkit.JSON{"name": "Facturation"}).AssertOK()
+		c.d.Owner.PutJSON("/api/v1/collections/"+empty+"/translations/fr", testkit.JSON{"name": "Facturation"}).
+			AssertOK()
 		open := c.browse()
 
 		assert.Contains(t, string(open("/articles/reset-your-password").AssertOK().Body), "Open settings.")
@@ -170,7 +176,8 @@ func TestHelpCenterLanguages(t *testing.T) {
 		assert.Contains(t, page, `hreflang="fr" href="`+c.address("/fr/articles/reinitialiser-le-mot-de-passe")+`"`)
 		assert.NotContains(t, page, `rel="alternate" hreflang="de"`)
 		assert.Contains(t, page, "data-language-switch")
-		assert.Contains(t, page, `href="`+c.local("/de")+`?lang=de"`, "an untranslated page leads to the language's home")
+		assert.Contains(t, page, `href="`+c.local("/de")+`?lang=de"`,
+			"an untranslated page leads to the language's home")
 
 		open("/fr/collections/billing").AssertNotFound()
 		assert.Contains(t, string(open("/fr/collections/compte").AssertOK().Body), "Réinitialiser le mot de passe")
@@ -214,7 +221,7 @@ func TestHelpCenterLanguages(t *testing.T) {
 		c.speaks(t, "fr")
 		id := c.published(t, testkit.JSON{"title": "Export data", "body_markdown": "Use export."})
 		c.published(t, testkit.JSON{"title": "Import data", "body_markdown": "Use import."})
-		c.translate(t, id, "fr", testkit.JSON{"title": "Exporter les données", "body_markdown": "Exportez."})
+		c.french(t, id, testkit.JSON{"title": "Exporter les données", "body_markdown": "Exportez."})
 
 		open := c.browse()
 		sitemap := string(open("/sitemap.xml").AssertOK().Body)
@@ -234,8 +241,8 @@ func TestHelpCenterLanguages(t *testing.T) {
 		c := newCenter(t)
 		c.speaks(t, "fr")
 		id := c.published(t, testkit.JSON{"title": "Export data", "body_markdown": "Use export."})
-		c.translate(t, id, "fr", testkit.JSON{"title": "Exporter", "body_markdown": "Exportez."})
-		c.translate(t, id, "fr", testkit.JSON{"slug": "exporter-les-donnees"})
+		c.french(t, id, testkit.JSON{"title": "Exporter", "body_markdown": "Exportez."})
+		c.french(t, id, testkit.JSON{"slug": "exporter-les-donnees"})
 
 		open := c.browse()
 		open("/fr/articles/exporter").AssertStatus(fhttp.StatusMovedPermanently).
@@ -248,9 +255,11 @@ func TestHelpCenterLanguages(t *testing.T) {
 		t.Parallel()
 		c := newCenter(t)
 		c.speaks(t, "fr")
-		refunds := c.published(t, testkit.JSON{"title": "Refund policy", "body_markdown": "Refunds take fourteen days."})
+		refunds := c.published(t, testkit.JSON{
+			"title": "Refund policy", "body_markdown": "Refunds take fourteen days.",
+		})
 		c.published(t, testkit.JSON{"title": "Refund exceptions", "body_markdown": "Refunds for annual plans differ."})
-		c.translate(t, refunds, "fr", testkit.JSON{
+		c.french(t, refunds, testkit.JSON{
 			"title": "Politique de remboursement", "body_markdown": "Les remboursements prennent quatorze jours.",
 		})
 		ws := c.d.TC.Workspace.Workspace.ID
@@ -284,7 +293,7 @@ func TestHelpCenterLanguages(t *testing.T) {
 		app := c.d.Owner.GetJSON("/api/v1/widget-settings").AssertOK().String("data.0.id")
 		id := c.published(t, testkit.JSON{"title": "Export data", "body_markdown": "Use export."})
 		c.published(t, testkit.JSON{"title": "Import data", "body_markdown": "Use import."})
-		c.translate(t, id, "fr", testkit.JSON{"title": "Exporter les données", "body_markdown": "Exportez."})
+		c.french(t, id, testkit.JSON{"title": "Exporter les données", "body_markdown": "Exportez."})
 
 		help := "/widget/v1/apps/" + app + "/help"
 		french := c.d.TC.Client().WithHeader("Accept-Language", "fr-FR,fr;q=0.9").GetJSON(help).AssertOK()

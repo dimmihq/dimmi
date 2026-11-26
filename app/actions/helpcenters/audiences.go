@@ -158,7 +158,8 @@ func readable(ctx context.Context, q *models.Queries, s Snapshot, reader audienc
 	}
 
 	out := Snapshot{
-		HelpCenter: s.HelpCenter, Locale: s.Locale, Originals: s.Originals, Alternates: s.Alternates, Messenger: s.Messenger,
+		HelpCenter: s.HelpCenter, Locale: s.Locale, Originals: s.Originals, Alternates: s.Alternates,
+		Messenger: s.Messenger,
 	}
 	for _, c := range s.Collections {
 		if r.Collection(c.ID, allowed) {

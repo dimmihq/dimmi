@@ -16,6 +16,7 @@ import { toast } from "@/components/base/toast/toast";
 import { Panel, ScrollArea } from "@/features/shell/page";
 import { ListSkeleton } from "@/features/shell/table-skeleton";
 import { type Article, type ArticleVersion, articleVersionsQuery, restoreArticleVersion } from "@/lib/api/help-centers";
+import { type ArticleTranslation, restoreTranslationVersion, translationVersionsQuery } from "@/lib/api/translations";
 import { formatDateTime } from "@/lib/i18n/format";
 import { cx } from "@/utils/cx";
 
@@ -71,20 +72,29 @@ function VersionCard({ version, onRestore }: { version: ArticleVersion; onRestor
 export function VersionHistory({
   workspace,
   article,
+  locale,
   onRestored,
   onClose,
   className,
 }: {
   workspace: string;
   article: string;
-  onRestored: (article: Article) => void;
+  /* The language of the translation whose versions to list, none for the source. */
+  locale?: string;
+  onRestored: (restored: Article | ArticleTranslation) => void;
   onClose: () => void;
   className?: string;
 }) {
-  const { data, isPending } = useQuery({ ...articleVersionsQuery(workspace, article), enabled: workspace !== "" });
+  const query = locale
+    ? translationVersionsQuery(workspace, article, locale)
+    : articleVersionsQuery(workspace, article);
+  const { data, isPending } = useQuery({ ...query, enabled: workspace !== "" });
   const [restoring, setRestoring] = useState<ArticleVersion | null>(null);
   const restore = useMutation({
-    mutationFn: (version: ArticleVersion) => restoreArticleVersion(workspace, article, version.id),
+    mutationFn: (version: ArticleVersion): Promise<Article | ArticleTranslation> =>
+      locale
+        ? restoreTranslationVersion(workspace, article, locale, version.id)
+        : restoreArticleVersion(workspace, article, version.id),
     onSuccess: onRestored,
     onError: (error) => toast.error(error.message),
   });

@@ -120,6 +120,20 @@ func (t *Translator) T(ctx context.Context, key string, args Args) string {
 }
 
 /*
+In returns the message for the key in the locale given, for text that
+reads in a language of its own rather than the request's, such as a
+help center page in the language its reader picked.
+*/
+func (t *Translator) In(locale, key string, args Args) string {
+	message, ok := t.localize(locale, key, args)
+	if !ok {
+		return key
+	}
+
+	return message
+}
+
+/*
 Lookup returns the message for the key in the locale of the context and
 whether any locale has it, for callers that keep their own text when a
 message is missing.

@@ -166,6 +166,11 @@ export const analyticsKey = "analytics";
 export const requestsKey = "requests";
 
 /*
+ * translationsKey is the pick that lists what is left to translate.
+ */
+export const translationsKey = "translations";
+
+/*
  * articlesIn lists the articles a pick shows: all of them, the unfiled
  * ones, or those in a collection and every collection inside it.
  */

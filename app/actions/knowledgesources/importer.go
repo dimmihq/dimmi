@@ -174,19 +174,9 @@ on. A translation whose source is gone, or whose language has no place
 in the help center, is skipped.
 */
 func (e *Engine) importTranslation(ctx context.Context, s models.KnowledgeSource, doc models.KnowledgeDocument) error {
-	source, err := e.sourceOf(ctx, s, doc)
+	source, err := e.importedSourceOf(ctx, s, doc)
 	if err != nil {
 		return err
-	}
-
-	if source != nil && source.LinkedArticleID == nil && source.Status == "active" {
-		if err := e.importOne(ctx, s, *source); err != nil {
-			return err
-		}
-
-		if source, err = e.sourceOf(ctx, s, doc); err != nil {
-			return err
-		}
 	}
 
 	if source == nil || source.LinkedArticleID == nil {
@@ -216,12 +206,32 @@ func (e *Engine) importTranslation(ctx context.Context, s models.KnowledgeSource
 			return fmt.Errorf("find translated article: %w", err)
 		}
 
-		if err := e.Articles.ImportTranslationRedirect(ctx, tx, art, locale, oldPath(deref(doc.Url))); err != nil {
+		if err := e.Articles.ImportTranslationRedirect(ctx, tx, helpcenters.ImportedTranslation{
+			Article: art, Locale: locale, FromPath: oldPath(deref(doc.Url)),
+		}); err != nil {
 			return err
 		}
 
 		return e.link(ctx, q, doc, nil)
 	})
+}
+
+/*
+importedSourceOf returns the document a translation translates, imported
+first when it was not yet, nil when the source has none by that id.
+*/
+func (e *Engine) importedSourceOf(ctx context.Context, s models.KnowledgeSource, doc models.KnowledgeDocument,
+) (*models.KnowledgeDocument, error) {
+	source, err := e.sourceOf(ctx, s, doc)
+	if err != nil || source == nil || source.LinkedArticleID != nil || source.Status != "active" {
+		return source, err
+	}
+
+	if err := e.importOne(ctx, s, *source); err != nil {
+		return nil, err
+	}
+
+	return e.sourceOf(ctx, s, doc)
 }
 
 /*

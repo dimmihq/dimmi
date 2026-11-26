@@ -120,14 +120,15 @@ func newSite(ctx context.Context, public *helpcenters.Public, snap helpcenters.S
 /*
 centerOf is the page frame of a help center served under the base.
 */
-func centerOf(h models.HelpCenter, base string) helpcenter.Center {
+func (c *HelpCenterController) centerOf(h models.HelpCenter, base string) helpcenter.Center {
 	s := helpcenters.SettingsOf(h)
 	brand := s.PrimaryColor
 	if brand == "" {
 		brand = "#10b981"
 	}
 	return helpcenter.Center{
-		Name: h.Name, Product: h.Name, Base: base, Brand: brand, Tagline: s.HomeSubtitle, ContactURL: s.ContactURL,
+		Lang: c.Lang, Name: h.Name, Product: h.Name, Base: base, Brand: brand, Tagline: s.HomeSubtitle,
+		ContactURL: s.ContactURL,
 		Appearance: s.Appearance, HomeTitle: s.HomeTitle, FooterText: s.FooterText, NoIndex: !h.IndexingEnabled,
 	}
 }

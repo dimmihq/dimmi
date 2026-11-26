@@ -67,7 +67,7 @@ export interface CollectionTranslation {
 }
 
 const article = (id: string, locale?: string) =>
-  `/articles/${encodeURIComponent(id)}/translations` + (locale ? `/${encodeURIComponent(locale)}` : "");
+  `/articles/${encodeURIComponent(id)}/translations${locale ? `/${encodeURIComponent(locale)}` : ""}`;
 
 export function languagesQuery(workspace: string) {
   return queryOptions({
@@ -95,7 +95,7 @@ export function articleTranslationQuery(workspace: string, id: string, locale: s
 export function translationVersionsQuery(workspace: string, id: string, locale: string) {
   return queryOptions({
     queryKey: ["workspace", workspace, "articles", id, "translations", locale, "versions"],
-    queryFn: () => request<ArticleVersion[]>("GET", article(id, locale) + "/versions", undefined, { workspace }),
+    queryFn: () => request<ArticleVersion[]>("GET", `${article(id, locale)}/versions`, undefined, { workspace }),
   });
 }
 
@@ -135,7 +135,7 @@ export function saveArticleTranslation(
 }
 
 export function publishArticleTranslation(workspace: string, id: string, locale: string): Promise<ArticleTranslation> {
-  return request<ArticleTranslation>("POST", article(id, locale) + "/publications", {}, { workspace });
+  return request<ArticleTranslation>("POST", `${article(id, locale)}/publications`, {}, { workspace });
 }
 
 export function unpublishArticleTranslation(
@@ -143,11 +143,11 @@ export function unpublishArticleTranslation(
   id: string,
   locale: string,
 ): Promise<ArticleTranslation> {
-  return request<ArticleTranslation>("DELETE", article(id, locale) + "/publications", undefined, { workspace });
+  return request<ArticleTranslation>("DELETE", `${article(id, locale)}/publications`, undefined, { workspace });
 }
 
 export function markTranslationCurrent(workspace: string, id: string, locale: string): Promise<ArticleTranslation> {
-  return request<ArticleTranslation>("POST", article(id, locale) + "/reviews", {}, { workspace });
+  return request<ArticleTranslation>("POST", `${article(id, locale)}/reviews`, {}, { workspace });
 }
 
 export function deleteArticleTranslation(workspace: string, id: string, locale: string): Promise<void> {
@@ -162,7 +162,7 @@ export function restoreTranslationVersion(
 ): Promise<ArticleTranslation> {
   return request<ArticleTranslation>(
     "POST",
-    article(id, locale) + "/restorations",
+    `${article(id, locale)}/restorations`,
     { version_id: version },
     { workspace },
   );

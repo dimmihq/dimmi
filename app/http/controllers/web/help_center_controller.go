@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/i18n"
 	"github.com/dimmihq/dimmi/framework/view"
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
@@ -55,6 +56,7 @@ and API answer, which a help center on its own host loads across.
 Ratings keeps readers' answers about articles, and Passes signs readers
 in to the messenger on the help center's pages. Analytics counts views
 and searches, and Addresses names the help center's canonical address.
+Lang holds the words of the pages in every language.
 */
 type HelpCenterController struct {
 	Library     *helpsample.Library
@@ -71,6 +73,7 @@ type HelpCenterController struct {
 	Passes      *identity.Passes
 	Analytics   *helpcenters.Analytics
 	Addresses   helpcenters.Addresses
+	Lang        *i18n.Translator
 }
 
 /*
@@ -94,7 +97,7 @@ func (c *HelpCenterController) Home(w fhttp.ResponseWriter, r *fhttp.Request) {
 	if !ok {
 		return
 	}
-	if s, real := lib.(*site); real {
+	if s, isSite := lib.(*site); isSite {
 		h := s.snap.HelpCenter
 		if readingLocale(r.Context()) == "" {
 			if wants := preferredLocale(r, h); wants != h.Locale {
@@ -104,7 +107,7 @@ func (c *HelpCenterController) Home(w fhttp.ResponseWriter, r *fhttp.Request) {
 				return
 			}
 		}
-		localize(&center, s.snap, s.at, samePage("/"), true)
+		localize(&center, s.snap, s.at, indexed(samePage("/")))
 	}
 
 	c.respond(w, r, fhttp.StatusOK, helpcenter.Home(
@@ -127,8 +130,8 @@ func (c *HelpCenterController) Collection(w fhttp.ResponseWriter, r *fhttp.Reque
 
 		return
 	}
-	if s, real := lib.(*site); real {
-		localize(&center, s.snap, s.at, s.collectionIn(r.PathValue("slug")), true)
+	if s, isSite := lib.(*site); isSite {
+		localize(&center, s.snap, s.at, indexed(s.collectionIn(r.PathValue("slug"))))
 	}
 
 	c.respond(w, r, fhttp.StatusOK, helpcenter.CollectionPage(center, lib.Collections(), col, trail, c.styles()))
@@ -165,8 +168,8 @@ func (c *HelpCenterController) Article(w fhttp.ResponseWriter, r *fhttp.Request)
 		return
 	}
 
-	if s, real := lib.(*site); real && !markdown {
-		localize(&center, s.snap, s.at, s.articleIn(slug), true)
+	if s, isSite := lib.(*site); isSite && !markdown {
+		localize(&center, s.snap, s.at, indexed(s.articleIn(slug)))
 	}
 	query := r.URL.Query()
 	helpful := helpcenter.Helpful{
@@ -235,7 +238,7 @@ func (c *HelpCenterController) missing(w fhttp.ResponseWriter, r *fhttp.Request,
 		}
 	}
 	if s, ok := lib.(*site); ok {
-		localize(&center, s.snap, s.at, func(string) (string, bool) { return "/", false }, false)
+		localize(&center, s.snap, s.at, unindexed(func(string) (string, bool) { return "/", false }))
 	}
 	page := helpcenter.NotFoundPage(center, lib.Collections(), lib.Popular(), c.styles())
 	c.respond(w, r, fhttp.StatusNotFound, page)
@@ -285,6 +288,7 @@ func (c *HelpCenterController) center(w fhttp.ResponseWriter, r *fhttp.Request) 
 	slug := r.PathValue("center")
 
 	center, ok := c.Library.Center(slug, "/hc/"+slug)
+	center.Lang = c.Lang
 	if !ok {
 		w.WriteHeader(fhttp.StatusNotFound)
 

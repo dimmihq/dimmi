@@ -59,27 +59,6 @@ type TranslationStatesOutput struct {
 }
 
 /*
-CollectionTranslationsOutput is a list of collection translations.
-*/
-type CollectionTranslationsOutput struct {
-	Body fhttp.Collection[resources.CollectionTranslation]
-}
-
-/*
-CollectionTranslationOutput is one collection translation.
-*/
-type CollectionTranslationOutput struct {
-	Body fhttp.Resource[resources.CollectionTranslation]
-}
-
-/*
-LanguagesOutput is the languages a help center may offer.
-*/
-type LanguagesOutput struct {
-	Body fhttp.Collection[resources.Language]
-}
-
-/*
 Index lists an article's translations.
 */
 func (c *TranslationController) Index(ctx context.Context, in *requests.ArticleRequest,
@@ -106,7 +85,7 @@ func (c *TranslationController) Show(ctx context.Context, in *requests.ArticleTr
 	if err != nil {
 		return nil, err
 	}
-	t, err := c.Translations.Show(ctx, membership(ctx), id, in.Locale)
+	t, err := c.Translations.Show(ctx, membership(ctx), ref(id, in.Locale))
 	return translationOutput(t, err)
 }
 
@@ -137,7 +116,7 @@ func (c *TranslationController) Destroy(ctx context.Context, in *requests.Articl
 	if err != nil {
 		return nil, err
 	}
-	return &struct{}{}, c.Translations.Delete(ctx, membership(ctx), id, in.Locale)
+	return &struct{}{}, c.Translations.Delete(ctx, membership(ctx), ref(id, in.Locale))
 }
 
 /*
@@ -149,7 +128,7 @@ func (c *TranslationController) Publish(ctx context.Context, in *requests.Articl
 	if err != nil {
 		return nil, err
 	}
-	t, err := c.Translations.Publish(ctx, membership(ctx), id, in.Locale)
+	t, err := c.Translations.Publish(ctx, membership(ctx), ref(id, in.Locale))
 	return translationOutput(t, err)
 }
 
@@ -162,7 +141,7 @@ func (c *TranslationController) Unpublish(ctx context.Context, in *requests.Arti
 	if err != nil {
 		return nil, err
 	}
-	t, err := c.Translations.Unpublish(ctx, membership(ctx), id, in.Locale)
+	t, err := c.Translations.Unpublish(ctx, membership(ctx), ref(id, in.Locale))
 	return translationOutput(t, err)
 }
 
@@ -175,7 +154,7 @@ func (c *TranslationController) Review(ctx context.Context, in *requests.Article
 	if err != nil {
 		return nil, err
 	}
-	t, err := c.Translations.MarkCurrent(ctx, membership(ctx), id, in.Locale)
+	t, err := c.Translations.MarkCurrent(ctx, membership(ctx), ref(id, in.Locale))
 	return translationOutput(t, err)
 }
 
@@ -188,7 +167,7 @@ func (c *TranslationController) Versions(ctx context.Context, in *requests.Artic
 	if err != nil {
 		return nil, err
 	}
-	rows, err := c.Translations.Versions(ctx, membership(ctx), id, in.Locale)
+	rows, err := c.Translations.Versions(ctx, membership(ctx), ref(id, in.Locale))
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +188,7 @@ func (c *TranslationController) Restore(ctx context.Context, in *requests.Restor
 	if err != nil {
 		return nil, err
 	}
-	t, err := c.Translations.Restore(ctx, membership(ctx), id, in.Locale, version)
+	t, err := c.Translations.Restore(ctx, membership(ctx), ref(id, in.Locale), version)
 	return translationOutput(t, err)
 }
 
@@ -253,83 +232,6 @@ func inState(r helpcenters.TranslationState, state string) bool {
 	return r.State == state
 }
 
-/*
-IndexCollection lists a collection's translations.
-*/
-func (c *TranslationController) IndexCollection(ctx context.Context, in *requests.CollectionRequest,
-) (*CollectionTranslationsOutput, error) {
-	id, err := c.decode(models.PrefixCollection, in.Collection)
-	if err != nil {
-		return nil, err
-	}
-	rows, err := c.Translations.ListCollection(ctx, membership(ctx), id)
-	if err != nil {
-		return nil, err
-	}
-	items := resources.NewCollectionTranslations(rows)
-	page := pagination.Page[resources.CollectionTranslation]{Items: items, Limit: helpcenters.MaxLocales}
-	return &CollectionTranslationsOutput{Body: fhttp.NewCollection(page)}, nil
-}
-
-/*
-IndexHelpCenterCollections lists every collection translation of a help
-center.
-*/
-func (c *TranslationController) IndexHelpCenterCollections(ctx context.Context, in *requests.HelpCenterRequest,
-) (*CollectionTranslationsOutput, error) {
-	hc, err := c.decode(models.PrefixHelpCenter, in.HelpCenter)
-	if err != nil {
-		return nil, err
-	}
-	rows, err := c.Translations.ListForHelpCenter(ctx, membership(ctx), hc)
-	if err != nil {
-		return nil, err
-	}
-	items := resources.NewCollectionTranslations(rows)
-	page := pagination.Page[resources.CollectionTranslation]{Items: items, Limit: len(items)}
-	return &CollectionTranslationsOutput{Body: fhttp.NewCollection(page)}, nil
-}
-
-/*
-UpdateCollection writes a collection's translation into a language.
-*/
-func (c *TranslationController) UpdateCollection(ctx context.Context, in *requests.UpdateCollectionTranslationRequest,
-) (*CollectionTranslationOutput, error) {
-	id, err := c.decode(models.PrefixCollection, in.Collection)
-	if err != nil {
-		return nil, err
-	}
-	t, err := c.Translations.SaveCollection(ctx, helpcenters.CollectionTranslationInput{
-		Membership: membership(ctx), CollectionID: id, Locale: in.Locale, Name: in.Body.Name, Slug: in.Body.Slug,
-		Description: in.Body.Description,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &CollectionTranslationOutput{Body: fhttp.NewResource(resources.NewCollectionTranslation(t))}, nil
-}
-
-/*
-DestroyCollection removes a collection's translation into a language.
-*/
-func (c *TranslationController) DestroyCollection(ctx context.Context, in *requests.CollectionTranslationRequest,
-) (*struct{}, error) {
-	id, err := c.decode(models.PrefixCollection, in.Collection)
-	if err != nil {
-		return nil, err
-	}
-	return &struct{}{}, c.Translations.DeleteCollection(ctx, membership(ctx), id, in.Locale)
-}
-
-/*
-Languages lists the languages a help center may offer.
-*/
-func (c *TranslationController) Languages(_ context.Context, _ *requests.NoInput) (*LanguagesOutput, error) {
-	items := resources.NewLanguages(helpcenters.Languages())
-	page := pagination.Page[resources.Language]{Items: items, Limit: len(items)}
-	return &LanguagesOutput{Body: fhttp.NewCollection(page)}, nil
-}
-
 func translationOutput(t helpcenters.Translation, err error) (*ArticleTranslationOutput, error) {
 	if err != nil {
 		return nil, err
@@ -343,4 +245,11 @@ func (c *TranslationController) decode(prefix models.Prefix, public string) (ids
 		return ids.UUID{}, exceptions.ErrNotFound
 	}
 	return id, nil
+}
+
+/*
+ref names an article's translation into a language.
+*/
+func ref(article ids.UUID, locale string) helpcenters.TranslationRef {
+	return helpcenters.TranslationRef{Article: article, Locale: locale}
 }

@@ -20581,6 +20581,9 @@
           "primary_color": {
             "description": "The help center's main color as a hex code, such as #10b981. Left out when not set.",
             "type": "string"
+          },
+          "untranslated_articles": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -20686,6 +20689,13 @@
           "primary_color": {
             "description": "Main color of the help center, as # and six hex digits, such as #10b981. An empty text clears it.",
             "maxLength": 7,
+            "type": "string"
+          },
+          "untranslated_articles": {
+            "enum": [
+              "original",
+              "hide"
+            ],
             "type": "string"
           }
         },
@@ -43591,7 +43601,7 @@
             "type": "boolean"
           },
           "default_locale": {
-            "description": "The language articles are written in, served without a prefix. Same as locale.",
+            "description": "Default locale: text of at most 16 characters.",
             "maxLength": 16,
             "type": "string"
           },
@@ -43605,7 +43615,7 @@
             "type": "string"
           },
           "locales": {
-            "description": "Every language readers may pick, such as [\"en\", \"fr\"]. The default is always included.",
+            "description": "Locales: a list, such as [\"...\"].",
             "items": {
               "type": "string"
             },
