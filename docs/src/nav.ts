@@ -22,6 +22,7 @@ export const sidebar: Group[] = [
       { label: "Quickstart", link: "/quickstart/" },
       { label: "Concepts", link: "/concepts/" },
       { label: "Cloud vs self-hosting", link: "/cloud-vs-self-hosted/" },
+      { label: "Move from Intercom", link: "/migrate/intercom/" },
     ],
   },
   {

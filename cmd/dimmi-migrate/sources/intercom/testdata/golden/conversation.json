@@ -1,0 +1,198 @@
+[
+  {
+    "kind": "teammate",
+    "record": {
+      "source_id": "502",
+      "email": "old@example.com",
+      "name": "Old Teammate",
+      "current": false
+    }
+  },
+  {
+    "kind": "conversation",
+    "record": {
+      "source_id": "1001",
+      "source_updated_at": "2025-11-16T10:46:40Z",
+      "contact_ref": "c-1",
+      "channel": "chat",
+      "created_at": "2025-11-15T09:46:40Z",
+      "source": {
+        "type": "conversation",
+        "url": "https://example.com/pricing"
+      },
+      "status": "closed",
+      "priority": "high",
+      "assignee_ref": "501",
+      "team_ref": "71",
+      "tag_refs": [
+        "9"
+      ],
+      "custom_attributes": {
+        "Issue type": "Billing"
+      },
+      "rating": {
+        "score": 5,
+        "remark": "Quick \u0026 kind",
+        "teammate_ref": "501",
+        "created_at": "2025-11-16T08:00:00Z"
+      },
+      "entries": [
+        {
+          "source_id": "source_2001",
+          "type": "message",
+          "created_at": "2025-11-15T09:46:40Z",
+          "author": {
+            "type": "contact",
+            "ref": "c-1"
+          },
+          "body": "Hi, my invoice is wrong",
+          "attachments": [
+            "file_56084f2c4c56488310727218"
+          ]
+        },
+        {
+          "source_id": "3001",
+          "type": "event",
+          "created_at": "2025-11-15T09:48:20Z",
+          "author": {
+            "type": "ai_agent",
+            "label": "Operator"
+          },
+          "event": {
+            "type": "team_assignment",
+            "team_ref": "71",
+            "raw_type": "assignment"
+          }
+        },
+        {
+          "source_id": "3002",
+          "type": "reply",
+          "created_at": "2025-11-15T09:50:00Z",
+          "author": {
+            "type": "teammate",
+            "ref": "501"
+          },
+          "body": "Sorry about that! **Fixing** it now."
+        },
+        {
+          "source_id": "3003",
+          "type": "reply",
+          "created_at": "2025-11-15T09:50:50Z",
+          "author": {
+            "type": "ai_agent",
+            "label": "Fin"
+          },
+          "body": "Here is the answer from our docs."
+        },
+        {
+          "source_id": "3004",
+          "type": "note",
+          "created_at": "2025-11-15T09:51:40Z",
+          "author": {
+            "type": "teammate",
+            "ref": "502"
+          },
+          "body": "Refund approved by finance",
+          "attachments": [
+            "file_7bd6a7458a9b76c7bfd1b75a"
+          ]
+        },
+        {
+          "source_id": "3005",
+          "type": "event",
+          "created_at": "2025-11-15T09:53:20Z",
+          "author": {
+            "type": "teammate",
+            "ref": "501"
+          },
+          "event": {
+            "type": "status",
+            "status": "snoozed",
+            "raw_type": "snoozed"
+          }
+        },
+        {
+          "source_id": "3006",
+          "type": "event",
+          "created_at": "2025-11-15T09:55:00Z",
+          "author": {
+            "type": "teammate",
+            "ref": "501"
+          },
+          "event": {
+            "type": "attribute",
+            "attribute": "Issue type",
+            "value": "Billing",
+            "raw_type": "conversation_attribute_updated_by_admin"
+          }
+        },
+        {
+          "source_id": "3007",
+          "type": "message",
+          "created_at": "2025-11-15T09:56:40Z",
+          "author": {
+            "type": "contact",
+            "ref": "c-1"
+          },
+          "body": "Thanks!"
+        },
+        {
+          "source_id": "3008",
+          "type": "event",
+          "created_at": "2025-11-15T09:58:20Z",
+          "author": {
+            "type": "teammate",
+            "ref": "501"
+          },
+          "event": {
+            "type": "status",
+            "status": "closed",
+            "raw_type": "close"
+          }
+        },
+        {
+          "source_id": "3009",
+          "type": "event",
+          "created_at": "2025-11-15T10:00:00Z",
+          "author": {
+            "type": "system",
+            "label": "Operator"
+          },
+          "event": {
+            "type": "custom",
+            "raw_type": "operator_workflow_event",
+            "text": "workflow: CSAT survey, event: started, result: sent"
+          }
+        },
+        {
+          "source_id": "3010",
+          "type": "event",
+          "created_at": "2025-11-15T10:01:40Z",
+          "author": {
+            "type": "teammate",
+            "ref": "501"
+          },
+          "event": {
+            "type": "custom",
+            "raw_type": "unknown",
+            "text": "Something new"
+          }
+        }
+      ]
+    },
+    "files": [
+      {
+        "source_id": "file_56084f2c4c56488310727218",
+        "name": "invoice.pdf",
+        "content_type": "application/pdf",
+        "size": 2048
+      },
+      {
+        "source_id": "file_7bd6a7458a9b76c7bfd1b75a",
+        "name": "screenshot.png",
+        "content_type": "image/png",
+        "size": 4096
+      }
+    ]
+  }
+]

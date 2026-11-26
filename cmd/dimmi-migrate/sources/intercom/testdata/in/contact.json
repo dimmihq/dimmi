@@ -1,0 +1,5 @@
+{"type": "contact", "id": "c-1", "external_id": "u-77", "role": "user", "email": "ada&amp;co@example.com", "phone": null, "whatsapp_number": "+4915100000", "name": "Ada &lt;Lovelace&gt;",
+ "avatar": "https://static.intercomassets.com/avatars/1/square_128/ada.png", "unsubscribed_from_emails": true, "created_at": 1762000000, "updated_at": 1763000000, "signed_up_at": 1762100000, "last_seen_at": 1763000100,
+ "language_override": null, "browser_language": "de", "custom_attributes": {"plan": "pro", "seats": 4},
+ "tags": {"data": [{"type": "tag", "id": "9"}], "has_more": false}, "companies": {"data": [{"type": "company", "id": "co-1"}, {"type": "company", "id": "co-2"}], "has_more": false},
+ "location": {"country": "Germany", "region": "Berlin", "city": "Berlin"}}

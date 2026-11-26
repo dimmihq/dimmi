@@ -1,0 +1,4 @@
+{"schedule": {"type": "office_hours_schedule", "id": "s-1", "name": "Support hours", "time_zone_name": "Europe/Berlin", "twenty_four_seven": false, "updated_at": 1763000000,
+  "time_intervals": [{"start_minute": 540, "end_minute": 1020}, {"start_minute": 1980, "end_minute": 2460}, {"start_minute": 8100, "end_minute": 8700}]},
+ "exceptions": [{"id": "e-1", "exception_date": "2026-12-25", "exception_type": "closed", "name": "Christmas", "recurring_annually": true},
+                {"id": "e-2", "exception_date": "2026-12-24", "exception_type": "custom_hours", "name": "Christmas Eve", "time_intervals": [{"start_minute": 540, "end_minute": 780}]}]}

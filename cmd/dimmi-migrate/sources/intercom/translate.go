@@ -695,8 +695,31 @@ func rewritePlaceholders(body string) (string, []string) {
 	return out, unknown
 }
 
+/*
+macroBody converts a macro's HTML and rewrites its placeholders. They
+are set aside while the HTML becomes Markdown, which would otherwise
+escape their underscores.
+*/
+func macroBody(body string) (string, []string) {
+	var kept []string
+
+	held := placeholder.ReplaceAllStringFunc(body, func(m string) string {
+		kept = append(kept, m)
+
+		return fmt.Sprintf("DIMMIPLACEHOLDER%dX", len(kept)-1)
+	})
+
+	md := toMarkdown(held)
+
+	for i, m := range kept {
+		md = strings.Replace(md, fmt.Sprintf("DIMMIPLACEHOLDER%dX", i), html.UnescapeString(m), 1)
+	}
+
+	return rewritePlaceholders(md)
+}
+
 func translateMacro(m macro) format.Record {
-	body, unknown := rewritePlaceholders(toMarkdown(firstOf(m.Body, m.BodyText)))
+	body, unknown := macroBody(firstOf(m.Body, m.BodyText))
 
 	shared := m.VisibleTo != "specific_teams"
 	r := &format.SavedReply{

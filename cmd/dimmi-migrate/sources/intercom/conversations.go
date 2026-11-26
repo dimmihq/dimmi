@@ -184,6 +184,10 @@ func (t *convTranslation) entry(p part) []format.Entry {
 
 	event := func(ev format.Event) []format.Entry {
 		e.Type = format.EntryEvent
+		if e.Author.Type == format.AuthorAIAgent && !p.Author.FromAIAgent {
+			e.Author = format.Author{Type: format.AuthorSystem, Label: e.Author.Label}
+		}
+
 		ev.RawType = p.PartType
 		e.Event = &ev
 
@@ -424,7 +428,7 @@ func translateConversation(c conversation, parts []part, known map[string]bool) 
 	}
 
 	if c.Rating != nil && c.Rating.Rating > 0 {
-		conv.Rating = &format.Rating{Score: c.Rating.Rating, Remark: c.Rating.Remark, CreatedAt: at(c.Rating.CreatedAt)}
+		conv.Rating = &format.Rating{Score: c.Rating.Rating, Remark: text(c.Rating.Remark), CreatedAt: at(c.Rating.CreatedAt)}
 		if conv.Rating.CreatedAt.IsZero() {
 			conv.Rating.CreatedAt = at(c.UpdatedAt)
 		}
