@@ -148,6 +148,10 @@ func (a *CreateConversation) importIn(ctx context.Context, tx *database.Tx, run 
 			return Loaded{}, false, err
 		}
 
+		if err := a.setAttributes(ctx, w, c, run.in.Attributes); err != nil {
+			return Loaded{}, false, err
+		}
+
 		if c, err = closeImported(ctx, w, c, run); err != nil {
 			return Loaded{}, false, err
 		}

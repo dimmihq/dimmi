@@ -44,6 +44,8 @@
   "office_hours_text": "",
   "offline_message": "نحن غير متاحين. اترك رسالة وسنرد عليك عبر البريد الإلكتروني.",
   "open_in_help_center": "فتح في مركز المساعدة",
+  "written_by": "كتبه {name}",
+  "updated_ago": "آخر تحديث {time}",
   "popular": "مقالات شائعة",
   "privacy_notice": "نتعامل مع بياناتك وفق سياسة الخصوصية لدينا.",
   "rated_thanks": "شكرًا على ملاحظاتك!",

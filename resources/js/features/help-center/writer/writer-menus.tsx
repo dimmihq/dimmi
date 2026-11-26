@@ -11,6 +11,7 @@ import {
   RiAlignRight,
   RiAspectRatioLine,
   RiBold,
+  RiClosedCaptioningLine,
   RiCodeLine,
   RiDeleteBinLine,
   RiDoubleQuotesL,
@@ -21,6 +22,7 @@ import {
   RiLink,
   RiStrikethrough,
 } from "@remixicon/react";
+import { NodeSelection } from "@tiptap/pm/state";
 import { type Editor, useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { useEffect, useState } from "react";
@@ -77,6 +79,12 @@ const marks: Tool[] = [
     active: (e) => e.isActive("blockquote"),
     run: (e) => e.chain().focus().toggleBlockquote().run(),
   },
+  {
+    label: "Center",
+    icon: RiAlignCenter,
+    active: (e) => e.isActive("center"),
+    run: (e) => e.chain().focus().toggleCenter().run(),
+  },
 ];
 
 const buttonClass = cx(
@@ -123,7 +131,7 @@ export function SelectionBar({ editor }: { editor: Editor }) {
       editor={editor}
       pluginKey="textBar"
       shouldShow={({ editor: e, from, to }) =>
-        from !== to && e.isEditable && !e.isActive("codeBlock") && !e.isActive("image")
+        from !== to && e.isEditable && !(e.state.selection instanceof NodeSelection) && !e.isActive("codeBlock")
       }
     >
       <div role="toolbar" aria-label="Formatting" className={barClass}>
@@ -168,7 +176,8 @@ const placements: { align: ImageAlign | null; label: string; icon: RemixiconComp
 /*
  * ImageBar is the bar over a selected picture: what it shows, for people
  * who cannot see it, where it sits in the column, going back to its own
- * size after a resize, swapping it for another file, and removing it.
+ * size after a resize, a caption under it, where it links, swapping it
+ * for another file, and removing it.
  */
 export function ImageBar({ editor, onReplace }: { editor: Editor; onReplace: () => void }) {
   const image = useEditorState({
@@ -180,9 +189,12 @@ export function ImageBar({ editor, onReplace }: { editor: Editor; onReplace: () 
         alt: (attrs.alt as string) ?? "",
         align: (attrs.align as ImageAlign | null) ?? null,
         sized: attrs.width != null,
+        captioned: typeof attrs.title === "string",
+        href: (attrs.href as string | null) ?? null,
       };
     },
   });
+  const [linking, setLinking] = useState<string | null>(null);
   const set = (attrs: Record<string, unknown>) => editor.chain().updateAttributes("image", attrs).run();
 
   return (
@@ -192,62 +204,104 @@ export function ImageBar({ editor, onReplace }: { editor: Editor; onReplace: () 
       shouldShow={({ editor: e }) => e.isEditable && e.isActive("image")}
     >
       <div role="toolbar" aria-label="Image" className={cx(barClass, "gap-1 ps-2")}>
-        <div className="w-52">
-          <Input
-            size="small"
-            aria-label="Alt text"
-            placeholder="Describe the image"
-            value={image.alt}
-            onChange={(value) => set({ alt: value })}
-          />
-        </div>
-        <span aria-hidden className="mx-0.5 h-5 w-px bg-separator-border" />
-        {placements.map((p) => (
-          <button
-            key={p.label}
-            type="button"
-            aria-label={p.label}
-            aria-pressed={image.align === p.align}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => set({ align: p.align })}
-            className={cx(
-              buttonClass,
-              image.align === p.align && "bg-background-tertiary-default text-foreground-icon-primary",
-            )}
-          >
-            <p.icon aria-hidden className="size-4" />
-          </button>
-        ))}
-        {image.sized ? (
-          <button
-            type="button"
-            aria-label="Original size"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => set({ width: null })}
-            className={buttonClass}
-          >
-            <RiAspectRatioLine aria-hidden className="size-4" />
-          </button>
-        ) : null}
-        <span aria-hidden className="mx-0.5 h-5 w-px bg-separator-border" />
-        <button
-          type="button"
-          aria-label="Replace image"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={onReplace}
-          className={buttonClass}
-        >
-          <RiImageEditLine aria-hidden className="size-4" />
-        </button>
-        <button
-          type="button"
-          aria-label="Remove image"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => editor.chain().focus().deleteSelection().run()}
-          className={buttonClass}
-        >
-          <RiDeleteBinLine aria-hidden className="size-4" />
-        </button>
+        {linking !== null ? (
+          <div className="w-64">
+            <LinkRow
+              initial={linking}
+              onApply={(href) => {
+                set({ href: href.trim() === "" || href.trim() === "https://" ? null : href.trim() });
+                setLinking(null);
+              }}
+              onCancel={() => setLinking(null)}
+            />
+          </div>
+        ) : (
+          <>
+            <div className="w-52">
+              <Input
+                size="small"
+                aria-label="Alt text"
+                placeholder="Describe the image"
+                value={image.alt}
+                onChange={(value) => set({ alt: value })}
+              />
+            </div>
+            <span aria-hidden className="mx-0.5 h-5 w-px bg-separator-border" />
+            {placements.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                aria-label={p.label}
+                aria-pressed={image.align === p.align}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => set({ align: p.align })}
+                className={cx(
+                  buttonClass,
+                  image.align === p.align && "bg-background-tertiary-default text-foreground-icon-primary",
+                )}
+              >
+                <p.icon aria-hidden className="size-4" />
+              </button>
+            ))}
+            {image.sized ? (
+              <button
+                type="button"
+                aria-label="Original size"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => set({ width: null })}
+                className={buttonClass}
+              >
+                <RiAspectRatioLine aria-hidden className="size-4" />
+              </button>
+            ) : null}
+            <span aria-hidden className="mx-0.5 h-5 w-px bg-separator-border" />
+            <button
+              type="button"
+              aria-label={image.captioned ? "Remove caption" : "Add caption"}
+              aria-pressed={image.captioned}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => set({ title: image.captioned ? null : "" })}
+              className={cx(
+                buttonClass,
+                image.captioned && "bg-background-tertiary-default text-foreground-icon-primary",
+              )}
+            >
+              <RiClosedCaptioningLine aria-hidden className="size-4" />
+            </button>
+            <button
+              type="button"
+              aria-label="Link image"
+              aria-pressed={image.href !== null}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => setLinking(image.href ?? "https://")}
+              className={cx(
+                buttonClass,
+                image.href !== null && "bg-background-tertiary-default text-foreground-icon-primary",
+              )}
+            >
+              <RiLink aria-hidden className="size-4" />
+            </button>
+            <span aria-hidden className="mx-0.5 h-5 w-px bg-separator-border" />
+            <button
+              type="button"
+              aria-label="Replace image"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={onReplace}
+              className={buttonClass}
+            >
+              <RiImageEditLine aria-hidden className="size-4" />
+            </button>
+            <button
+              type="button"
+              aria-label="Remove image"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => editor.chain().focus().deleteSelection().run()}
+              className={buttonClass}
+            >
+              <RiDeleteBinLine aria-hidden className="size-4" />
+            </button>
+          </>
+        )}
       </div>
     </BubbleMenu>
   );

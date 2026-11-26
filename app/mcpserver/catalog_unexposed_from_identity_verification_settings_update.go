@@ -62,8 +62,8 @@ func unexposedDocsFromIntegrationsInstallationsStore() map[string]Doc {
 				"and the right to manage integrations.",
 			Returns: "the URL to send the browser to.",
 			Params: map[string]string{
-				"account": "For a service hosted per customer, such as Zendesk, the account to " +
-					"connect, up to 63 characters, such as the subdomain acme.",
+				"account": "For a service hosted per customer, the account to connect, up to 63 " +
+					"characters, such as the subdomain acme.",
 				"features": "Up to 20 feature names of the provider that the install is for, each up " +
 					"to 40 characters. Leave out or send empty for every feature; an unknown one is refused.",
 				"provider": "The provider's key from the list of integration providers, such as slack.",

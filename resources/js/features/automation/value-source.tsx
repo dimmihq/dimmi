@@ -10,7 +10,7 @@ import { useState } from "react";
 
 import { Field } from "@/features/settings/controls";
 import { useAccount } from "@/features/settings/use-account";
-import { aiAttributesQuery } from "@/lib/api/ai-attributes";
+import { conversationAttributesQuery } from "@/lib/api/conversation-attributes";
 
 import type { Choices } from "./choices";
 import { Pick } from "./pick";
@@ -26,7 +26,7 @@ export function ValueSource({
   onChange: (value: string) => void;
 }) {
   const workspace = useAccount().workspace.id;
-  const attributes = useQuery({ ...aiAttributesQuery(workspace), retry: false }).data ?? [];
+  const attributes = useQuery({ ...conversationAttributesQuery(workspace), retry: false }).data ?? [];
   const [saved, savedName] = sourceOf(value);
   const [source, setSource] = useState(saved);
   const [name, setName] = useState(savedName);

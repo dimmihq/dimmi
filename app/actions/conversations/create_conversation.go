@@ -57,6 +57,7 @@ type CreateConversationInput struct {
 	AssignSet    bool
 	Assignee     *ids.UUID
 	MutationID   string
+	Attributes   map[string]any
 }
 
 /*
@@ -78,10 +79,35 @@ Errors: [exceptions.ErrForbidden], [exceptions.ErrInboxNotFound],
 [exceptions.ErrMemberInactive], or a wrapped database error.
 */
 type CreateConversation struct {
-	DB       *database.DB
-	Events   *events.Dispatcher
-	Clock    clock.Clock
-	Delivery Delivery
+	DB         *database.DB
+	Events     *events.Dispatcher
+	Clock      clock.Clock
+	Delivery   Delivery
+	Attributes AttributeWriter
+}
+
+/*
+AttributeWriter sets a new conversation's attribute values, as the
+writer's actor, by the import when imported.
+*/
+type AttributeWriter func(ctx context.Context, w *Writer, c models.Conversation, values map[string]any) error
+
+/*
+setAttributes sets the values the request gave, refusing them when
+nothing can set them.
+*/
+func (a *CreateConversation) setAttributes(
+	ctx context.Context, w *Writer, c models.Conversation, values map[string]any,
+) error {
+	if len(values) == 0 {
+		return nil
+	}
+
+	if a.Attributes == nil {
+		return exceptions.ErrForbidden.OnField("attributes")
+	}
+
+	return a.Attributes(ctx, w, c, values)
 }
 
 /*
@@ -104,6 +130,10 @@ func (a *CreateConversation) Handle(ctx context.Context, in CreateConversationIn
 
 		c, err := a.start(ctx, w, in)
 		if err != nil {
+			return err
+		}
+
+		if err := a.setAttributes(ctx, w, c, in.Attributes); err != nil {
 			return err
 		}
 

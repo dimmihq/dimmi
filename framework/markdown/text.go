@@ -51,6 +51,26 @@ func parseGFM(src []byte) ast.Node {
 }
 
 /*
+parseBlocksDialect reads Markdown in the blocks dialect: parseGFM's plus the
+content blocks.
+*/
+func parseBlocksDialect(src []byte) ast.Node {
+	md := goldmark.New(
+		goldmark.WithExtensions(extension.GFM, extension.Footnote),
+		goldmark.WithParserOptions(
+			parser.WithBlockParsers(util.Prioritized(directiveParser{}, directivePriority)),
+			parser.WithASTTransformers(
+				util.Prioritized(alertTransformer{}, alertPriority),
+				util.Prioritized(buttonTransformer{}, directivePriority),
+				util.Prioritized(figureTransformer{}, figurePriority),
+			),
+		),
+	)
+
+	return md.Parser().Parse(text.NewReader(src))
+}
+
+/*
 collectText appends one line per text block under n.
 */
 func collectText(n ast.Node, src []byte, lines *[]string) {

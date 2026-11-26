@@ -67,6 +67,7 @@ func executors() map[string]executor {
 		workflowspec.KindSplit: runSplit,
 	}
 	maps.Copy(all, ticketExecutors())
+	maps.Copy(all, attributeExecutors())
 	maps.Copy(all, agentExecutors())
 	maps.Copy(all, automationExecutors())
 

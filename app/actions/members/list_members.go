@@ -41,8 +41,9 @@ const (
 ListMembersInput is who asks, through their membership, and which page
 of which members they want. Statuses, Roles and TeamIDs narrow the
 list, none meaning all; TwoFactor, when set, keeps members with or
-without a second factor; Search matches names and emails; Sort is one
-of the Sort constants, by name when empty.
+without a second factor; AwaitingEnable, when set, keeps imported
+members who wait to be enabled or everyone else; Search matches names
+and emails; Sort is one of the Sort constants, by name when empty.
 */
 type ListMembersInput struct {
 	Membership authz.Membership
@@ -51,9 +52,11 @@ type ListMembersInput struct {
 	TeamIDs    []ids.UUID
 	TwoFactor  *bool
 	Search     string
-	Sort       string
-	Offset     int
-	Limit      int
+
+	AwaitingEnable *bool
+	Sort           string
+	Offset         int
+	Limit          int
 }
 
 /*
@@ -92,7 +95,7 @@ func (a *ListMembers) Handle(ctx context.Context, in ListMembersInput) (MemberPa
 
 		rows, err = models.New(tx).ListWorkspaceMembers(ctx, models.ListWorkspaceMembersParams{
 			WorkspaceID: in.Membership.Workspace.ID, Statuses: in.Statuses, Roles: in.Roles, TeamIds: in.TeamIDs,
-			TwoFactor: in.TwoFactor, Search: in.Search, Sort: in.Sort,
+			TwoFactor: in.TwoFactor, AwaitingEnable: in.AwaitingEnable, Search: in.Search, Sort: in.Sort,
 			RowOffset: int64(in.Offset), RowLimit: int64(in.Limit + 1),
 		})
 

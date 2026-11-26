@@ -246,16 +246,21 @@ type AiAgentVersion struct {
 }
 
 type AiConversationAttribute struct {
-	ID          ids.UUID  `json:"id"`
-	WorkspaceID ids.UUID  `json:"workspace_id"`
-	Key         string    `json:"key"`
-	Label       string    `json:"label"`
-	Description string    `json:"description"`
-	DataType    string    `json:"data_type"`
-	Options     []string  `json:"options"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID                 ids.UUID        `json:"id"`
+	WorkspaceID        ids.UUID        `json:"workspace_id"`
+	Key                string          `json:"key"`
+	Label              string          `json:"label"`
+	Description        string          `json:"description"`
+	DataType           string          `json:"data_type"`
+	Options            []string        `json:"options"`
+	Status             string          `json:"status"`
+	CreatedAt          time.Time       `json:"created_at"`
+	UpdatedAt          time.Time       `json:"updated_at"`
+	FilledBy           string          `json:"filled_by"`
+	RequiredToClose    bool            `json:"required_to_close"`
+	TeamIds            []ids.UUID      `json:"team_ids"`
+	Position           int32           `json:"position"`
+	OptionDescriptions json.RawMessage `json:"option_descriptions"`
 }
 
 type AiProviderKey struct {
@@ -1074,6 +1079,8 @@ type ConversationAiValue struct {
 	CheckedAt        *time.Time      `json:"checked_at"`
 	CreatedAt        time.Time       `json:"created_at"`
 	UpdatedAt        time.Time       `json:"updated_at"`
+	Sources          json.RawMessage `json:"sources"`
+	AttachmentIds    []ids.UUID      `json:"attachment_ids"`
 }
 
 type ConversationDraft struct {
@@ -3514,4 +3521,10 @@ type WorkspaceMember struct {
 	LastAssignedAt               *time.Time      `json:"last_assigned_at"`
 	UndoSendSeconds              *int16          `json:"undo_send_seconds"`
 	CustomRoleID                 *ids.UUID       `json:"custom_role_id"`
+	ImportSource                 *string         `json:"import_source"`
+	ImportRole                   *string         `json:"import_role"`
+	ImportTeamIds                []ids.UUID      `json:"import_team_ids"`
+	ImportPending                bool            `json:"import_pending"`
+	ImportInvitedAt              *time.Time      `json:"import_invited_at"`
+	ImportArrivedAt              *time.Time      `json:"import_arrived_at"`
 }

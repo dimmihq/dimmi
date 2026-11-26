@@ -12,13 +12,11 @@ import type { ComponentType } from "react";
 import type { ChipColor } from "@/components/base/badges/chip";
 import {
   IncidentIOMark,
-  IntercomMark,
   JiraMark,
   LinearMark,
   NotionMark,
   PagerDutyMark,
   RootlyMark,
-  ZendeskMark,
 } from "@/features/tickets/issues/tool-logos";
 
 import type { Integration, RoomChange, RoomMode, RoomSettings, RoomTrigger, SlackRoom } from "@/lib/api/integrations";
@@ -70,18 +68,6 @@ const providerLooks: Record<string, ProviderLook> = {
     icon: RootlyMark,
     brand: "#8D6FDE",
     detail: "Declare incidents from tickets; their status moves the ticket.",
-  },
-  intercom: {
-    label: "Intercom",
-    icon: IntercomMark,
-    brand: "#1F8DED",
-    detail: "Answer from your Intercom help center articles.",
-  },
-  zendesk: {
-    label: "Zendesk",
-    icon: ZendeskMark,
-    brand: "#03363D",
-    detail: "Answer from your Zendesk help center articles.",
   },
   notion: {
     label: "Notion",

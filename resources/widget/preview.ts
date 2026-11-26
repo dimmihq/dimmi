@@ -18,6 +18,13 @@ export const teammate = "Maya Kerr";
 const reply = "Thanks for the details. A teammate will pick this up here in a moment.";
 
 /*
+ * daysAgo is the date some days back, for sample articles' updates.
+ */
+function daysAgo(days: number): string {
+  return new Date(Date.now() - days * 86_400_000).toISOString();
+}
+
+/*
  * said draws a message the team sent in a preview.
  */
 export function said(message: Incoming): string {
@@ -190,8 +197,8 @@ export const sample: Content = {
       slug: "install-the-widget",
       title: "Install the messenger on your site",
       summary: "Add one script tag and the messenger appears on every page.",
-      author: "Maya Kerr",
-      updated: "Updated this week",
+      updated: daysAgo(4),
+      author: { name: "Maya Kerr", avatar_url: null },
       body: [
         { kind: "p", text: "The messenger loads from a single script tag. It works on any site, framework or CMS." },
         { kind: "h2", text: "Add the snippet" },
@@ -219,8 +226,8 @@ export const sample: Content = {
       slug: "invite-your-team",
       title: "Invite your team",
       summary: "Bring teammates in so they can answer conversations.",
-      author: "Jonas Reed",
-      updated: "Updated 2 weeks ago",
+      updated: daysAgo(15),
+      author: { name: "Jonas Reed", avatar_url: null },
       body: [
         { kind: "p", text: "Everyone you invite gets their own login and can reply from the shared inbox." },
         {
@@ -234,8 +241,8 @@ export const sample: Content = {
       slug: "connect-github",
       title: "Connect a GitHub repository",
       summary: "Sync docs and changelog drafts from your repository.",
-      author: "Maya Kerr",
-      updated: "Updated yesterday",
+      updated: daysAgo(1),
+      author: { name: "Maya Kerr", avatar_url: null },
       body: [
         {
           kind: "p",
@@ -266,8 +273,8 @@ export const sample: Content = {
       slug: "change-your-plan",
       title: "Change your plan",
       summary: "Upgrade, downgrade or cancel at any time.",
-      author: "Jonas Reed",
-      updated: "Updated last month",
+      updated: daysAgo(40),
+      author: { name: "Jonas Reed", avatar_url: null },
       body: [
         { kind: "p", text: "Plan changes take effect right away. Upgrades are prorated for the rest of the month." },
         { kind: "steps", items: ["Open Settings, then Billing.", "Choose Change plan.", "Pick a plan and confirm."] },

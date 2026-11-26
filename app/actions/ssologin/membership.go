@@ -6,7 +6,8 @@
 | A person signing in through their company's identity provider must be
 | an active member of the company's workspace. A connection that admits
 | newcomers adds them with its default role, custom role and teams; it
-| never brings back a member someone deactivated. When the identity
+| never brings back a member someone deactivated, nor lets in a teammate
+| an import brought over who waits for an admin. When the identity
 | provider reports groups, the connection's group mapping decides the
 | member's role: the highest role any of their groups gives wins, and an
 | owner is never touched.
@@ -44,6 +45,10 @@ func (a *CompleteSSOLogin) membership(ctx context.Context, j joining) (models.Wo
 		WorkspaceID: workspace.ID, UserID: user.ID,
 	})
 	if err == nil {
+		if member.Status != string(enums.MemberStatusActive) && member.ImportPending {
+			return member, exceptions.ErrAccessAwaitingEnable
+		}
+
 		if member.Status != string(enums.MemberStatusActive) {
 			return member, exceptions.ErrMembershipDeactivated
 		}

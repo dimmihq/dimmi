@@ -44,6 +44,8 @@
   "office_hours_text": "",
   "offline_message": "Nous sommes absents. Laissez un message et nous vous répondrons par e-mail.",
   "open_in_help_center": "Ouvrir dans le centre d'aide",
+  "written_by": "Rédigé par {name}",
+  "updated_ago": "Mis à jour {time}",
   "popular": "Articles populaires",
   "privacy_notice": "Nous traitons vos données conformément à notre politique de confidentialité.",
   "rated_thanks": "Merci pour votre avis !",

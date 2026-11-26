@@ -43,7 +43,9 @@ it.describe("automation", () => {
     await canvas.getByRole("button", { name: "Add a step" }).click();
     await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Reply buttons" }).click();
     await expect(inspector.getByRole("heading", { name: "Reply buttons" })).toBeVisible();
-    await inspector.getByRole("textbox", { name: "Question" }).fill("What is it about?");
+    const question = inspector.getByRole("textbox", { name: "Question" });
+    await expect(question).toHaveAttribute("contenteditable", "true");
+    await question.fill("What is it about?");
     await inspector.getByRole("textbox", { name: "Button 1" }).fill("Billing");
     await expect(canvas.getByRole("button", { name: /What is it about\?/ })).toBeVisible();
     await expect(canvas.getByText("Billing", { exact: true })).toBeVisible();

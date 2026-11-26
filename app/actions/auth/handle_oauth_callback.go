@@ -30,6 +30,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/netip"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -269,11 +270,19 @@ func (a *HandleOAuthCallback) settle(ctx context.Context, in OAuthCallbackInput,
 
 /*
 adopt links the provider account to the account with its verified
-address, proving that address first.
+address, proving that address first. The placeholder account an import
+made is claimed like a sign-up: an install that publishes terms takes
+the person's acceptance first, and stores it.
 */
 func (a *HandleOAuthCallback) adopt(
 	ctx context.Context, tx *database.Tx, user models.User, in OAuthCallbackInput,
 ) (models.User, error) {
+	if user.IsPlaceholder() {
+		if err := a.acceptTerms(ctx, tx, user, in); err != nil {
+			return models.User{}, err
+		}
+	}
+
 	user, err := a.ClaimAccount.Prove(ctx, tx, user, in.Client)
 	if err != nil {
 		return models.User{}, err
@@ -282,6 +291,39 @@ func (a *HandleOAuthCallback) adopt(
 	return user, a.Link.Attach(ctx, tx, user, LinkOAuthIdentityInput{
 		UserID: user.ID, Identity: in.Identity, Client: in.Client,
 	})
+}
+
+/*
+acceptTerms stores the acceptance of the terms the person gave while
+claiming an imported teammate's placeholder account, and refuses a claim
+without one where the install publishes terms.
+*/
+func (a *HandleOAuthCallback) acceptTerms(
+	ctx context.Context, tx *database.Tx, user models.User, in OAuthCallbackInput,
+) error {
+	if !in.TermsAccepted {
+		if a.Terms.SiteURL != "" {
+			return exceptions.ErrTermsNotAccepted
+		}
+
+		return nil
+	}
+
+	terms := in.terms()
+
+	var ip *netip.Addr
+	if terms.IP.IsValid() {
+		ip = &terms.IP
+	}
+
+	err := models.New(tx).RecordUserTerms(ctx, models.RecordUserTermsParams{
+		ID: user.ID, TermsVersion: &a.Terms.Version, Ip: ip, UserAgent: &terms.UserAgent, Now: a.Clock.Now(),
+	})
+	if err != nil {
+		return fmt.Errorf("record terms: %w", err)
+	}
+
+	return nil
 }
 
 /*

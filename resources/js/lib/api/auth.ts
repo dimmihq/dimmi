@@ -104,10 +104,20 @@ export interface Instance {
   audit_retention_days?: number;
 }
 
+/*
+ * AwaitingAccess is a workspace the person was imported into from
+ * another tool and waits for an admin to enable them in.
+ */
+export interface AwaitingAccess {
+  id: string;
+  name: string;
+}
+
 export interface Me {
   object: "me";
   user: User;
   workspaces: WorkspaceSummary[];
+  awaiting_access?: AwaitingAccess[] | null;
   instance: Instance;
   locale: string;
 }

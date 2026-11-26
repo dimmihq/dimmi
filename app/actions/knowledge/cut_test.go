@@ -108,3 +108,18 @@ func TestCutArticle(t *testing.T) {
 		assert.Empty(t, cutArticle(Article{Title: "Empty", Body: "# Empty\n\n## Nothing here\n\n"}))
 	})
 }
+
+func TestCutArticleBlocks(t *testing.T) {
+	t.Parallel()
+
+	body := "Watch first.\n\n::embed[Setup tour]{src=\"https://youtu.be/dQw4w9WgXcQ\"}\n\n" +
+		":::details[How long do refunds take?]\nFive working days.\n:::\n\n" +
+		"::button[Ask for a refund]{href=\"https://example.com/refund\"}"
+
+	got := strings.Join(texts(Article{Title: "Refunds", Body: body}), "\n")
+
+	assert.Contains(t, got, "[Setup tour](<https://youtu.be/dQw4w9WgXcQ>)")
+	assert.Contains(t, got, "**How long do refunds take?**\nFive working days.")
+	assert.Contains(t, got, "[Ask for a refund](<https://example.com/refund>)")
+	assert.NotContains(t, got, "::")
+}
