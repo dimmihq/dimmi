@@ -234,6 +234,16 @@ type replay struct {
 	state     convState
 	conflicts map[string]bool
 	clamped   bool
+	prefix    string
+}
+
+/*
+external is the id the migration keeps the conversation under: the
+record's source id, after the prefix of a record that is no conversation
+itself, such as a ticket's.
+*/
+func (r *replay) external() string {
+	return r.s.runner.row.ID.String() + ":" + r.prefix + r.s.rec.base.SourceID
 }
 
 /*
@@ -348,7 +358,7 @@ first entry's, whichever is earlier, kept under the migration's id for
 it, with its first entry's key, metadata and author.
 */
 func (r *replay) opening(first Entry) (conversations.ConversationImport, error) {
-	external := r.s.runner.row.ID.String() + ":" + r.s.rec.base.SourceID
+	external := r.external()
 
 	metadata, err := r.entryMetadata(first)
 	if err != nil {

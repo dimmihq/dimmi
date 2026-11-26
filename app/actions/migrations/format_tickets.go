@@ -49,7 +49,9 @@ type TicketState struct {
 }
 
 /*
-Ticket is one ticket, with the states it went through.
+Ticket is one ticket, with the states it went through and what was
+written on it: messages, replies and notes, oldest first. Event entries
+are left out; state_history says how its state moved.
 */
 type Ticket struct {
 	Base
@@ -66,6 +68,7 @@ type Ticket struct {
 	CreatedAt       time.Time      `json:"created_at"`
 	UpdatedAt       *time.Time     `json:"updated_at,omitempty"`
 	StateHistory    []StateMove    `json:"state_history,omitempty"`
+	Entries         []Entry        `json:"entries,omitempty"`
 }
 
 /*

@@ -155,9 +155,15 @@ A `ticket_type` takes `kind` (`customer`, `back_office` or `tracker`), `name`, `
 | `states[]` | `source_id` unique in the type, `group` (`submitted`, `in_progress`, `waiting_customer`, `waiting_team`, `resolved`), `name`, `customer_label` |
 | `fields[]` | `source_id`, `key`, `label`, `type` (`string`, `text`, `list`, or a ticket field type such as `number` or `date`), `options`, `customer_visible` |
 
-A `ticket` takes `ticket_type_ref`, `state_ref`, `title`, `description`, `values` by field key, `priority`, `contact_ref`, `assignee_ref`, `conversation_ref`, `author`, `created_at`, `updated_at` and `state_history`, a list of `{"state_ref": "...", "at": "..."}` oldest first.
+A `ticket` takes `ticket_type_ref`, `state_ref`, `title`, `description`, `values` by field key, `priority`, `contact_ref`, `assignee_ref`, `conversation_ref`, `author`, `created_at`, `updated_at`, `state_history`, a list of `{"state_ref": "...", "at": "..."}` oldest first, and `entries`.
 
 `state_ref` and `state_history` name states by their `source_id` within the ticket's type. The ticket starts in its first state at `created_at`, then moves through each later state at its time.
+
+A ticket's `entries` are what was written on it, in the same shape as a conversation's. Messages, replies and notes are kept; event entries are left out, since `state_history` already says how the state moved.
+
+- A customer ticket keeps them in its conversation: the one `conversation_ref` names, or one opened for the ticket with its first message or reply.
+- A back-office ticket or a tracker keeps them as notes on the ticket, at their time and by whoever wrote them.
+- A later sync writes only the entries that are new. An undo removes the conversation a ticket opened.
 
 ## Results
 

@@ -982,6 +982,14 @@
               "at"
             ]
           }
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entry"
+          },
+          "maxItems": 5000,
+          "description": "What was written on the ticket. Messages, replies and notes are kept; event entries are left out."
         }
       },
       "required": [
