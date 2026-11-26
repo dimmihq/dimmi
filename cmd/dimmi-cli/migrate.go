@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -34,6 +35,7 @@ Commands:
   rollback     Undo everything this migration created in dimmi
   import FILE  Import a JSON Lines file already in dimmi's import format
   disconnect   Forget the saved Intercom token
+  inventory    Report the shapes of the workspace's data, never its content
 
 Every command takes --json and --profile.
 `
@@ -88,6 +90,11 @@ func (a *app) migrateCommand(ctx context.Context, name string) (command, bool) {
 		}}, true
 	case "disconnect":
 		return command{fs, a.disconnect}, true
+	case "inventory":
+		out := fs.String("out", "", "a folder to write scrubbed payload shapes to")
+		visitor := fs.String("visitor-id", "", "an anonymous visitor's intercom-id cookie to look for in the API")
+
+		return command{fs, func() error { return a.inventory(ctx, *out, *visitor) }}, true
 	}
 
 	return command{}, false
@@ -567,6 +574,32 @@ func (a *app) rollback(ctx context.Context, yes bool) error {
 
 	a.report.Report(engine.Event{Event: "rolled_back", Message: "Rollback " + mig.Status + ". The next run starts over.",
 		Data: map[string]string{"migration_id": mig.ID, "status": mig.Status}})
+
+	return nil
+}
+
+/*
+inventory reports how the workspace's data is shaped: part types,
+article blocks, how attachments are served. It prints kinds, counts and
+field names only.
+*/
+func (a *app) inventory(ctx context.Context, out, visitor string) error {
+	src, err := a.source(nil)
+	if err != nil {
+		return err
+	}
+
+	rep, err := src.Inventory(ctx, out, visitor)
+	if err != nil {
+		return err
+	}
+
+	raw, err := json.MarshalIndent(rep, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintln(a.out, string(raw))
 
 	return nil
 }

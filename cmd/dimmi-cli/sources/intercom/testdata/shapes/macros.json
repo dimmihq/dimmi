@@ -1,0 +1,51 @@
+{
+  "data": [
+    {
+      "available_on": [
+        "\u003cstring\u003e"
+      ],
+      "body": "\u003chtml\u003e",
+      "body_text": "\u003cstring\u003e",
+      "created_at": "\u003cstring\u003e",
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "type": "macro",
+      "updated_at": "\u003cstring\u003e",
+      "visible_to": "everyone",
+      "visible_to_team_ids": []
+    },
+    {
+      "available_on": [
+        "\u003cstring\u003e"
+      ],
+      "body": "\u003chtml\u003e",
+      "body_text": "\u003cstring\u003e",
+      "created_at": "\u003cstring\u003e",
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "type": "macro",
+      "updated_at": "\u003cstring\u003e",
+      "visible_to": "everyone",
+      "visible_to_team_ids": []
+    },
+    {
+      "available_on": [
+        "\u003cstring\u003e"
+      ],
+      "body": "\u003chtml\u003e",
+      "body_text": "\u003cstring\u003e",
+      "created_at": "\u003cstring\u003e",
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "type": "macro",
+      "updated_at": "\u003cstring\u003e",
+      "visible_to": "everyone",
+      "visible_to_team_ids": []
+    }
+  ],
+  "pages": {
+    "per_page": 0,
+    "type": "pages"
+  },
+  "type": "list"
+}

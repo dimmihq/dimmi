@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "created_at": 0,
+      "custom_domain": null,
+      "default": true,
+      "display_name": null,
+      "id": "\u003cstring\u003e",
+      "identifier": "\u003cstring\u003e",
+      "locales": [
+        "\u003cstring\u003e"
+      ],
+      "updated_at": 0,
+      "url": "\u003cstring\u003e",
+      "website_turned_on": false,
+      "workspace_id": "\u003cstring\u003e"
+    }
+  ],
+  "type": "list"
+}

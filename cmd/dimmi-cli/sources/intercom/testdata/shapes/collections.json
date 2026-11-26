@@ -1,0 +1,54 @@
+{
+  "data": [
+    {
+      "created_at": 0,
+      "description": "\u003cstring\u003e",
+      "help_center_id": 0,
+      "icon": "\u003cstring\u003e",
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "order": 0,
+      "parent_id": null,
+      "type": "collection",
+      "updated_at": 0,
+      "url": "\u003cstring\u003e",
+      "workspace_id": "\u003cstring\u003e"
+    },
+    {
+      "created_at": 0,
+      "description": "\u003cstring\u003e",
+      "help_center_id": 0,
+      "icon": "\u003cstring\u003e",
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "order": 0,
+      "parent_id": null,
+      "type": "collection",
+      "updated_at": 0,
+      "url": "\u003cstring\u003e",
+      "workspace_id": "\u003cstring\u003e"
+    },
+    {
+      "created_at": 0,
+      "description": "\u003cstring\u003e",
+      "help_center_id": 0,
+      "icon": "\u003cstring\u003e",
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "order": 0,
+      "parent_id": null,
+      "type": "collection",
+      "updated_at": 0,
+      "url": "\u003cstring\u003e",
+      "workspace_id": "\u003cstring\u003e"
+    }
+  ],
+  "pages": {
+    "page": 0,
+    "per_page": 0,
+    "total_pages": 0,
+    "type": "pages"
+  },
+  "total_count": 0,
+  "type": "list"
+}

@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "type": "tag"
+    },
+    {
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "type": "tag"
+    },
+    {
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "type": "tag"
+    }
+  ],
+  "type": "list"
+}

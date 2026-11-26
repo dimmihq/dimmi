@@ -17,7 +17,7 @@ original type is kept on the conversation's source.
 */
 func channel(sourceType string) string {
 	switch sourceType {
-	case "conversation", "chat", "push", "":
+	case "conversation", "messenger", "chat", "push", "":
 		return "widget"
 	case "email":
 		return "email"
@@ -276,7 +276,7 @@ func (t *convTranslation) entry(p part) []format.Entry {
 		return event(format.Event{Type: format.EventCustom, Text: plain(p.Body)})
 	}
 
-	if strings.HasPrefix(p.PartType, "tag") && len(p.Tags) > 0 {
+	if strings.Contains(p.PartType, "tag") && len(p.Tags) > 0 {
 		var ids []string
 		for _, tg := range p.Tags {
 			ids = append(ids, string(tg.ID))

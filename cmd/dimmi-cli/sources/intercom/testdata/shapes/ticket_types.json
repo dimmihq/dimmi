@@ -1,0 +1,238 @@
+{
+  "data": [
+    {
+      "archived": false,
+      "category": "Customer",
+      "created_at": 0,
+      "description": "\u003cstring\u003e",
+      "icon": "\u003cstring\u003e",
+      "id": "\u003cstring\u003e",
+      "is_internal": false,
+      "name": "\u003cstring\u003e",
+      "ticket_states": {
+        "data": [
+          {
+            "category": "submitted",
+            "external_label": "\u003cstring\u003e",
+            "id": "\u003cstring\u003e",
+            "internal_label": "\u003cstring\u003e",
+            "type": "ticket_state"
+          },
+          {
+            "category": "in_progress",
+            "external_label": "\u003cstring\u003e",
+            "id": "\u003cstring\u003e",
+            "internal_label": "\u003cstring\u003e",
+            "type": "ticket_state"
+          },
+          {
+            "category": "waiting_on_customer",
+            "external_label": "\u003cstring\u003e",
+            "id": "\u003cstring\u003e",
+            "internal_label": "\u003cstring\u003e",
+            "type": "ticket_state"
+          }
+        ],
+        "type": "list"
+      },
+      "ticket_type_attributes": {
+        "data": [
+          {
+            "archived": false,
+            "created_at": 0,
+            "data_type": "string",
+            "default": true,
+            "description": "\u003cstring\u003e",
+            "id": "\u003cstring\u003e",
+            "input_options": {
+              "multiline": false
+            },
+            "name": "\u003cstring\u003e",
+            "order": 0,
+            "required_to_create": false,
+            "required_to_create_for_contacts": false,
+            "ticket_type_id": 0,
+            "type": "ticket_type_attribute",
+            "updated_at": 0,
+            "visible_on_create": true,
+            "visible_to_contacts": true,
+            "workspace_id": "\u003cstring\u003e"
+          },
+          {
+            "archived": false,
+            "created_at": 0,
+            "data_type": "string",
+            "default": true,
+            "description": "\u003cstring\u003e",
+            "id": "\u003cstring\u003e",
+            "input_options": {
+              "multiline": true
+            },
+            "name": "\u003cstring\u003e",
+            "order": 0,
+            "required_to_create": false,
+            "required_to_create_for_contacts": false,
+            "ticket_type_id": 0,
+            "type": "ticket_type_attribute",
+            "updated_at": 0,
+            "visible_on_create": true,
+            "visible_to_contacts": true,
+            "workspace_id": "\u003cstring\u003e"
+          },
+          {
+            "archived": false,
+            "created_at": 0,
+            "data_type": "string",
+            "default": false,
+            "description": "\u003cstring\u003e",
+            "id": "\u003cstring\u003e",
+            "input_options": {
+              "multiline": false
+            },
+            "name": "\u003cstring\u003e",
+            "order": 0,
+            "required_to_create": false,
+            "required_to_create_for_contacts": false,
+            "ticket_type_id": 0,
+            "type": "ticket_type_attribute",
+            "updated_at": 0,
+            "visible_on_create": true,
+            "visible_to_contacts": true,
+            "workspace_id": "\u003cstring\u003e"
+          }
+        ],
+        "type": "list"
+      },
+      "type": "ticket_type",
+      "updated_at": 0,
+      "workspace_id": "\u003cstring\u003e"
+    },
+    {
+      "archived": false,
+      "category": "Tracker",
+      "created_at": 0,
+      "description": "\u003cstring\u003e",
+      "icon": "\u003cstring\u003e",
+      "id": "\u003cstring\u003e",
+      "is_internal": true,
+      "name": "\u003cstring\u003e",
+      "ticket_states": {
+        "data": [
+          {
+            "category": "submitted",
+            "external_label": "\u003cstring\u003e",
+            "id": "\u003cstring\u003e",
+            "internal_label": "\u003cstring\u003e",
+            "type": "ticket_state"
+          },
+          {
+            "category": "in_progress",
+            "external_label": "\u003cstring\u003e",
+            "id": "\u003cstring\u003e",
+            "internal_label": "\u003cstring\u003e",
+            "type": "ticket_state"
+          },
+          {
+            "category": "waiting_on_customer",
+            "external_label": "\u003cstring\u003e",
+            "id": "\u003cstring\u003e",
+            "internal_label": "\u003cstring\u003e",
+            "type": "ticket_state"
+          }
+        ],
+        "type": "list"
+      },
+      "ticket_type_attributes": {
+        "data": [
+          {
+            "archived": false,
+            "created_at": 0,
+            "data_type": "string",
+            "default": true,
+            "description": "\u003cstring\u003e",
+            "id": "\u003cstring\u003e",
+            "input_options": {
+              "multiline": false
+            },
+            "name": "\u003cstring\u003e",
+            "order": 0,
+            "required_to_create": false,
+            "required_to_create_for_contacts": false,
+            "ticket_type_id": 0,
+            "type": "ticket_type_attribute",
+            "updated_at": 0,
+            "visible_on_create": true,
+            "visible_to_contacts": false,
+            "workspace_id": "\u003cstring\u003e"
+          },
+          {
+            "archived": false,
+            "created_at": 0,
+            "data_type": "list",
+            "default": false,
+            "description": null,
+            "id": "\u003cstring\u003e",
+            "input_options": {
+              "list_options": [
+                {
+                  "archived": false,
+                  "description": null,
+                  "id": "\u003cstring\u003e",
+                  "label": "\u003cstring\u003e"
+                },
+                {
+                  "archived": false,
+                  "description": null,
+                  "id": "\u003cstring\u003e",
+                  "label": "\u003cstring\u003e"
+                },
+                {
+                  "archived": false,
+                  "description": null,
+                  "id": "\u003cstring\u003e",
+                  "label": "\u003cstring\u003e"
+                }
+              ]
+            },
+            "name": "\u003cstring\u003e",
+            "order": 0,
+            "required_to_create": false,
+            "required_to_create_for_contacts": false,
+            "ticket_type_id": 0,
+            "type": "ticket_type_attribute",
+            "updated_at": 0,
+            "visible_on_create": true,
+            "visible_to_contacts": false,
+            "workspace_id": "\u003cstring\u003e"
+          },
+          {
+            "archived": false,
+            "created_at": 0,
+            "data_type": "string",
+            "default": true,
+            "description": "\u003cstring\u003e",
+            "id": "\u003cstring\u003e",
+            "input_options": {
+              "multiline": true
+            },
+            "name": "\u003cstring\u003e",
+            "order": 0,
+            "required_to_create": false,
+            "required_to_create_for_contacts": false,
+            "ticket_type_id": 0,
+            "type": "ticket_type_attribute",
+            "updated_at": 0,
+            "visible_on_create": true,
+            "visible_to_contacts": false,
+            "workspace_id": "\u003cstring\u003e"
+          }
+        ],
+        "type": "list"
+      },
+      "type": "ticket_type",
+      "updated_at": 0,
+      "workspace_id": "\u003cstring\u003e"
+    }
+  ],
+  "type": "list"
+}

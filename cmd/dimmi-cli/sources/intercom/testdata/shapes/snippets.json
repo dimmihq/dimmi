@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "ai_chatbot_availability": true,
+      "ai_copilot_availability": true,
+      "ai_sales_agent_availability": true,
+      "audience_ids": [],
+      "body_markdown": "\u003cstring\u003e",
+      "chatbot_availability": 0,
+      "copilot_availability": 0,
+      "created_at": 0,
+      "id": "\u003cstring\u003e",
+      "json_blocks": "\u003cstring\u003e",
+      "locale": "\u003cstring\u003e",
+      "title": "\u003cstring\u003e",
+      "type": "content_snippet",
+      "updated_at": 0
+    }
+  ],
+  "page": 0,
+  "per_page": 0,
+  "total_count": 0,
+  "total_pages": 0,
+  "type": "list"
+}
