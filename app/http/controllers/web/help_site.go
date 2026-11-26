@@ -190,6 +190,10 @@ func (s *site) Article(_ helpcenter.Center, slug string) (helpcenter.Article, bo
 		Summary: s.summary(a), Trail: s.trail(a.CollectionID), Body: a.BodyHtml, Contents: contents(a.Toc),
 		Updated: a.VersionCreatedAt, Minutes: max(1, len(strings.Fields(a.BodyMarkdown))/wordsPerMinute),
 	}
+	if s.snap.Originals[a.ID] {
+		page.Untranslated = helpcenters.LanguageOf(s.snap.Locale).Native
+		page.OriginalLang = s.snap.HelpCenter.Locale
+	}
 	siblings := s.in(a.CollectionID)
 	i := indexOf(siblings, a.ID)
 	if i > 0 {

@@ -23,17 +23,22 @@ import "@hotwired/turbo";
 
 import { showWhen } from "./requests";
 
-const greetings: [hour: number, text: string][] = [
-  [18, "Good evening."],
-  [12, "Good afternoon."],
-  [5, "Good morning."],
-  [0, "Good evening."],
+/*
+ * The greeting's words come from the page, in its language; the hour
+ * picks one.
+ */
+const greetings: [hour: number, part: "evening" | "afternoon" | "morning"][] = [
+  [18, "evening"],
+  [12, "afternoon"],
+  [5, "morning"],
+  [0, "evening"],
 ];
 
 function greet(root: ParentNode): void {
   const hour = new Date().getHours();
-  const text = greetings.find(([from]) => hour >= from)?.[1];
+  const part = greetings.find(([from]) => hour >= from)?.[1];
   for (const element of root.querySelectorAll<HTMLElement>("[data-greeting]")) {
+    const text = part ? element.dataset[part] : undefined;
     if (text) {
       element.textContent = text;
     }
@@ -52,11 +57,11 @@ async function copy(button: HTMLButtonElement): Promise<void> {
     const response = await fetch(source, { headers: { Accept: "text/markdown" } });
     await navigator.clipboard.writeText(await response.text());
     if (label) {
-      label.textContent = "Copied";
+      label.textContent = button.dataset.copied ?? "Copied";
     }
   } catch {
     if (label) {
-      label.textContent = "Copy failed";
+      label.textContent = button.dataset.copyFailed ?? "Copy failed";
     }
   }
   setTimeout(() => {

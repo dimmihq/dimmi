@@ -175,7 +175,7 @@ func TestHelpCenterPages(t *testing.T) {
 			status, body := get(t, tc, path)
 
 			assert.Equal(t, fhttp.StatusNotFound, status, path)
-			assert.Contains(t, body, "We couldn't find that page", path)
+			assert.Contains(t, body, "We couldn&#39;t find that page", path)
 		}
 	})
 

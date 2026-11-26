@@ -285,3 +285,10 @@ LEFT JOIN article_versions s ON s.id = a.published_version_id
 WHERE t.workspace_id = @workspace_id AND t.help_center_id = @help_center_id AND t.locale = @locale
   AND t.slug = @slug AND t.status = 'published' AND a.deleted_at IS NULL AND a.status <> 'archived'
   AND coalesce(s.visibility, a.visibility) = 'public';
+
+-- name: ListTranslatedArticleIDs :many
+-- ListTranslatedArticleIDs returns the articles of a help center with a
+-- published translation into the language.
+SELECT article_id FROM article_translations
+WHERE workspace_id = @workspace_id AND help_center_id = @help_center_id AND locale = @locale
+  AND status = 'published';

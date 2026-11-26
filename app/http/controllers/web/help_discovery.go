@@ -95,7 +95,9 @@ func (c *HelpCenterController) Sitemap(w fhttp.ResponseWriter, r *fhttp.Request)
 		set.URLs = append(set.URLs, sitemapURL{Loc: root + "/collections/" + col.Slug, LastMod: day(col.UpdatedAt)})
 	}
 	for _, a := range snap.Articles {
-		set.URLs = append(set.URLs, sitemapURL{Loc: root + "/articles/" + a.Slug, LastMod: day(a.VersionCreatedAt)})
+		if !snap.Originals[a.ID] {
+			set.URLs = append(set.URLs, sitemapURL{Loc: root + "/articles/" + a.Slug, LastMod: day(a.VersionCreatedAt)})
+		}
 	}
 	if snap.Locale == snap.HelpCenter.Locale {
 		set.URLs = append(set.URLs, c.changelogURLs(r, snap.HelpCenter, root)...)
@@ -176,10 +178,13 @@ func (c *HelpCenterController) LLMs(w fhttp.ResponseWriter, r *fhttp.Request) {
 	var b strings.Builder
 	b.WriteString(llmsHeading(snap))
 	listed := map[string]bool{}
+	for _, a := range snap.Articles {
+		listed[a.Slug] = snap.Originals[a.ID]
+	}
 	for _, col := range snap.Collections {
 		var lines []string
 		for _, a := range snap.Articles {
-			if a.CollectionID != nil && *a.CollectionID == col.ID {
+			if a.CollectionID != nil && *a.CollectionID == col.ID && !snap.Originals[a.ID] {
 				lines, listed[a.Slug] = append(lines, llmsLink(root, a)), true
 			}
 		}
@@ -212,6 +217,9 @@ func (c *HelpCenterController) LLMsFull(w fhttp.ResponseWriter, r *fhttp.Request
 	var b strings.Builder
 	b.WriteString(llmsHeading(snap))
 	for _, a := range snap.Articles {
+		if snap.Originals[a.ID] {
+			continue
+		}
 		b.WriteString("\n---\n\n# " + oneLine(a.Title) + "\n\nSource: " + root + "/articles/" + a.Slug + "\n\n")
 		if a.Description != nil && *a.Description != "" {
 			b.WriteString("> " + oneLine(*a.Description) + "\n\n")

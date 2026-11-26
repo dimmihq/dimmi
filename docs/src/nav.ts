@@ -128,6 +128,7 @@ export const sidebar: Group[] = [
     items: [
       { label: "Setup", link: "/help-center/set-up/" },
       { label: "Custom domain", link: "/help-center/custom-domain/" },
+      { label: "Languages", link: "/help-center/languages/" },
       { label: "Restricted articles", link: "/help-center/limit-articles/" },
       { label: "Feature requests", link: "/help-center/feature-requests/" },
       { label: "Changelog", link: "/help-center/changelog/" },

@@ -152,8 +152,16 @@ func TestHelpCenterLanguages(t *testing.T) {
 		home := string(open("/fr").AssertOK().Body)
 		assert.Contains(t, home, `lang="fr"`)
 		assert.Contains(t, home, "Compte")
-		assert.NotContains(t, home, "Facturation", "a collection with no French article stays hidden")
-		assert.NotContains(t, home, "Close your account", "an untranslated article stays hidden")
+		assert.Contains(t, home, "Comment pouvons-nous vous aider ?", "the help center's own words read in French")
+		assert.NotContains(t, home, "Facturation", "a collection with no article stays hidden")
+		assert.Contains(t, home, "Close your account", "an untranslated article shows in the original")
+
+		original := string(open("/fr/articles/close-your-account").AssertOK().Body)
+		assert.Contains(t, original, "data-untranslated")
+		assert.Contains(t, original, "Cet article n&#39;est pas encore disponible en Français.")
+		assert.Contains(t, original, `content="noindex"`)
+		assert.Contains(t, original, `hreflang="en" href="`+c.address("/articles/close-your-account")+`"`)
+		assert.NotContains(t, original, `rel="alternate" hreflang="fr"`)
 
 		page := string(open("/fr/articles/reinitialiser-le-mot-de-passe").AssertOK().Body)
 		assert.Contains(t, page, "Ouvrez les réglages.")
@@ -164,7 +172,6 @@ func TestHelpCenterLanguages(t *testing.T) {
 		assert.Contains(t, page, "data-language-switch")
 		assert.Contains(t, page, `href="`+c.local("/de")+`?lang=de"`, "an untranslated page leads to the language's home")
 
-		open("/fr/articles/close-your-account").AssertNotFound()
 		open("/fr/collections/billing").AssertNotFound()
 		assert.Contains(t, string(open("/fr/collections/compte").AssertOK().Body), "Réinitialiser le mot de passe")
 		open("/en/articles/reset-your-password").AssertStatus(fhttp.StatusMovedPermanently).
@@ -174,7 +181,16 @@ func TestHelpCenterLanguages(t *testing.T) {
 
 		found := string(open("/fr/search?q=réglages").AssertOK().Body)
 		assert.Contains(t, found, "Réinitialiser le mot de passe")
-		assert.NotContains(t, string(open("/fr/search?q=settings").AssertOK().Body), "Reset your password")
+		english := string(open("/fr/search?q=settings+write").AssertOK().Body)
+		assert.NotContains(t, english, "Reset your password", "a translated article is found in French only")
+		assert.Contains(t, english, "Close your account", "an untranslated one is found in the original")
+
+		c.d.Owner.PatchJSON("/api/v1/help-centers/"+c.id, testkit.JSON{
+			"settings": testkit.JSON{"untranslated_articles": "hide"},
+		}).AssertOK().AssertJSONPath("data.settings.untranslated_articles", "hide")
+		assert.NotContains(t, string(open("/fr").AssertOK().Body), "Close your account")
+		open("/fr/articles/close-your-account").AssertNotFound()
+		assert.NotContains(t, string(open("/fr/search?q=write").AssertOK().Body), "Close your account")
 	})
 
 	t.Run("opens the home page in the browser's language until the reader picks one", func(t *testing.T) {
@@ -272,8 +288,9 @@ func TestHelpCenterLanguages(t *testing.T) {
 
 		help := "/widget/v1/apps/" + app + "/help"
 		french := c.d.TC.Client().WithHeader("Accept-Language", "fr-FR,fr;q=0.9").GetJSON(help).AssertOK()
-		french.AssertJSONPath("data.locale", "fr").AssertJSONPath("data.articles.#", float64(1)).
-			AssertJSONPath("data.articles.0.title", "Exporter les données")
+		french.AssertJSONPath("data.locale", "fr").AssertJSONPath("data.articles.#", float64(2)).
+			AssertJSONPath("data.articles.0.title", "Exporter les données").
+			AssertJSONPath("data.articles.1.title", "Import data")
 		assert.True(t, strings.HasSuffix(french.String("data.url"), "/fr"))
 		c.d.TC.Client().GetJSON(help+"?locale=en").AssertOK().AssertJSONPath("data.articles.#", float64(2)).
 			AssertJSONPath("data.locale", "en")

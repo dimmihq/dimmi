@@ -25,6 +25,7 @@ import { type WidgetSummary, widgetSettingsQuery } from "@/lib/api/widget-settin
 import { Action, Colour, Field, Toggle } from "./controls";
 import { DeleteHelpCenter } from "./help-center-delete";
 import { HelpCenterDomain } from "./help-center-domain";
+import { LanguagesSection } from "./help-center-languages";
 import { Glyph, Item, Row, Section, SettingsPage } from "./layout";
 import { rowLink } from "./row-link";
 import { SaveBar } from "./save-bar";
@@ -43,6 +44,9 @@ interface Form {
   messengerId: string;
   askAi: boolean;
   indexing: boolean;
+  defaultLocale: string;
+  locales: string[];
+  untranslated: "original" | "hide";
 }
 
 function formOf(center: HelpCenter): Form {
@@ -60,6 +64,9 @@ function formOf(center: HelpCenter): Form {
     messengerId: center.settings.messenger_id ?? "",
     askAi: center.ask_ai_enabled,
     indexing: center.indexing_enabled,
+    defaultLocale: center.default_locale ?? center.locale,
+    locales: center.locales ?? [center.locale],
+    untranslated: center.settings.untranslated_articles ?? "original",
   };
 }
 
@@ -83,13 +90,16 @@ function changeOf(center: HelpCenter, form: Form): Parameters<typeof updateHelpC
     ...(differs("emailSignIn") ? { email_sign_in: form.emailSignIn } : {}),
     ...(differs("messenger") ? { messenger: form.messenger } : {}),
     ...(differs("messengerId") ? { messenger_id: form.messengerId } : {}),
+    ...(differs("untranslated") ? { untranslated_articles: form.untranslated } : {}),
   };
+  const languages = form.defaultLocale !== was.defaultLocale || form.locales.join() !== was.locales.join();
 
   return {
     ...(differs("name") ? { name: form.name } : {}),
     ...(differs("subdomain") ? { subdomain: form.subdomain } : {}),
     ...(differs("askAi") ? { ask_ai_enabled: form.askAi } : {}),
     ...(differs("indexing") ? { indexing_enabled: form.indexing } : {}),
+    ...(languages ? { default_locale: form.defaultLocale, locales: form.locales } : {}),
     ...(Object.keys(settings).length > 0 ? { settings: { ...center.settings, ...settings } } : {}),
   };
 }
@@ -256,6 +266,12 @@ export function HelpCentersSettings() {
               <Colour label="Help center color" value={form.color} onChange={(color) => setForm({ ...form, color })} />
             </Row>
           </Section>
+          <LanguagesSection
+            key={`languages-${version}`}
+            workspace={workspace}
+            form={form}
+            onChange={(change) => setForm({ ...form, ...change })}
+          />
           <HelpCenterDomain workspace={workspace} center={center} />
           <Section
             key={`sign-in-${version}`}

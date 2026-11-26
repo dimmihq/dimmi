@@ -38,7 +38,7 @@ Sections returns the portal's sections in the order its navigation
 shows them: the help center first, then the sections the portal has.
 */
 func Sections(c Center) []Section {
-	return append([]Section{{Key: "help", Name: "Help center", Icon: "book", Path: "/"}}, c.Sections...)
+	return append([]Section{{Key: "help", Name: c.T("help_center"), Icon: "book", Path: "/"}}, c.Sections...)
 }
 
 /*

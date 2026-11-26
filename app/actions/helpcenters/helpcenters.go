@@ -85,6 +85,26 @@ type HelpCenterSettings struct {
 	ChangelogSubscriptions *bool  `json:"changelog_subscriptions,omitempty"`
 	ChangelogEmail         string `json:"changelog_email,omitempty"`
 	ChangelogUndoMinutes   *int   `json:"changelog_undo_minutes,omitempty"`
+
+	UntranslatedArticles string `json:"untranslated_articles,omitempty"`
+}
+
+/*
+Untranslated values: what readers of another language see of an article
+not translated into it. Readers get the original, with a notice, unless
+the team chose to hide it.
+*/
+const (
+	UntranslatedOriginal = "original"
+	UntranslatedHide     = "hide"
+)
+
+/*
+ShowsOriginals reports whether readers of another language see articles
+not translated into it in the default language.
+*/
+func (s HelpCenterSettings) ShowsOriginals() bool {
+	return s.UntranslatedArticles != UntranslatedHide
 }
 
 /*

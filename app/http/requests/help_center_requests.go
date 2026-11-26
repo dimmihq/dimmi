@@ -43,6 +43,8 @@ type HelpCenterSettingsBody struct {
 	ChangelogSubscriptions *bool   `json:"changelog_subscriptions,omitempty"`
 	ChangelogEmail         *string `json:"changelog_email,omitempty"         enum:"full,summary"`
 	ChangelogUndoMinutes   *int    `json:"changelog_undo_minutes,omitempty"  enum:"0,5,15,60"`
+
+	UntranslatedArticles *string `json:"untranslated_articles,omitempty" enum:"original,hide" doc:"What readers of another language see of an article not translated into it: the original in the default language, with a notice (the default), or nothing."`
 }
 
 /*

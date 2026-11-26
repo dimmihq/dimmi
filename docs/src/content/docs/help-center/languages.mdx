@@ -1,0 +1,110 @@
+---
+title: "Translate your help center"
+description: "Serve one help center in several languages, translate articles and collections, and keep translations in step with the source."
+---
+
+A help center speaks one **default language** and as many other languages as you turn on. You write each article once in the default language, which stays the source, and add a translation for every other language your readers need. Readers of each language get their own pages, search, sitemap, and AI answers, all from the same help center.
+
+Every address your help center already has keeps working. Default-language pages stay at the root, and other languages live under their own prefix:
+
+| Page | Default language (English) | French |
+| --- | --- | --- |
+| Home | `https://acme.dimmi.help/` | `https://acme.dimmi.help/fr` |
+| Article | `/articles/reset-your-password` | `/fr/articles/reinitialiser-le-mot-de-passe` |
+| Collection | `/collections/account` | `/fr/collections/compte` |
+| Search | `/search?q=password` | `/fr/search?q=mot+de+passe` |
+
+## Turn on a language
+
+Add languages in **Settings → Help centers** under **Languages**. Turning a language off hides its translations from readers but keeps them, so turning it back on brings them back.
+
+Over the API, send every language readers may pick in `locales`. The default is always kept first:
+
+```bash
+curl -X PATCH https://trydimmi.com/api/v1/help-centers/hc_01j9z3k8 \
+  -H "Authorization: Bearer $DIMMI_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"locales": ["en", "fr", "pt-BR"]}'
+```
+
+```json
+{
+  "data": {
+    "id": "hc_01j9z3k8",
+    "locale": "en",
+    "default_locale": "en",
+    "locales": ["en", "fr", "pt-BR"]
+  }
+}
+```
+
+`locale` and `default_locale` name the same thing. Clients written before languages existed keep reading and writing `locale` as they always did.
+
+## Translate an article
+
+Open an article and pick a language from the language menu next to its title. A translation is edited like the source: saving keeps a draft, **Publish** makes it live under that language's prefix, and each publish saves a version you can restore.
+
+```bash
+curl -X PUT https://trydimmi.com/api/v1/articles/art_01j9z4m2/translations/fr \
+  -H "Authorization: Bearer $DIMMI_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Réinitialiser le mot de passe", "body_markdown": "Ouvrez **Réglages**, puis **Sécurité**."}'
+
+curl -X POST https://trydimmi.com/api/v1/articles/art_01j9z4m2/translations/fr/publications \
+  -H "Authorization: Bearer $DIMMI_TOKEN"
+```
+
+The first save starts a draft and needs a `title`. dimmi makes the slug from the title unless you send one, and a later save that sends `lock_version` is refused with `translation_changed` when a teammate saved since you opened it.
+
+Collections get a translated name, slug, and description with `PUT /api/v1/collections/{collection}/translations/{locale}`.
+
+## What readers of each language see
+
+Readers of a language only ever see what is translated into it. dimmi never shows the source's words on a French page.
+
+- **Articles:** an article shows in a language once its translation there is published. Unpublishing or deleting the source's translation hides it again.
+- **Collections:** a collection shows once its name is translated and it, or a collection inside it, holds a published article in that language.
+- **Search:** each language searches its own published translations.
+- **Audiences:** an article [kept to an audience](/help-center/limit-articles/) stays kept to it in every language.
+
+The header shows a language menu when the help center speaks more than one language. Each choice leads to the same page in that language, or to that language's home when the page is not translated.
+
+The first time a reader opens your home page, dimmi picks the first language their browser asks for that you offer, so a reader whose browser prefers `fr-CA` lands on `/fr`. A reader who picks a language from the menu keeps it. dimmi never moves a reader off a page they followed a link to.
+
+## Keep translations up to date
+
+A translation is **outdated** when you publish the source with different title, description, or body text than the translation last caught up with. Moving the source to another collection or changing its slug does not count.
+
+Publishing the translation again catches it up. When the source change does not affect the translation, such as a fixed English typo, mark it up to date without republishing:
+
+```bash
+curl -X POST https://trydimmi.com/api/v1/articles/art_01j9z4m2/translations/fr/reviews \
+  -H "Authorization: Bearer $DIMMI_TOKEN"
+```
+
+To find the work left, list where every article stands in each language, narrowed to `missing` or `outdated`:
+
+```bash
+curl "https://trydimmi.com/api/v1/help-centers/hc_01j9z3k8/translation-states?locale=fr&state=outdated" \
+  -H "Authorization: Bearer $DIMMI_TOKEN"
+```
+
+## Search engines and AI answers
+
+- **hreflang:** every article, collection, and home page links its other languages, plus an `x-default` for the default language.
+- **Sitemaps:** each language has its own sitemap at `/<language>/sitemap.xml`, and `robots.txt` lists them all.
+- **llms.txt:** each language has its own `/<language>/llms.txt`.
+- **Redirects:** changing the slug of a published translation redirects its old address to the new one, in the same language.
+- **dimmi agent:** when the customer's language has a published translation, the agent answers from it and links its translated page. Articles without one answer from the source.
+- **Messenger:** the Help tab shows the help center in the visitor's browser language when you offer it. Send `?locale=fr` to `GET /widget/v1/apps/{app}/help` to choose one yourself.
+
+## Rules and limits
+
+| Rule | Value |
+| --- | --- |
+| Languages per help center | 30, the default included |
+| Languages you can add | The ones listed in the language picker, such as `fr`, `de`, `pt-BR`, `zh-TW` |
+| Changing the default | Refused with `default_locale_translated` while any article or collection is translated into the new default |
+| Translation title, slug, body | Same limits as articles: 150 characters, 120 characters, 256 KB |
+
+Importing from Intercom keeps every language in one help center: each translated article becomes a translation of the imported article, and dimmi turns its language on for you. See [Knowledge sources](/ai/knowledge-sources/) if you are moving over.

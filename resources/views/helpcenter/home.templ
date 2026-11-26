@@ -11,14 +11,14 @@ close it.
 */
 
 templ Home(c Center, collections []Collection, popular []Summary, updates []Update, assets templ.Component) {
-	@Layout(c, Meta{Title: c.Name, Description: c.Tagline, Section: "help", Trail: []Crumb{{Title: "Help center", Path: "/"}}, Markdown: "/index.md"}, HelpSidebar(c, collections, "", ""), assets) {
+	@Layout(c, Meta{Title: c.Name, Description: c.Tagline, Section: "help", Trail: []Crumb{{Title: c.T("help_center"), Path: "/"}}, Markdown: "/index.md"}, HelpSidebar(c, collections, "", ""), assets) {
 		<div class="mx-auto w-full max-w-[42rem] px-5 pt-14 md:pt-20">
 			<header class="stagger">
 				<div class="flex items-center gap-3 [&_img]:h-9 [&>span]:text-title-2-semibold">
 					@Logo(c)
 				</div>
 				<h1 class="mt-5 text-title-1-medium tracking-tight text-balance">
-					<span data-greeting>Hi there.</span>
+					<span data-greeting data-morning={ c.T("good_morning") } data-afternoon={ c.T("good_afternoon") } data-evening={ c.T("good_evening") }>{ c.T("hi_there") }</span>
 					<span class="text-text-tertiary">{ homeTitle(c) }</span>
 				</h1>
 				if c.Tagline != "" {
@@ -149,15 +149,15 @@ templ AskBox(c Center, query string, suggestions []Summary) {
 templ latestUpdates(c Center, updates []Update) {
 	<section aria-labelledby="updates">
 		<div class="flex items-baseline justify-between">
-			<h2 id="updates" class="text-body-medium text-text-secondary">Latest updates</h2>
-			<a href={ Href(c, "/changelog") } class="text-body-2-medium text-link hover:underline">Changelog</a>
+			<h2 id="updates" class="text-body-medium text-text-secondary">{ c.T("latest_updates") }</h2>
+			<a href={ Href(c, "/changelog") } class="text-body-2-medium text-link hover:underline">{ c.T("changelog") }</a>
 		</div>
 		<ol class="relative ms-1 mt-5 border-s border-separator-border">
 			for _, u := range updates {
 				<li class="relative pb-6 ps-5 last:pb-0">
 					<span class="absolute -start-[5px] top-1.5 size-[9px] rounded-full bg-brand ring-4 ring-background-full" aria-hidden="true"></span>
 					<p class="text-caption-1-regular text-text-tertiary">
-						<time datetime={ Stamp(u.Published) }>{ Day(u.Published) }</time>
+						<time datetime={ Stamp(u.Published) }>{ c.Date(u.Published) }</time>
 						if u.Label != "" {
 							· { u.Label }
 						}
@@ -175,7 +175,7 @@ collection as a group, the one holding the page open.
 */
 
 templ HelpSidebar(c Center, all []Collection, current, article string) {
-	<nav aria-label="Collections" class="flex flex-col gap-5">
+	<nav aria-label={ c.T("collections") } class="flex flex-col gap-5">
 		for _, col := range all {
 			@CollectionGroup(c, col, current, article)
 		}
@@ -188,7 +188,7 @@ team's own, or the default.
 */
 func homeTitle(c Center) string {
 	if c.HomeTitle == "" {
-		return "How can we help?"
+		return c.T("home_title")
 	}
 	return c.HomeTitle
 }
@@ -206,21 +206,21 @@ func askIcon(c Center) string {
 
 func askLabel(c Center) string {
 	if c.MessengerAI {
-		return "Ask AI a question or search the help center"
+		return c.T("ask_label")
 	}
-	return "Search the help center"
+	return c.T("search_label")
 }
 
 func askButton(c Center) string {
 	if c.MessengerAI {
-		return "Ask"
+		return c.T("ask")
 	}
-	return "Search"
+	return c.T("search")
 }
 
 func askPlaceholder(c Center) string {
 	if c.MessengerAI {
-		return "Ask anything…"
+		return c.T("ask_placeholder")
 	}
-	return "Search for articles…"
+	return c.T("search_placeholder")
 }

@@ -871,6 +871,40 @@ func (q *Queries) ListPublishedArticleTranslations(ctx context.Context, arg List
 	return items, nil
 }
 
+const listTranslatedArticleIDs = `-- name: ListTranslatedArticleIDs :many
+SELECT article_id FROM article_translations
+WHERE workspace_id = $1 AND help_center_id = $2 AND locale = $3
+  AND status = 'published'
+`
+
+type ListTranslatedArticleIDsParams struct {
+	WorkspaceID  ids.UUID `json:"workspace_id"`
+	HelpCenterID ids.UUID `json:"help_center_id"`
+	Locale       string   `json:"locale"`
+}
+
+// ListTranslatedArticleIDs returns the articles of a help center with a
+// published translation into the language.
+func (q *Queries) ListTranslatedArticleIDs(ctx context.Context, arg ListTranslatedArticleIDsParams) ([]ids.UUID, error) {
+	rows, err := q.db.Query(ctx, listTranslatedArticleIDs, arg.WorkspaceID, arg.HelpCenterID, arg.Locale)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ids.UUID
+	for rows.Next() {
+		var article_id ids.UUID
+		if err := rows.Scan(&article_id); err != nil {
+			return nil, err
+		}
+		items = append(items, article_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTranslationsOfCollection = `-- name: ListTranslationsOfCollection :many
 SELECT t.id, t.workspace_id, t.help_center_id, t.collection_id, t.locale, t.name, t.slug, t.description, t.source_hash, t.created_at, t.updated_at, (t.source_hash IS DISTINCT FROM help_text_hash(c.name, c.description, ''))::boolean AS outdated
 FROM collection_translations t

@@ -35,7 +35,9 @@ import (
 Snapshot is a help center as readers of one language see it at one
 cache version. Locale is that language. Collections and Articles carry
 that language's names, slugs and text: in the default language the
-source, in another only what is translated into it. Alternates gives,
+source, in another what is translated into it and, when the team shows
+them, the articles that are not, in the default language; Originals
+marks those. Alternates gives,
 for each article and collection, its slug in every language readers
 may read it in. Restricted says audiences keep some of it from this
 reader, so signing in could show more. Messenger is the messenger its
@@ -46,6 +48,7 @@ type Snapshot struct {
 	Locale      string
 	Collections []models.Collection
 	Articles    []models.ListPublishedArticlesRow
+	Originals   map[ids.UUID]bool
 	Alternates  Alternates
 	Restricted  bool
 	Messenger   Messenger
@@ -256,7 +259,8 @@ func loadAll(ctx context.Context, q *models.Queries, h models.HelpCenter, locale
 	if err != nil {
 		return out, err
 	}
-	out.Collections, out.Articles = read.in(locale)
+	shown := read.in(locale, SettingsOf(h).ShowsOriginals())
+	out.Collections, out.Articles, out.Originals = shown.collections, shown.articles, shown.originals
 	out.Alternates = read.alternates()
 	out.Messenger, err = messengerOf(ctx, q, h)
 	return out, err
