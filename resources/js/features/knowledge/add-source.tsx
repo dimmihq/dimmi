@@ -329,13 +329,16 @@ function useStepFlow({
         workspace={workspace}
         input={inputOf(draft)}
         selected={selection}
+        pages={patternTree(kind)}
         onChange={(next) =>
           patternTree(kind) ? onChange({ include: next }) : onChange({ values: { ...values, selected: next } })
         }
       />
     ),
     use: <UseStep workspace={workspace} kind={kind} usage={usage} onChange={(u) => onChange({ usage: u })} />,
-    review: <ReviewStep kind={kind} usage={usage} preview={preview} picked={selection.length} />,
+    review: (
+      <ReviewStep kind={kind} usage={usage} preview={preview} picked={selection.length} pages={patternTree(kind)} />
+    ),
   };
 
   return { body: bodies[step], action, filling: step === "content", busy: check.isPending || create.isPending };

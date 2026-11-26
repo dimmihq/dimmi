@@ -36,6 +36,7 @@ export interface SchemaProperty {
   "x-account"?: string;
   "x-depends"?: string[];
   "x-patterns"?: boolean;
+  "x-hidden"?: boolean;
 }
 
 /*

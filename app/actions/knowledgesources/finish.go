@@ -303,7 +303,15 @@ func errorCode(err error) string {
 }
 
 /*
-message is a failure in words a member can act on.
+unread is what a member reads when a source fails for a reason only
+the log explains, such as a service refusing a call.
+*/
+const unread = "dimmi could not read this. It tries again at the next sync."
+
+/*
+message is a failure in words a member can act on. A failure with
+nothing for them to act on says only that reading failed: what the
+service said belongs in the log, never on the page.
 */
 func message(err error) string {
 	var cfgErr *sources.ConfigError
@@ -319,12 +327,7 @@ func message(err error) string {
 		return "The source could not be found. It may have been deleted or made private."
 	}
 
-	text := err.Error()
-	if len(text) > 300 {
-		text = text[:300]
-	}
-
-	return text
+	return unread
 }
 
 /*

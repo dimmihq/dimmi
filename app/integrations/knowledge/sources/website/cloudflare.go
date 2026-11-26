@@ -37,13 +37,17 @@ import (
 
 /*
 Cloudflare API locations, how long to wait between looks at a running
-job, and the longest a call to it may take.
+job, the longest a call to it may take, and how much of its reason for
+refusing a call is kept. Cloudflare refuses a crawl of more than a
+hundred pages.
 */
 const (
 	cloudflareAPI     = "https://api.cloudflare.com/client/v4"
 	cloudflarePoll    = 15 * time.Second
 	cloudflareTimeout = 90 * time.Second
 	cloudflareMaxWait = 15 * time.Minute
+	cloudflareReason  = 300
+	cloudflarePages   = 100
 	waitCursor        = "wait:"
 	pageCursor        = "page:"
 )
@@ -162,7 +166,7 @@ func (c *Cloudflare) start(ctx context.Context, s Site) (string, error) {
 	}
 
 	body := map[string]any{
-		"url": s.StartURL, "limit": s.MaxPages, "source": source, "formats": []string{"markdown"},
+		"url": s.StartURL, "limit": min(s.MaxPages, cloudflarePages), "source": source, "formats": []string{"markdown"},
 		"crawlPurposes": []string{"search", "ai-input"}, "contentUse": "reference",
 		"options": map[string]any{
 			"includePatterns": onSite(s.StartURL, s.Include), "excludePatterns": onSite(s.StartURL, s.Exclude),
@@ -393,10 +397,33 @@ func (c *Cloudflare) call(ctx context.Context, r cfRequest) error {
 	}
 
 	if err := sources.FromResponse(resp, "cloudflare "+path); err != nil {
-		return err
+		return withReason(err, resp)
 	}
 
 	return resp.JSON(out)
+}
+
+/*
+withReason adds what Cloudflare said about a refused call, such as a
+limit that is too high, so the failure can be understood from the log.
+*/
+func withReason(err error, resp *httpclient.Response) error {
+	var answer envelope[json.RawMessage]
+	if json.Unmarshal(resp.Body, &answer) != nil || len(answer.Errors) == 0 {
+		return err
+	}
+
+	said := make([]string, 0, len(answer.Errors))
+	for _, e := range answer.Errors {
+		said = append(said, e.Message)
+	}
+
+	reason := strings.Join(said, "; ")
+	if len(reason) > cloudflareReason {
+		reason = reason[:cloudflareReason]
+	}
+
+	return fmt.Errorf("%w: %s", err, reason)
 }
 
 /*

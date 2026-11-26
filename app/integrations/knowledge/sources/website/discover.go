@@ -6,9 +6,11 @@
 | A listing is the site's sitemap: the one the settings name, else the
 | site's /sitemap.xml, following sitemap indexes and gzipped files, up
 | to fifty sitemaps. Only addresses on the site's own host that
-| robots.txt allows are kept, each once, up to the page limit. A site
-| without a sitemap is listed as its start page alone, and the crawl
-| finds the rest through links.
+| robots.txt allows and the member chose are kept, each once, up to
+| the page limit, the pages nearest the top of the site first, so a
+| limit keeps the home page and its sections rather than whatever the
+| sitemap happens to list first. A site without a sitemap is listed as
+| its start page alone, and the crawl finds the rest through links.
 |
 */
 
@@ -21,6 +23,7 @@ import (
 	"encoding/xml"
 	"io"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -50,8 +53,9 @@ type sitemapEntry struct {
 }
 
 /*
-List returns every page the sitemap allows in one page, or the start
-page alone.
+List returns every page the sitemap allows in one page. A site without
+a sitemap is its start page and the pages that one links to. Pages a
+member ticked one by one are listed whether or not the site names them.
 */
 func (d *Builtin) List(ctx context.Context, s Site, _ string) (sources.Page, error) {
 	start, _ := url.Parse(s.StartURL)
@@ -62,24 +66,74 @@ func (d *Builtin) List(ctx context.Context, s Site, _ string) (sources.Page, err
 	}
 
 	if len(entries) == 0 {
-		entries = []sitemapEntry{{Loc: s.StartURL}}
+		entries = d.linked(ctx, s)
 	}
 
-	return sources.Page{Refs: d.refs(ctx, start, entries, s.MaxPages)}, nil
+	for _, pattern := range s.Include {
+		if !strings.ContainsAny(pattern, "*?[") {
+			entries = append(entries, sitemapEntry{
+				Loc: start.Scheme + "://" + start.Host + "/" + strings.TrimPrefix(pattern, "/"),
+			})
+		}
+	}
+
+	return sources.Page{Refs: d.refs(ctx, s, start, entries)}, nil
 }
 
 /*
-refs keeps the entries on the site that robots.txt allows, each once,
-up to the limit.
+linked is the start page and the pages it links to, what is known of a
+site that has no sitemap.
 */
-func (d *Builtin) refs(ctx context.Context, start *url.URL, entries []sitemapEntry, limit int) []sources.Ref {
-	seen := map[string]bool{}
+func (d *Builtin) linked(ctx context.Context, s Site) []sitemapEntry {
+	out := []sitemapEntry{{Loc: s.StartURL}}
+
+	doc, err := d.Fetch(ctx, s, sources.Ref{URL: s.StartURL})
+	if err != nil {
+		return out
+	}
+
+	for _, link := range doc.Links {
+		out = append(out, sitemapEntry{Loc: link})
+	}
+
+	return out
+}
+
+/*
+depth is how far below the top of its site an address sits: none for
+the home page, one for /pricing, two for /docs/refunds.
+*/
+func depth(address string) int {
+	u, err := url.Parse(strings.TrimSpace(address))
+	if err != nil {
+		return 0
+	}
+
+	path := strings.Trim(u.Path, "/")
+	if path == "" {
+		return 0
+	}
+
+	return strings.Count(path, "/") + 1
+}
+
+/*
+refs keeps the entries on the site that robots.txt allows and the
+member chose, each once, nearest the top of the site first, up to the
+page limit. Pages a member's exclude pattern leaves out stay listed:
+the engine sets them aside with that reason, where the member sees it.
+*/
+func (d *Builtin) refs(ctx context.Context, s Site, start *url.URL, entries []sitemapEntry) []sources.Ref {
+	seen, limit := map[string]bool{}, s.MaxPages
+
+	entries = slices.Clone(entries)
+	slices.SortStableFunc(entries, func(a, b sitemapEntry) int { return depth(a.Loc) - depth(b.Loc) })
 
 	var out []sources.Ref
 
 	for _, e := range entries {
 		u, err := url.Parse(strings.TrimSpace(e.Loc))
-		if err != nil || !sameSite(start, u) {
+		if err != nil || !sameSite(start, u) || !sources.Allowed(s.Include, nil, u.EscapedPath()) {
 			continue
 		}
 

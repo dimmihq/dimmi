@@ -104,6 +104,51 @@ func TestCloudflareCrawler(t *testing.T) {
 	})
 }
 
+func TestCloudflareRefusal(t *testing.T) {
+	t.Parallel()
+
+	refuse := func(t *testing.T) *httpclient.Client {
+		t.Helper()
+
+		client := sourcetest.Client(t)
+		fake := httpclienttest.New(client).PreventStrayRequests()
+		fake.Stub("POST https://api.cloudflare.com/client/v4/accounts/acct/browser-run/crawl", httpclient.Response{
+			Status: 400,
+			Body: []byte(`{"success":false,"result":{},` +
+				`"errors":[{"message":"Limit must be less than or equal to 100"}]}`),
+		})
+		fake.Stub("GET https://go.dev/robots.txt", httpclient.Response{Status: 200, Body: []byte("User-agent: *\n")})
+		fake.Stub("GET https://go.dev/sitemap.xml", httpclient.Response{
+			Status: 200,
+			Body: []byte(`<urlset><url><loc>https://go.dev/doc/effective</loc></url>` +
+				`<url><loc>https://go.dev/doc/</loc></url></urlset>`),
+		})
+
+		return client
+	}
+
+	t.Run("the reason Cloudflare gives for refusing a crawl is kept", func(t *testing.T) {
+		t.Parallel()
+
+		cf := &website.Cloudflare{HTTP: refuse(t), Clock: clock.System(), Token: "cf-test", AccountID: "acct"}
+
+		_, err := cf.List(t.Context(), website.Site{StartURL: "https://go.dev/doc/", MaxPages: 20}, "")
+		require.ErrorContains(t, err, "status 400")
+		assert.ErrorContains(t, err, "Limit must be less than or equal to 100")
+	})
+
+	t.Run("a refused crawl is read by the built-in crawler instead", func(t *testing.T) {
+		t.Parallel()
+
+		d := cloudflareDriver(refuse(t), "cf-test")
+
+		page, err := d.List(t.Context(), sources.Config{JSON: json.RawMessage(cloudflareSite)}, "")
+		require.NoError(t, err)
+		require.Len(t, page.Refs, 2)
+		assert.Equal(t, "https://go.dev/doc/", page.Refs[0].URL, "the page nearest the top comes first")
+	})
+}
+
 func TestRecordCloudflare(t *testing.T) {
 	if !testkit.Switch("DIMMI_RECORD_SOURCES") {
 		t.Skip("set DIMMI_RECORD_SOURCES=1 and CLOUDFLARE_API_TOKEN to crawl for real")

@@ -323,12 +323,49 @@ export function patternTree(kind: { schema: SourceSchema }): boolean {
 }
 
 /*
+ * A website is never read whole: its top pages when nothing is ticked,
+ * and at most this many however much is ticked.
+ */
+export const topPages = 20;
+export const mostPages = 100;
+
+/*
+ * topOf picks the pages nearest the top of a site, level by level, the
+ * ticks a website source starts with. Folders are opened, never ticked,
+ * so a tick never reads more than the page it names.
+ */
+export function topOf(nodes: TreeNode[], limit = topPages): string[] {
+  const out: string[] = [];
+  let level = nodes;
+  while (level.length > 0 && out.length < limit) {
+    out.push(...level.filter((n) => n.children.length === 0).map((n) => n.id));
+    level = level.flatMap((n) => n.children);
+  }
+
+  return out.slice(0, limit);
+}
+
+/*
+ * pagesLine says how much of a website the ticks read.
+ */
+export function pagesLine(count: number, ticked: number): string {
+  if (ticked === 0) {
+    return `Nothing ticked: dimmi reads the site's top ${topPages} pages.`;
+  }
+  if (count > mostPages) {
+    return `${count} pages ticked. A source reads ${mostPages} at most, the ones nearest the home page first.`;
+  }
+
+  return `${count} ${count === 1 ? "page" : "pages"} will be read, of ${mostPages} at most. You can change this any time.`;
+}
+
+/*
  * setupFields are the settings asked for after the account: everything
  * but the account itself and the tree.
  */
 export function setupFields(kind: { schema: SourceSchema }): string[] {
   return Object.entries(kind.schema.properties)
-    .filter(([, prop]) => prop.format !== "x-integration" && prop.format !== "x-tree")
+    .filter(([, prop]) => prop.format !== "x-integration" && prop.format !== "x-tree" && !prop["x-hidden"])
     .map(([name]) => name);
 }
 

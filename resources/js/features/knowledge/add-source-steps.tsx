@@ -10,7 +10,7 @@
  */
 import { RiArrowRightSLine, RiExternalLinkLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 
 import { CheckboxCard } from "@/components/base/checkbox/checkbox-card";
 import { Input } from "@/components/base/input/input";
@@ -29,7 +29,7 @@ import {
 } from "@/lib/api/knowledge-sources";
 
 import { SourceLogo } from "./logos";
-import { countChosen, type StepId, scheduleLabels, targetLabels } from "./model";
+import { countChosen, mostPages, pagesLine, type StepId, scheduleLabels, targetLabels, topOf, topPages } from "./model";
 import { TreePicker, TreeSkeleton } from "./tree-picker";
 
 /*
@@ -155,17 +155,21 @@ export function StepBar({ steps, at }: { steps: { id: StepId; label: string }[];
 
 /*
  * TreeStep shows what the source holds to tick, filling the dialog,
- * with how many documents the ticks read.
+ * with how many documents the ticks read. A website starts with its
+ * top pages ticked, so the member sees what the first sync reads and
+ * adds to it on purpose.
  */
 export function TreeStep({
   workspace,
   input,
   selected,
+  pages = false,
   onChange,
 }: {
   workspace: string;
   input: SourceInput;
   selected: string[];
+  pages?: boolean;
   onChange: (selected: string[]) => void;
 }) {
   const settings = Object.fromEntries(Object.entries(input.settings ?? {}).filter(([key]) => key !== "selected"));
@@ -173,6 +177,16 @@ export function TreeStep({
     queryKey: ["workspace", workspace, "knowledge", "tree-preview", input.type, settings],
     queryFn: () => previewTree(workspace, { ...input, include: [] }),
   });
+
+  const started = useRef<unknown>(null);
+  useEffect(() => {
+    if (pages && tree.data && started.current !== tree.data) {
+      started.current = tree.data;
+      if (selected.length === 0) {
+        onChange(topOf(tree.data));
+      }
+    }
+  }, [pages, tree.data, selected.length, onChange]);
 
   if (tree.isError) {
     return (
@@ -183,16 +197,19 @@ export function TreeStep({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <p className="text-body-regular text-text-secondary" aria-live="polite">
-        {treeLine(tree.data ? countChosen(tree.data, selected) : null, selected.length)}
+        {treeLine(tree.data ? countChosen(tree.data, selected) : null, selected.length, pages)}
       </p>
       {tree.data ? <TreePicker nodes={tree.data} selected={selected} onChange={onChange} fill /> : <TreeSkeleton />}
     </div>
   );
 }
 
-function treeLine(count: number | null, ticked: number): string {
+function treeLine(count: number | null, ticked: number, pages: boolean): string {
   if (count === null) {
-    return "Reading what this account holds…";
+    return pages ? "Listing the site's pages…" : "Reading what this account holds…";
+  }
+  if (pages) {
+    return pagesLine(count, ticked);
   }
 
   return ticked === 0
@@ -372,11 +389,13 @@ export function ReviewStep({
   usage,
   preview,
   picked,
+  pages = false,
 }: {
   kind: SourceType;
   usage: Usage;
   preview: SourcePreview | null;
   picked: number;
+  pages?: boolean;
 }) {
   const lines = [
     ["Source", `${kind.name}${preview ? ` · ${preview.account}` : ""}`],
@@ -388,7 +407,7 @@ export function ReviewStep({
         : `A synced copy for ${usage.targets.map((t) => targetLabels[t]).join(" and ")}`,
     ],
     ["Sync", usage.mode === "import" ? "Once now; sync again to update" : scheduleLabels[usage.schedule]],
-    ["Content", contentLine(picked)],
+    ["Content", pages ? pagesPicked(picked) : contentLine(picked)],
   ];
 
   return (
@@ -401,6 +420,14 @@ export function ReviewStep({
       ))}
     </dl>
   );
+}
+
+function pagesPicked(picked: number): string {
+  if (picked === 0) {
+    return `The site's top ${topPages} pages`;
+  }
+
+  return `${picked} ticked ${picked === 1 ? "item" : "items"}, ${mostPages} pages at most`;
 }
 
 function contentLine(picked: number): string {

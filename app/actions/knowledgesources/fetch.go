@@ -26,6 +26,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/hashing"
+	"github.com/dimmihq/dimmi/framework/log"
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
@@ -115,6 +116,9 @@ func (e *Engine) fetchFailed(ctx context.Context, job *queue.Job[jobs.FetchKnowl
 	case errorCode(err) == "failed" && job.Attempt < job.MaxAttempts && ctx.Err() == nil:
 		return err
 	}
+
+	log.From(ctx).WarnContext(ctx, "knowledge document fetch failed", log.String("source_id", st.source.ID.String()),
+		log.String("document_id", doc.ID.String()), log.String("code", errorCode(err)), log.Err(err))
 
 	return e.inWorkspace(ctx, doc.WorkspaceID, func(ctx context.Context, tx *database.Tx, q *models.Queries) error {
 		if err := lockRun(ctx, q, st.run); err != nil {

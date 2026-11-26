@@ -23,6 +23,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/log"
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app/integrations/knowledge/sources"
@@ -139,6 +140,9 @@ func (e *Engine) listFailed(ctx context.Context, job *queue.Job[jobs.DiscoverKno
 	}
 
 	ws := job.Args.WorkspaceID
+
+	log.From(ctx).ErrorContext(ctx, "knowledge source listing failed", log.String("source_id", st.source.ID.String()),
+		log.String("type", st.source.Type), log.String("code", code), log.Err(err))
 
 	return e.inWorkspace(ctx, ws, func(ctx context.Context, tx *database.Tx, _ *models.Queries) error {
 		_, endErr := e.end(ctx, tx, st.run, outcome{status: "failed", code: code, message: message(err)})
