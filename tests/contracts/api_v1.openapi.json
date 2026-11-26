@@ -16758,6 +16758,52 @@
         ],
         "type": "object"
       },
+      "ConversationAttributeUsage": {
+        "additionalProperties": false,
+        "properties": {
+          "conversations": {
+            "description": "How many conversations hold a value of the attribute.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "deletable": {
+            "description": "Whether it can be deleted: true only when nothing uses it.",
+            "type": "boolean"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "views": {
+            "description": "The inbox views that filter by it.",
+            "items": {
+              "$ref": "#/components/schemas/NamedRecord"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "workflows": {
+            "description": "The workflows that read or set it.",
+            "items": {
+              "$ref": "#/components/schemas/NamedRecord"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "object",
+          "conversations",
+          "workflows",
+          "views",
+          "deletable"
+        ],
+        "type": "object"
+      },
       "ConversationAttributeValue": {
         "additionalProperties": false,
         "properties": {
@@ -25218,6 +25264,24 @@
         ],
         "type": "object"
       },
+      "NamedRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The workflow's or view's name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
       "Node": {
         "additionalProperties": false,
         "properties": {
@@ -31010,6 +31074,18 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/ConversationAttribute"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceConversationAttributeUsage": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConversationAttributeUsage"
           }
         },
         "required": [
@@ -56590,6 +56666,40 @@
       }
     },
     "/conversation-attributes/{attribute}": {
+      "delete": {
+        "description": "Deletes an attribute nothing uses: no conversation holds a value and no workflow or view reads or sets it. Otherwise it is refused; archive it instead. Returns nothing.",
+        "operationId": "conversation-attributes.destroy",
+        "parameters": [
+          {
+            "description": "Id of the custom attribute, starting with atd_, such as atd_01jx2m8k4t. Find it with GET /attribute-definitions.",
+            "in": "path",
+            "name": "attribute",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a conversation attribute",
+        "x-abilities": [
+          "attributes:write"
+        ]
+      },
       "patch": {
         "description": "Changes an attribute's label, description, options, who fills it, whether it is required to close, the teams that see it, or archives it. Its key and type stay. Returns the attribute as saved.",
         "operationId": "conversation-attributes.update",
@@ -56637,6 +56747,49 @@
           }
         },
         "summary": "Edit a conversation attribute",
+        "x-abilities": [
+          "attributes:write"
+        ]
+      }
+    },
+    "/conversation-attributes/{attribute}/usage": {
+      "get": {
+        "description": "Says how many conversations hold a value, and which workflows and views use it. Returns the counts and names, and whether it can be deleted.",
+        "operationId": "conversation-attributes.usage.index",
+        "parameters": [
+          {
+            "description": "Id of the custom attribute, starting with atd_, such as atd_01jx2m8k4t. Find it with GET /attribute-definitions.",
+            "in": "path",
+            "name": "attribute",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceConversationAttributeUsage"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "See what uses a conversation attribute",
         "x-abilities": [
           "attributes:write"
         ]

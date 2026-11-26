@@ -103,6 +103,18 @@ func conversationAttributeDocs() map[string]Doc {
 			Returns: "the attribute as saved.",
 			Params:  params,
 		},
+		"conversation-attributes.destroy": {
+			Title: "Delete a conversation attribute",
+			Use: "Deletes an attribute nothing uses: no conversation holds a value and no workflow or view " +
+				"reads or sets it. Otherwise it is refused; archive it instead.",
+			Returns: "nothing.",
+		},
+		"conversation-attributes.usage.index": {
+			Name:    "get_conversation_attribute_usage",
+			Title:   "See what uses a conversation attribute",
+			Use:     "Says how many conversations hold a value, and which workflows and views use it.",
+			Returns: "the counts and names, and whether it can be deleted.",
+		},
 		"conversation-attributes.order.update": {
 			Name:    "reorder_conversation_attributes",
 			Title:   "Reorder conversation attributes",
@@ -165,6 +177,15 @@ func aiAttributeSchemaTexts() map[string]map[string]string {
 			"set_by": "Who set the value and when. Null when it was never set.",
 			"files": "With a file attribute, the files the value holds, each with a short-lived link. " +
 				"Empty otherwise.",
+		},
+		"ConversationAttributeUsage": {
+			"conversations": "How many conversations hold a value of the attribute.",
+			"workflows":     "The workflows that read or set it.",
+			"views":         "The inbox views that filter by it.",
+			"deletable":     "Whether it can be deleted: true only when nothing uses it.",
+		},
+		"NamedRecord": {
+			"name": "The workflow's or view's name.",
 		},
 		"ConversationAttributeSource": {
 			"by":   "ai, member, workflow or import.",

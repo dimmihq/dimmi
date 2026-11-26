@@ -154,6 +154,46 @@ func (c *ConversationAttributeController) Reorder(
 }
 
 /*
+ConversationAttributeUsageOutput is what uses an attribute.
+*/
+type ConversationAttributeUsageOutput struct {
+	Body fhttp.Resource[resources.ConversationAttributeUsage]
+}
+
+/*
+Usage says what uses an attribute.
+*/
+func (c *ConversationAttributeController) Usage(ctx context.Context, in *requests.AIAttributeRequest,
+) (*ConversationAttributeUsageOutput, error) {
+	id, err := c.IDs.Decode(string(models.PrefixAIAttribute), in.Attribute)
+	if err != nil {
+		return nil, exceptions.ErrNotFound
+	}
+
+	used, err := c.Attributes.Usage(ctx, membership(ctx), id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ConversationAttributeUsageOutput{
+		Body: fhttp.NewResource(resources.NewConversationAttributeUsage(used)),
+	}, nil
+}
+
+/*
+Destroy deletes an attribute nothing uses.
+*/
+func (c *ConversationAttributeController) Destroy(ctx context.Context, in *requests.AIAttributeRequest,
+) (*EmptyOutput, error) {
+	id, err := c.IDs.Decode(string(models.PrefixAIAttribute), in.Attribute)
+	if err != nil {
+		return nil, exceptions.ErrNotFound
+	}
+
+	return &EmptyOutput{}, c.Attributes.Delete(ctx, membership(ctx), id)
+}
+
+/*
 Values reads a conversation's values.
 */
 func (c *ConversationAttributeController) Values(ctx context.Context, in *requests.ConversationRequest,

@@ -26,6 +26,24 @@ func (q *Queries) CountActiveAIConversationAttributes(ctx context.Context, works
 	return count, err
 }
 
+const countConversationsWithAttribute = `-- name: CountConversationsWithAttribute :one
+SELECT count(*) FROM conversation_ai_values WHERE workspace_id = $1 AND "values" ? $2::text
+`
+
+type CountConversationsWithAttributeParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Key         string   `json:"key"`
+}
+
+// CountConversationsWithAttribute counts the conversations that hold a
+// value of the attribute.
+func (q *Queries) CountConversationsWithAttribute(ctx context.Context, arg CountConversationsWithAttributeParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countConversationsWithAttribute, arg.WorkspaceID, arg.Key)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAIConversationAttribute = `-- name: CreateAIConversationAttribute :one
 INSERT INTO ai_conversation_attributes (
     workspace_id, key, label, description, data_type, options, option_descriptions, filled_by, required_to_close,
@@ -91,6 +109,24 @@ func (q *Queries) CreateAIConversationAttribute(ctx context.Context, arg CreateA
 	return i, err
 }
 
+const deleteConversationAttribute = `-- name: DeleteConversationAttribute :execrows
+DELETE FROM ai_conversation_attributes WHERE workspace_id = $1 AND id = $2
+`
+
+type DeleteConversationAttributeParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// DeleteConversationAttribute removes an attribute.
+func (q *Queries) DeleteConversationAttribute(ctx context.Context, arg DeleteConversationAttributeParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteConversationAttribute, arg.WorkspaceID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const findAIConversationAttribute = `-- name: FindAIConversationAttribute :one
 SELECT id, workspace_id, key, label, description, data_type, options, status, created_at, updated_at, filled_by, required_to_close, team_ids, position, option_descriptions FROM ai_conversation_attributes WHERE workspace_id = $1 AND id = $2
 `
@@ -149,6 +185,23 @@ func (q *Queries) FindConversationAIValues(ctx context.Context, arg FindConversa
 		&i.AttachmentIds,
 	)
 	return i, err
+}
+
+const forgetConversationAttributeSources = `-- name: ForgetConversationAttributeSources :exec
+UPDATE conversation_ai_values SET sources = sources - $1::text
+WHERE workspace_id = $2 AND sources ? $1::text
+`
+
+type ForgetConversationAttributeSourcesParams struct {
+	Key         string   `json:"key"`
+	WorkspaceID ids.UUID `json:"workspace_id"`
+}
+
+// ForgetConversationAttributeSources drops who set a deleted attribute
+// from the conversations that kept it after clearing its value.
+func (q *Queries) ForgetConversationAttributeSources(ctx context.Context, arg ForgetConversationAttributeSourcesParams) error {
+	_, err := q.db.Exec(ctx, forgetConversationAttributeSources, arg.Key, arg.WorkspaceID)
+	return err
 }
 
 const listAIConversationAttributes = `-- name: ListAIConversationAttributes :many
@@ -273,6 +326,88 @@ func (q *Queries) ListRequiredToCloseConversationAttributes(ctx context.Context,
 			&i.Position,
 			&i.OptionDescriptions,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listViewsUsingAttribute = `-- name: ListViewsUsingAttribute :many
+SELECT id, name FROM conversation_views
+WHERE workspace_id = $1 AND deleted_at IS NULL AND strpos(definition::text, $2::text) > 0
+ORDER BY lower(name), id
+`
+
+type ListViewsUsingAttributeParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Field       string   `json:"field"`
+}
+
+type ListViewsUsingAttributeRow struct {
+	ID   ids.UUID `json:"id"`
+	Name string   `json:"name"`
+}
+
+// ListViewsUsingAttribute returns the inbox views that filter by the
+// attribute.
+func (q *Queries) ListViewsUsingAttribute(ctx context.Context, arg ListViewsUsingAttributeParams) ([]ListViewsUsingAttributeRow, error) {
+	rows, err := q.db.Query(ctx, listViewsUsingAttribute, arg.WorkspaceID, arg.Field)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListViewsUsingAttributeRow
+	for rows.Next() {
+		var i ListViewsUsingAttributeRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkflowsUsingAttribute = `-- name: ListWorkflowsUsingAttribute :many
+SELECT w.id, w.name FROM workflows w
+LEFT JOIN workflow_versions v ON v.id = w.live_version_id
+WHERE w.workspace_id = $1 AND w.deleted_at IS NULL
+  AND (strpos(w.draft::text, $2::text) > 0 OR strpos(coalesce(v.spec::text, ''), $2::text) > 0
+    OR (strpos(w.draft::text, 'set_conversation_attributes') > 0 AND strpos(w.draft::text, $3::text) > 0)
+    OR (strpos(coalesce(v.spec::text, ''), 'set_conversation_attributes') > 0
+      AND strpos(coalesce(v.spec::text, ''), $3::text) > 0))
+ORDER BY lower(w.name), w.id
+`
+
+type ListWorkflowsUsingAttributeParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Field       string   `json:"field"`
+	StepKey     string   `json:"step_key"`
+}
+
+type ListWorkflowsUsingAttributeRow struct {
+	ID   ids.UUID `json:"id"`
+	Name string   `json:"name"`
+}
+
+// ListWorkflowsUsingAttribute returns the workflows whose draft or live
+// version reads the attribute or sets it.
+func (q *Queries) ListWorkflowsUsingAttribute(ctx context.Context, arg ListWorkflowsUsingAttributeParams) ([]ListWorkflowsUsingAttributeRow, error) {
+	rows, err := q.db.Query(ctx, listWorkflowsUsingAttribute, arg.WorkspaceID, arg.Field, arg.StepKey)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListWorkflowsUsingAttributeRow
+	for rows.Next() {
+		var i ListWorkflowsUsingAttributeRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

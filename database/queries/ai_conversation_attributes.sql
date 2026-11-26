@@ -105,3 +105,37 @@ ORDER BY position, label, key;
 -- MoveConversationAttribute puts an attribute at a place in the list.
 UPDATE ai_conversation_attributes SET position = @position, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: CountConversationsWithAttribute :one
+-- CountConversationsWithAttribute counts the conversations that hold a
+-- value of the attribute.
+SELECT count(*) FROM conversation_ai_values WHERE workspace_id = @workspace_id AND "values" ? @key::text;
+
+-- name: ListWorkflowsUsingAttribute :many
+-- ListWorkflowsUsingAttribute returns the workflows whose draft or live
+-- version reads the attribute or sets it.
+SELECT w.id, w.name FROM workflows w
+LEFT JOIN workflow_versions v ON v.id = w.live_version_id
+WHERE w.workspace_id = @workspace_id AND w.deleted_at IS NULL
+  AND (strpos(w.draft::text, @field::text) > 0 OR strpos(coalesce(v.spec::text, ''), @field::text) > 0
+    OR (strpos(w.draft::text, 'set_conversation_attributes') > 0 AND strpos(w.draft::text, @step_key::text) > 0)
+    OR (strpos(coalesce(v.spec::text, ''), 'set_conversation_attributes') > 0
+      AND strpos(coalesce(v.spec::text, ''), @step_key::text) > 0))
+ORDER BY lower(w.name), w.id;
+
+-- name: ListViewsUsingAttribute :many
+-- ListViewsUsingAttribute returns the inbox views that filter by the
+-- attribute.
+SELECT id, name FROM conversation_views
+WHERE workspace_id = @workspace_id AND deleted_at IS NULL AND strpos(definition::text, @field::text) > 0
+ORDER BY lower(name), id;
+
+-- name: DeleteConversationAttribute :execrows
+-- DeleteConversationAttribute removes an attribute.
+DELETE FROM ai_conversation_attributes WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: ForgetConversationAttributeSources :exec
+-- ForgetConversationAttributeSources drops who set a deleted attribute
+-- from the conversations that kept it after clearing its value.
+UPDATE conversation_ai_values SET sources = sources - @key::text
+WHERE workspace_id = @workspace_id AND sources ? @key::text;

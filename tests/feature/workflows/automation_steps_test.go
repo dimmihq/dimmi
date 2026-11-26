@@ -190,7 +190,7 @@ func TestAIConversationAttributes(t *testing.T) {
 	t.Run("detects an attribute, keeps it on the conversation and starts workflows on it", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
-		llm := fake.New(contracts.LLMProviderAnthropic).Script(fake.Step{Text: `{"intent":"refund"}`})
+		llm := fake.New(contracts.LLMProviderAnthropic).Script(fake.Step{Text: `{"intent":"refund","_reasons":{"intent":"The customer asks for their money back."}}`})
 		classifyingModel(t, d, llm)
 
 		d.Owner.PostJSON("/api/v1/ai/conversation-attributes", testkit.JSON{
@@ -213,6 +213,9 @@ func TestAIConversationAttributes(t *testing.T) {
 
 		d.Owner.GetJSON(conv+"/ai-attributes").AssertOK().
 			AssertJSONPath("data.values.0.attribute.key", "intent").AssertJSONPath("data.values.0.value", "refund")
+		d.Owner.GetJSON(conv+"/attributes").AssertOK().
+			AssertJSONPath("data.values.0.set_by.by", "ai").
+			AssertJSONPath("data.values.0.set_by.reason", "The customer asks for their money back.")
 		d.Owner.GetJSON(conv).AssertOK().AssertJSONPath("data.tags.0.id", tag)
 
 		sent := llm.Sent()
@@ -239,7 +242,7 @@ func TestAIConversationAttributes(t *testing.T) {
 	t.Run("never replaces a value a teammate set, and starts workflows on any change", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
-		llm := fake.New(contracts.LLMProviderAnthropic).Script(fake.Step{Text: `{"intent":"refund"}`})
+		llm := fake.New(contracts.LLMProviderAnthropic).Script(fake.Step{Text: `{"intent":"refund","_reasons":{"intent":"The customer asks for their money back."}}`})
 		classifyingModel(t, d, llm)
 
 		d.Owner.PostJSON("/api/v1/conversation-attributes", testkit.JSON{
@@ -302,5 +305,45 @@ func TestAIConversationAttributes(t *testing.T) {
 			AssertJSONPath("data.values.0.set_by.by", "workflow").
 			AssertJSONPath("data.values.0.set_by.name", "Workflow: Triage")
 		res.AssertJSONPath("data.values.1.attribute.key", "seats").AssertJSONPath("data.values.1.value", 12.0)
+	})
+
+	t.Run("deletes an attribute only while no conversation, workflow or view uses it", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+
+		used := d.Owner.PostJSON("/api/v1/conversation-attributes", testkit.JSON{
+			"key": "issue", "label": "Issue type", "data_type": "choice", "options": []string{"Billing"},
+		}).AssertCreated().String("data.id")
+		held := d.Owner.PostJSON("/api/v1/conversation-attributes", testkit.JSON{
+			"key": "plan", "label": "Plan", "data_type": "text",
+		}).AssertCreated().String("data.id")
+		free := d.Owner.PostJSON("/api/v1/conversation-attributes", testkit.JSON{
+			"key": "issue_extra", "label": "Extra", "data_type": "text",
+		}).AssertCreated().String("data.id")
+
+		create(t, d, testkit.JSON{"name": "Billing triage", "spec": testkit.JSON{
+			"schema": 1, "trigger": "conversation.first_message",
+			"audience": testkit.JSON{
+				"rules": testkit.JSON{"field": "conversation.ai.issue", "op": "eq", "value": "Billing"},
+			},
+			"steps": []testkit.JSON{step("s_note0001", "note", testkit.JSON{"text": "Billing"})},
+		}})
+
+		conv := conversation(t, d, "ida", "Hello")
+		d.Owner.PatchJSON(conv+"/attributes", testkit.JSON{"values": testkit.JSON{"plan": "Pro"}}).AssertOK()
+
+		d.Owner.GetJSON("/api/v1/conversation-attributes/"+used+"/usage").AssertOK().
+			AssertJSONPath("data.deletable", false).AssertJSONPath("data.workflows.0.name", "Billing triage")
+		d.Owner.Delete("/api/v1/conversation-attributes/" + used).AssertStatus(409).
+			AssertJSONPath("code", "attribute_in_use").AssertJSONPath("workflows.0", "Billing triage")
+
+		d.Owner.GetJSON("/api/v1/conversation-attributes/"+held+"/usage").AssertOK().
+			AssertJSONPath("data.conversations", 1.0)
+		d.Owner.Delete("/api/v1/conversation-attributes/" + held).AssertStatus(409)
+
+		d.Owner.GetJSON("/api/v1/conversation-attributes/"+free+"/usage").AssertOK().
+			AssertJSONPath("data.deletable", true)
+		d.Owner.Delete("/api/v1/conversation-attributes/" + free).AssertStatus(204)
+		d.Owner.GetJSON("/api/v1/conversation-attributes").AssertOK().AssertJSONPath("data.#", 2)
 	})
 }
