@@ -104,5 +104,7 @@ func excluded() map[string]string {
 		"channels.facebook.signups.store":        "Finishes Meta's sign-in in a browser; only the browser calls it.",
 		"channels.instagram.signup-config.index": "What Meta's sign-in popup opens with; only the browser uses it.",
 		"channels.instagram.signups.store":       "Finishes Meta's sign-in in a browser; only the browser calls it.",
+		"migrations.records.store": "Records carry customer data, which never passes through an AI model; " +
+			"the dimmi-migrate CLI sends them.",
 	}
 }

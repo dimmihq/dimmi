@@ -173,6 +173,14 @@ func otherTextsFromCreateWidgetSettings() map[string]map[string]string {
 			"report": "The key of the report the number is on: overview, responsiveness, resolution, team, " +
 				"live, satisfaction, ai or help_center. Such as overview.",
 		},
+		"get_migration_by_id": {
+			"migration": "The migration's id (mig_...), as starting or listing migrations returns it. Such " +
+				"as mig_01jc8q3x7m2n4p5r6s7t8v9w0y.",
+		},
+		"roll_back_migration": {
+			"migration": "The migration (mig_...) to undo, as starting or listing migrations returns it. Such " +
+				"as mig_01jc8q3x7m2n4p5r6s7t8v9w0y.",
+		},
 		"list_imports": {
 			"kind": "Which imports to list: contacts (imports of customers) or companies. Required. Such as " +
 				"contacts.",
