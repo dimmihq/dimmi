@@ -13,14 +13,16 @@ Pick the source that matches where your docs live.
 
 | Source | What dimmi reads | Sync options (default first) |
 | --- | --- | --- |
-| **Website** | Pages linked from a start URL or listed in a sitemap. Up to 500 pages by default, or 5,000 at most. | **Every week**, **Every day**, **Only when I sync** |
+| **Website** | The pages you tick from the site's sitemap or the links on its start URL. The top 20 pages start ticked, and one source reads 100 at most. | **Every week**, **Every day**, **Only when I sync** |
 | **Markdown files** | A zip of Markdown files, or one file. Up to 50 MB and 2,000 files. | Upload again to replace the files. |
 | **GitHub** | Markdown files on one branch of a repository. | **Every day**, **Every hour**, **Every week**, **Only when I sync** |
 | **Notion** | The pages you share with dimmi and tick. | **Every day**, **Every week**, **Only when I sync** |
 | **Intercom** | Help center articles, with translations. | **Only when I sync**, **Every day**, **Every week** |
 | **Zendesk** | Help center articles, with translations. | **Only when I sync**, **Every day**, **Every week** |
 
-Each source holds up to 5,000 documents. The website crawler follows `robots.txt` and fetches at most one page per second from each host.
+Each source holds up to 5,000 documents, and a website source up to 100 pages. The website crawler follows `robots.txt` and fetches at most one page per second from each host.
+
+A website is never read whole. dimmi lists its pages without reading them, ticks the 20 nearest the home page, and reads only what stays ticked. To read more, open the source and tick pages or folders under **Content**.
 
 ## Synced copy vs. help center articles
 

@@ -6,7 +6,8 @@
 | A website's pages are shown as a tree of their addresses, folder by
 | folder, so a member ticks the parts of the site to read instead of
 | typing patterns. The pages come from the site's sitemaps, or from the
-| links on its start page when it has none. Each item's id is the path
+| links on its start page when it has none, and are only listed here,
+| never read. The home page comes first. Each item's id is the path
 | pattern it stands for, a folder "/docs/**" and a page its own path,
 | and the ticks are kept as the source's include patterns, so the crawl
 | and every link it follows keep to them.
@@ -45,13 +46,24 @@ func (d *Driver) Tree(ctx context.Context, cfg sources.Config) ([]sources.Node, 
 		return nil, err
 	}
 
-	root := &folder{}
+	root, top := &folder{}, []sources.Node{}
 	for _, p := range paths {
+		if p == home {
+			top = append(top, sources.Node{ID: home, Title: "Home page", Kind: "page", Children: []sources.Node{}})
+
+			continue
+		}
+
 		root.add(strings.Split(strings.Trim(p, "/"), "/"), "")
 	}
 
-	return root.nodes(), nil
+	return append(top, root.nodes()...), nil
 }
+
+/*
+home is the tree's item for the site's home page.
+*/
+const home = "/"
 
 /*
 pagePaths lists the paths of the site's pages: from its sitemaps, or
@@ -63,28 +75,21 @@ func (d *Driver) pagePaths(ctx context.Context, s Site) ([]string, error) {
 		return nil, err
 	}
 
-	addresses := make([]string, 0, len(page.Refs))
-	for _, r := range page.Refs {
-		addresses = append(addresses, r.URL)
-	}
-
-	if len(page.Refs) == 1 {
-		doc, err := d.builtin.Fetch(ctx, s, page.Refs[0])
-		if err == nil {
-			addresses = append(addresses, doc.Links...)
-		}
-	}
-
 	start, _ := url.Parse(s.StartURL)
 
 	var out []string
-	for _, a := range addresses {
-		u, err := url.Parse(a)
+	for _, r := range page.Refs {
+		u, err := url.Parse(r.URL)
 		if err != nil || !sameSite(start, u) {
 			continue
 		}
 
-		if p := strings.TrimSuffix(u.Path, "/"); p != "" && !slices.Contains(out, p) {
+		p := strings.TrimSuffix(u.Path, "/")
+		if p == "" {
+			p = home
+		}
+
+		if !slices.Contains(out, p) {
 			out = append(out, p)
 		}
 	}

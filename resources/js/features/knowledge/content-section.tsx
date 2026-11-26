@@ -11,9 +11,15 @@ import { Button } from "@/components/base/buttons/button";
 import { toast } from "@/components/base/toast/toast";
 import { Section } from "@/features/settings/layout";
 import { ApiError } from "@/lib/api/client";
-import { type KnowledgeSource, type SourceType, sourceTreeQuery, updateSource } from "@/lib/api/knowledge-sources";
+import {
+  type KnowledgeSource,
+  type SourceType,
+  sourceTreeQuery,
+  type TreeNode,
+  updateSource,
+} from "@/lib/api/knowledge-sources";
 
-import { chosen, countChosen, patternTree } from "./model";
+import { chosen, countChosen, pagesLine, patternTree } from "./model";
 import { TreePicker, TreeSkeleton } from "./tree-picker";
 
 export function ContentSection({
@@ -51,7 +57,7 @@ export function ContentSection({
   return (
     <Section
       title="Content"
-      description={tree.data ? `${countChosen(tree.data, selected)} documents chosen` : undefined}
+      description={readsLine(tree.data, selected, patterns)}
       action={
         canManage && changed ? (
           <Button size="small" loading={save.isPending} onClick={() => save.mutate()}>
@@ -69,4 +75,17 @@ export function ContentSection({
       </div>
     </Section>
   );
+}
+
+/*
+ * readsLine says how much the ticks read: for a website, within its
+ * page limit; for anything else, the documents chosen.
+ */
+function readsLine(nodes: TreeNode[] | undefined, selected: string[], pages: boolean): string | undefined {
+  if (!nodes) {
+    return undefined;
+  }
+  const count = countChosen(nodes, selected);
+
+  return pages ? pagesLine(count, selected.length) : `${count} documents chosen`;
 }

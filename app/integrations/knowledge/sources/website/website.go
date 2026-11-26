@@ -33,13 +33,15 @@ import (
 )
 
 /*
-Crawl limits: pages per source by default and at most, the largest
-page read, how long a robots.txt is trusted, and the longest crawl
-delay honored.
+Crawl limits: the pages read when a member chose none, the most one
+source ever reads, the largest page read, how long a robots.txt is
+trusted, and the longest crawl delay honored. A site is never read
+whole by default: the first sync takes its top pages, and a member
+ticks more in the source's settings.
 */
 const (
-	defaultMaxPages = 500
-	maxMaxPages     = 5000
+	defaultMaxPages = 20
+	maxMaxPages     = 100
 	maxPageBytes    = 5 << 20
 	robotsTTL       = time.Hour
 	maxCrawlDelay   = 10 * time.Second
@@ -65,16 +67,18 @@ const schema = `{
       "description": "Defaults to /sitemap.xml when the site has one."},
     "follow_links": {"type": "boolean", "title": "Follow links", "default": true,
       "description": "Also read pages linked from the pages found."},
-    "max_pages": {"type": "integer", "title": "Most pages", "default": 500, "minimum": 1, "maximum": 5000},
+    "max_pages": {"type": "integer", "title": "Most pages", "minimum": 1, "maximum": 100, "x-hidden": true,
+      "description": "The most pages read: 20 when no pages are chosen, 100 otherwise. Never more than 100."},
     "pages": {"type": "array", "items": {"type": "string"}, "format": "x-tree", "x-patterns": true,
-      "title": "Pages", "description": "The parts of the site to read. The whole site when none are chosen."}
+      "title": "Pages", "description": "The pages to read, 100 at most. The site's top 20 pages when none are chosen."}
   }
 }`
 
 /*
 Site is a website source's settings: where the crawl starts, the
 sitemap, whether links are followed and the most pages read, with the
-member's path patterns.
+member's path patterns. MaxPages left out is the top pages alone when
+no pattern is set, and the most a source reads when some are.
 */
 type Site struct {
 	StartURL    string   `json:"start_url"`
@@ -164,6 +168,9 @@ func read(cfg sources.Config) (Site, error) {
 	s.StartURL = Canonical(start)
 	if s.MaxPages <= 0 {
 		s.MaxPages = defaultMaxPages
+		if len(s.Include) > 0 {
+			s.MaxPages = maxMaxPages
+		}
 	}
 
 	s.MaxPages = min(s.MaxPages, maxMaxPages)

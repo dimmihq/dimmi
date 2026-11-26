@@ -10,6 +10,12 @@
 | site and reads a page; checking a site's address is always a plain
 | request, so adding a source never spends browser time.
 |
+| Pages a member ticked are listed with plain requests, since their
+| addresses are already known, and only read through the crawl service.
+| When the service refuses a crawl or a page, the built-in crawler does
+| the work instead and the service's reason is logged, so a problem at
+| the service never stops a sync.
+|
 */
 
 package website
@@ -17,6 +23,9 @@ package website
 import (
 	"context"
 	"encoding/json"
+	"errors"
+
+	"github.com/dimmihq/dimmi/framework/log"
 
 	"github.com/dimmihq/dimmi/app/integrations/knowledge/sources"
 )
@@ -106,7 +115,35 @@ func (d *Driver) List(ctx context.Context, cfg sources.Config, cursor string) (s
 		return sources.Page{}, err
 	}
 
-	return d.crawler.List(ctx, s, cursor)
+	if len(s.Include) > 0 {
+		return d.builtin.List(ctx, s, cursor)
+	}
+
+	page, err := d.crawler.List(ctx, s, cursor)
+	if d.refused(ctx, err) {
+		log.From(ctx).WarnContext(ctx, "crawl service refused a crawl, using the built-in crawler", log.Err(err))
+
+		return d.builtin.List(ctx, s, "")
+	}
+
+	return page, err
+}
+
+/*
+refused reports whether the crawl service failed in a way the built-in
+crawler can make up for: any failure but being asked to wait, a page
+that is gone or left out, and the caller giving up.
+*/
+func (d *Driver) refused(ctx context.Context, err error) bool {
+	if err == nil || ctx.Err() != nil || d.crawler == Crawler(d.builtin) {
+		return false
+	}
+
+	_, wait := errors.AsType[*sources.WaitError](err)
+	_, limited := errors.AsType[*sources.RateLimitError](err)
+	_, excluded := errors.AsType[*sources.ExcludedError](err)
+
+	return !wait && !limited && !excluded && !errors.Is(err, sources.ErrNotFound)
 }
 
 /*
@@ -118,5 +155,13 @@ func (d *Driver) Fetch(ctx context.Context, cfg sources.Config, ref sources.Ref)
 		return sources.Document{}, err
 	}
 
-	return d.crawler.Fetch(ctx, s, ref)
+	doc, err := d.crawler.Fetch(ctx, s, ref)
+	if d.refused(ctx, err) {
+		log.From(ctx).WarnContext(ctx, "crawl service refused a page, using the built-in crawler",
+			log.String("url", ref.URL), log.Err(err))
+
+		return d.builtin.Fetch(ctx, s, ref)
+	}
+
+	return doc, err
 }

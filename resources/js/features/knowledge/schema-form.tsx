@@ -43,7 +43,7 @@ export function SchemaForm({
 }) {
   const schema = kind.schema;
   const fields = Object.entries(schema.properties).filter(
-    ([, prop]) => prop.format !== "x-tree" && !(skipAccount && prop.format === "x-integration"),
+    ([, prop]) => prop.format !== "x-tree" && !prop["x-hidden"] && !(skipAccount && prop.format === "x-integration"),
   );
   const set = (name: string, value: unknown) => {
     if (values[name] !== value) {

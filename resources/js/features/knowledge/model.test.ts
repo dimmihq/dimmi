@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { KnowledgeSource, SourceSchema, SyncRun } from "@/lib/api/knowledge-sources";
+import type { KnowledgeSource, SourceSchema, SyncRun, TreeNode } from "@/lib/api/knowledge-sources";
 
 import {
   ago,
@@ -8,11 +8,13 @@ import {
   initialValues,
   missing,
   nameFor,
+  pagesLine,
   patterns,
   runSummary,
   settingsOf,
   sourceState,
   stepsFor,
+  topOf,
 } from "./model";
 
 const schema: SourceSchema = {
@@ -110,5 +112,25 @@ describe("stepsFor", () => {
     } as unknown as SourceSchema;
 
     expect(stepsFor({ schema, integration: "notion" }).map((s) => s.id)).not.toContain("account");
+  });
+});
+
+describe("website pages", () => {
+  const page = (id: string): TreeNode => ({ id, title: id, kind: "page", children: [] });
+  const site: TreeNode[] = [
+    page("/"),
+    { id: "/docs/**", title: "docs", kind: "folder", children: [page("/docs/a"), page("/docs/b")] },
+    page("/pricing"),
+  ];
+
+  it("starts with the pages nearest the top, never a whole folder", () => {
+    expect(topOf(site)).toEqual(["/", "/pricing", "/docs/a", "/docs/b"]);
+    expect(topOf(site, 3)).toEqual(["/", "/pricing", "/docs/a"]);
+  });
+
+  it("says what the ticks read within the limits", () => {
+    expect(pagesLine(4, 0)).toContain("top 20 pages");
+    expect(pagesLine(1, 1)).toContain("1 page will be read");
+    expect(pagesLine(143, 2)).toContain("reads 100 at most");
   });
 });

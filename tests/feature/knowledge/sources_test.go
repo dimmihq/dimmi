@@ -1,6 +1,7 @@
 package knowledge_test
 
 import (
+	"fmt"
 	"slices"
 	"strconv"
 	"testing"
@@ -72,6 +73,45 @@ func TestWebsiteSource(t *testing.T) {
 
 		runs := x.owner.GetJSON("/api/v1/knowledge/sources/" + source + "/syncs").AssertOK()
 		runs.AssertJSONPath("data.#", 2)
+	})
+
+	t.Run("a site with no pages chosen is read to its top twenty pages, nearest home first", func(t *testing.T) {
+		t.Parallel()
+
+		x := newSources(t)
+
+		var pages []page
+		for i := range 25 {
+			pages = append(pages, page{
+				path: fmt.Sprintf("/docs/guides/step-%d", i), title: fmt.Sprintf("Guide step %d", i),
+				body: fmt.Sprintf("Step %d of the long guide explains setting number %d in detail.", i, i),
+			})
+		}
+
+		pages = append(pages, page{path: "/pricing", title: "Pricing", body: "Plans start free and grow with volume."})
+		serveSite(t, x, append(pages, docsPages()...))
+
+		source := addWebsite(t, x, nil)
+		settle(t, x, source).AssertJSONPath("data.document_count", 20)
+
+		statuses := documentStatuses(t, x, source)
+		assert.Equal(t, "active", statuses["Pricing"], "a page near the top is read though the sitemap lists it last")
+		assert.Equal(t, "active", statuses["Refund policy"])
+	})
+
+	t.Run("a page ticked by itself is read even when the sitemap leaves it out", func(t *testing.T) {
+		t.Parallel()
+
+		x := newSources(t)
+		fake := serveSite(t, x, docsPages())
+		hidden := page{path: "/docs/unlisted", title: "Unlisted page", body: "This page is in no sitemap at all."}
+		fake.Stub("GET "+site+hidden.path, httpclient.Response{
+			Status: 200, Body: []byte(hidden.html()), Header: textHeader("text/html; charset=utf-8"),
+		})
+
+		source := addWebsite(t, x, testkit.JSON{"include": []string{"/docs/unlisted"}})
+		settle(t, x, source).AssertJSONPath("data.document_count", 1)
+		assert.Equal(t, "active", documentStatuses(t, x, source)["Unlisted page"])
 	})
 
 	t.Run("patterns and a member's exclusion keep pages out across syncs", func(t *testing.T) {
