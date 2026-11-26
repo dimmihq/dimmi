@@ -147,7 +147,7 @@ func helpCenter(pages *routing.Router, a *app.App) {
 		Assets: static.Handler(helpsample.Assets(), static.Options{}),
 		Vite:   vite.New(vite.Options{Build: a.Frontend, Base: "/build", HotFile: a.Config.Frontend.HotPath}),
 		AppURL: a.Application.Config.App.URL, Ratings: a.Actions.HelpRatings, Passes: a.Actions.IdentityPasses,
-		Analytics: a.Actions.HelpAnalytics, Addresses: a.Actions.HelpCenterAddresses,
+		Analytics: a.Actions.HelpAnalytics, Addresses: a.Actions.HelpCenterAddresses, Clock: a.Clock,
 	}
 	cl := web.ChangelogController{HelpCenterController: hc}
 	images := &web.HelpImageController{Disks: a.Storage, Dir: helpcenters.ImageDir}

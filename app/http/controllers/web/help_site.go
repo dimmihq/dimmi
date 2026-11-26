@@ -366,9 +366,13 @@ func deref(s *string) string {
 }
 
 /*
-authorOf is the teammate who wrote an article, with no name when none
-did.
+authorOf is the teammate who wrote an article, with their photo when
+they have one, and no name when no teammate did.
 */
 func authorOf(a models.ListPublishedArticlesRow) helpcenter.Person {
-	return helpcenter.Person{Name: a.AuthorName, Initials: initialsOf(a.AuthorName)}
+	p := helpcenter.Person{Name: a.AuthorName, Initials: initialsOf(a.AuthorName)}
+	if photo := (models.User{AvatarPath: a.AuthorAvatar}).AvatarURL(); photo != nil {
+		p.Photo = *photo
+	}
+	return p
 }

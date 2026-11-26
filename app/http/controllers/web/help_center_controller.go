@@ -23,6 +23,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/view"
 	"github.com/dimmihq/dimmi/framework/view/vite"
@@ -55,6 +56,7 @@ and API answer, which a help center on its own host loads across.
 Ratings keeps readers' answers about articles, and Passes signs readers
 in to the messenger on the help center's pages. Analytics counts views
 and searches, and Addresses names the help center's canonical address.
+Clock says how long ago an article changed.
 */
 type HelpCenterController struct {
 	Library     *helpsample.Library
@@ -71,6 +73,7 @@ type HelpCenterController struct {
 	Passes      *identity.Passes
 	Analytics   *helpcenters.Analytics
 	Addresses   helpcenters.Addresses
+	Clock       clock.Clock
 }
 
 /*
@@ -155,6 +158,9 @@ func (c *HelpCenterController) Article(w fhttp.ResponseWriter, r *fhttp.Request)
 		Answer: query.Get("helpful"), Commented: query.Has("commented"), Limited: query.Has("limited"),
 	}
 	c.countView(r, lib, slug)
+	if c.Clock != nil {
+		article.Age = helpcenter.Ago(article.Updated, c.Clock.Now())
+	}
 	page := helpcenter.ArticlePage(center, lib.Collections(), article, helpful, c.styles())
 	c.respond(w, r, fhttp.StatusOK, page)
 }

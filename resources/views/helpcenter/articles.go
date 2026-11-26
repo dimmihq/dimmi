@@ -51,7 +51,8 @@ type Heading struct {
 
 /*
 Article is an article's page: its trail, rendered body and contents, who
-wrote it and when it last changed, and its neighbors in the collection.
+wrote it, when it last changed and how long ago that is in Age, and its
+neighbors in the collection.
 */
 type Article struct {
 	Summary
@@ -60,6 +61,7 @@ type Article struct {
 	Contents []Heading
 	Author   Person
 	Updated  time.Time
+	Age      string
 	Minutes  int
 	Previous *Summary
 	Next     *Summary

@@ -373,11 +373,16 @@ templ Icon(name, class string) {
 }
 
 /*
-Avatar draws a person's initials in a circle; Avatars overlaps several.
+Avatar draws a person's photo in a circle, or their initials without one;
+Avatars overlaps several.
 */
 
 templ Avatar(p Person, size string) {
-	<span title={ p.Name } class={ "grid shrink-0 place-items-center rounded-full bg-background-tertiary-default text-text-secondary ring-2 ring-background-full " + size }>{ p.Initials }</span>
+	if p.Photo != "" {
+		<img src={ p.Photo } alt="" title={ p.Name } loading="lazy" class={ "shrink-0 rounded-full object-cover ring-2 ring-background-full " + size }/>
+	} else {
+		<span title={ p.Name } class={ "grid shrink-0 place-items-center rounded-full bg-background-tertiary-default text-text-secondary ring-2 ring-background-full " + size }>{ p.Initials }</span>
+	}
 }
 
 templ Avatars(people []Person) {
