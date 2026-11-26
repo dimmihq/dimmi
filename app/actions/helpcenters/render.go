@@ -3,9 +3,10 @@
 | Article Rendering
 |--------------------------------------------------------------------------
 |
-| Articles are Markdown: CommonMark with tables, task lists, footnotes
-| and alerts. Each published version is rendered to sanitized HTML once,
-| with its table of contents, so serving a page renders nothing. The
+| Articles are Markdown: CommonMark with tables, task lists, footnotes,
+| alerts and the article blocks: embeds, buttons, details and figures.
+| Each published version is rendered to sanitized HTML once, with its
+| table of contents, so serving a page renders nothing. The
 | renderer version is stored with each version, so a change to the
 | rendering can re-render old versions instead of serving stale HTML.
 | The content hash covers everything a reader could see change, and
@@ -35,7 +36,7 @@ import (
 RendererVersion is the version of the rendering stored with each
 article version.
 */
-const RendererVersion = 2
+const RendererVersion = 3
 
 /*
 rendered is an article body as a version keeps it.
@@ -50,7 +51,7 @@ renderer turns article Markdown into the HTML readers see.
 */
 func renderer() *markdown.Renderer {
 	return markdown.New(markdown.Options{
-		GFM: true, Footnotes: true, Alerts: true, HeadingIDs: true, ImageLayout: true, Highlight: true,
+		GFM: true, Footnotes: true, Alerts: true, HeadingIDs: true, ImageLayout: true, Highlight: true, Blocks: true,
 	})
 }
 

@@ -192,7 +192,7 @@ func indexOf(snap helpcenters.Snapshot) HelpIndex {
 		}
 		out.Articles = append(out.Articles, HelpArticle{
 			Slug: a.Slug, Title: a.Title, Summary: deref(a.Description), Updated: a.VersionCreatedAt,
-			Body: helpcenters.Blocks(a.BodyMarkdown),
+			Body: helpcenters.ArticleBlocks(a.BodyMarkdown),
 		})
 		if len(out.Popular) < 5 {
 			out.Popular = append(out.Popular, a.Slug)
