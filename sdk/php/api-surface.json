@@ -396,6 +396,7 @@
     "members.update": {"method":"PATCH","path":"/members/{member}","params":["member"],"body":"required"},
     "members.update-many": {"method":"PATCH","path":"/members","params":[],"body":"required"},
     "migrations.index": {"method":"GET","path":"/migrations","params":[],"body":"none"},
+    "migrations.lookups.store": {"method":"POST","path":"/migrations/{migration}/lookups","params":["migration"],"body":"required"},
     "migrations.records.store": {"method":"POST","path":"/migrations/{migration}/records","params":["migration"],"body":"required"},
     "migrations.rollbacks.store": {"method":"POST","path":"/migrations/{migration}/rollbacks","params":["migration"],"body":"none"},
     "migrations.show": {"method":"GET","path":"/migrations/{migration}","params":["migration"],"body":"none"},

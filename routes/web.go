@@ -88,14 +88,16 @@ func Web(a *app.App) {
 
 /*
 browserFiles declares the files browsers load outside the app's build:
-the messenger's, the dashboard's service worker and llms.txt, and the
-probe help centers' custom domains are checked with.
+the messenger's, the dashboard's service worker and llms.txt, the
+probe help centers' custom domains are checked with, and the download
+links of files too large to email.
 */
 func browserFiles(a *app.App) {
 	widgetAssets(a)
 	a.Router.Handle(fhttp.MethodGet, "/sw.js", "service-worker", fhttp.HandlerFunc(web.ServiceWorker))
 	a.Router.Handle(fhttp.MethodGet, "/llms.txt", "llms", fhttp.HandlerFunc(web.LLMs))
 	helpDomainProbe(a)
+	fileLinks(a)
 }
 
 /*

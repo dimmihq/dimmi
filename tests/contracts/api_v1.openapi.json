@@ -11390,6 +11390,71 @@
         ],
         "type": "object"
       },
+      "CollectionMigrationLookup": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/MigrationLookup"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionMigrationLookupMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionMigrationLookupMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
       "CollectionMigrationSummary": {
         "additionalProperties": false,
         "properties": {
@@ -25185,6 +25250,83 @@
         ],
         "type": "object"
       },
+      "MigrationLookup": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "applied",
+              "deferred",
+              "failed",
+              "unsupported",
+              "missing"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "status",
+          "id"
+        ],
+        "type": "object"
+      },
+      "MigrationLookupRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "description": "The kind of the records, as the import format names it: contact, conversation, article and so on. Such as contact.",
+            "enum": [
+              "teammate",
+              "team",
+              "tag",
+              "attribute_definition",
+              "company",
+              "contact",
+              "contact_note",
+              "ticket_type",
+              "help_center",
+              "collection",
+              "article",
+              "snippet",
+              "saved_reply",
+              "schedule",
+              "workflow",
+              "conversation",
+              "ticket"
+            ],
+            "type": "string"
+          },
+          "source_ids": {
+            "description": "Up to 100 ids the records had in the other tool. Such as [\"6512ab\",\"6512ac\"].",
+            "items": {
+              "maxLength": 255,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "source_ids"
+        ],
+        "type": "object"
+      },
       "MigrationRecordProblem": {
         "additionalProperties": false,
         "properties": {
@@ -25305,7 +25447,7 @@
         "additionalProperties": false,
         "properties": {
           "kind": {
-            "description": "Kind: one of teammate, team, tag, attribute_definition, company, contact, contact_note, ticket_type, help_center, collection, article, snippet, saved_reply, schedule, conversation, ticket.",
+            "description": "Kind: one of teammate, team, tag, attribute_definition, company, contact, contact_note, ticket_type, help_center, collection, article, snippet, saved_reply, schedule, workflow, conversation, ticket.",
             "enum": [
               "teammate",
               "team",
@@ -25321,6 +25463,7 @@
               "snippet",
               "saved_reply",
               "schedule",
+              "workflow",
               "conversation",
               "ticket"
             ],
@@ -67439,7 +67582,7 @@
         ]
       },
       "post": {
-        "description": "Starts a migration of history from another tool for one account there, or returns the one under way for the same source and account. Records are sent by the dimmi-migrate CLI. Needs imports:manage. Returns the migration with its progress.",
+        "description": "Starts a migration of history from another tool for one account there, or returns the one under way for the same source and account. Records are sent by the dimmi CLI. Needs imports:manage. Returns the migration with its progress.",
         "operationId": "migrations.store",
         "requestBody": {
           "content": {
@@ -67517,6 +67660,59 @@
           }
         },
         "summary": "Get a migration",
+        "x-abilities": [
+          "settings:write"
+        ]
+      }
+    },
+    "/migrations/{migration}/lookups": {
+      "post": {
+        "description": "Says where each record named by its id in the other tool stands: applied with the dimmi id it became, deferred, failed, unsupported, or missing when the migration never received it. Use it to check a sample after a run. Returns one entry per source id, in the order asked.",
+        "operationId": "migrations.lookups.store",
+        "parameters": [
+          {
+            "description": "The migration (mig_...) the records belong to. Such as mig_01jc8q3x7m2n4p5r6s7t8v9w0y.",
+            "in": "path",
+            "name": "migration",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MigrationLookupRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionMigrationLookup"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Look up records of a migration",
         "x-abilities": [
           "settings:write"
         ]

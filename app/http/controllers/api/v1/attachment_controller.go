@@ -27,10 +27,11 @@ import (
 )
 
 /*
-MaxMemberUploadBytes is the largest file a teammate may attach, the most
-mail providers accept in one message.
+MaxMemberUploadBytes is the largest file a teammate may attach. A reply
+email carries files up to what mail providers accept and links the
+rest, so a file past their limit still reaches the customer.
 */
-const MaxMemberUploadBytes = 25 << 20
+const MaxMemberUploadBytes = 100 << 20
 
 /*
 AttachmentController takes teammates' uploads.
