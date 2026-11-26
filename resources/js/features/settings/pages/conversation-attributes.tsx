@@ -562,7 +562,8 @@ function Line({
 
 /*
  * Movable is a row the team drags into a new place by its handle, or
- * moves with the arrow keys on the handle. While a row is dragged, a
+ * moves with the arrow keys on the handle. The whole row follows the
+ * pointer, not just the handle. While a row is dragged, a
  * line follows the pointer to show where it lands: above the row under
  * it when moving up, below it when moving down.
  */
@@ -595,7 +596,7 @@ function Movable({
 
   return (
     <li
-      className={cx("relative flex items-center", dragging && "opacity-50")}
+      className={cx("relative flex items-center rounded-xl bg-background-secondary-default", dragging && "opacity-50")}
       onDragOver={(event: DragEvent) => {
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
@@ -622,6 +623,11 @@ function Movable({
         onDragStart={(event) => {
           event.dataTransfer.effectAllowed = "move";
           event.dataTransfer.setData("text/plain", label);
+          const row = event.currentTarget.closest("li");
+          if (row) {
+            const box = row.getBoundingClientRect();
+            event.dataTransfer.setDragImage(row, event.clientX - box.left, event.clientY - box.top);
+          }
           onStart();
         }}
         onDragEnd={onEnd}
