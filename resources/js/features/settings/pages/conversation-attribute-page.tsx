@@ -1,8 +1,9 @@
 /*
  * One conversation attribute, laid out flat: its name and key, its type
  * (fixed once saved), its options and what each means, the description
- * the AI reads, who fills it, whether teammates must fill it before
- * closing, the teams that see it, and a danger zone that archives or
+ * the AI reads, then one card for who fills it, whether teammates must
+ * fill it before closing and the teams that see it, each picked from a
+ * dropdown whose choices say what they mean, and a danger zone that archives or
  * restores it, or deletes it while nothing uses it. "new" makes one.
  * Every change waits for Save in the bar at the bottom; Discard puts it
  * back, and leaving with changes not saved asks first.
@@ -10,17 +11,16 @@
 import { RiArrowLeftLine, RiPriceTag3Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { type ComponentType, useRef, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
-import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { Input } from "@/components/base/input/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
-import { RadioGroup } from "@/components/base/radio/radio";
-import { RadioCard } from "@/components/base/radio/radio-card";
+import { Select, SelectItem } from "@/components/base/select/select";
 import { Switch } from "@/components/base/switch/switch";
 import { Textarea } from "@/components/base/textarea/textarea";
 import { toast } from "@/components/base/toast/toast";
+import { MultiPick } from "@/features/automation/pick";
 import { keyFor } from "@/features/automation/step-values";
 import { usePermission } from "@/features/settings/inboxes";
 import { EmptyState, Panel } from "@/features/shell/page";
@@ -41,7 +41,7 @@ import {
 import { teamsQuery } from "@/lib/api/teams";
 
 import { Danger } from "../controls";
-import { Empty, PageSkeleton, Row, Section, SettingsPage } from "../layout";
+import { PageSkeleton, Row, Section, SettingsPage } from "../layout";
 import { optionList } from "../options";
 import { OptionsEditor } from "../options-editor";
 import { SaveBar } from "../save-bar";
@@ -62,7 +62,6 @@ interface Draft {
   description: string;
   filledBy: FilledBy;
   required: boolean;
-  everyTeam: boolean;
   teams: string[];
 }
 
@@ -75,7 +74,6 @@ const blank: Draft = {
   description: "",
   filledBy: "both",
   required: false,
-  everyTeam: true,
   teams: [],
 };
 
@@ -89,7 +87,6 @@ function draftOf(a: ConversationAttribute): Draft {
     description: a.description,
     filledBy: a.filled_by,
     required: a.required_to_close,
-    everyTeam: a.team_ids.length === 0,
     teams: a.team_ids,
   };
 }
@@ -108,7 +105,7 @@ function bodyOf(d: Draft): ConversationAttributeChange {
     option_descriptions: describedOf(options, d.descriptions),
     filled_by: aiFillable(d.dataType) ? d.filledBy : "teammates",
     required_to_close: d.required,
-    team_ids: d.everyTeam ? [] : d.teams,
+    team_ids: d.teams,
   };
 }
 
@@ -124,9 +121,6 @@ function problemOf(d: Draft, key: string): string | null {
   }
   if (choosable.includes(d.dataType) && optionList(d.options).length === 0) {
     return "Add at least one option.";
-  }
-  if (!d.everyTeam && d.teams.length === 0) {
-    return "Pick at least one team, or let every team see it.";
   }
 
   return null;
@@ -208,6 +202,67 @@ function BackToList() {
   );
 }
 
+const fillHints: Record<FilledBy, string> = {
+  both: "The AI fills it as the customer writes. A teammate's value always wins.",
+  teammates: "The AI leaves it alone.",
+  ai: "Teammates see the value but can't change it.",
+};
+
+/*
+ * Option is one choice of a dropdown: its name, with an optional mark,
+ * and a line saying what it means.
+ */
+function Option({
+  icon: Icon,
+  name,
+  hint,
+}: {
+  icon?: ComponentType<{ className?: string }>;
+  name: string;
+  hint: string;
+}) {
+  return (
+    <span className="flex min-w-0 items-start gap-2">
+      {Icon ? <Icon aria-hidden className="mt-0.5 size-4 shrink-0 text-foreground-icon-secondary" /> : null}
+      <span className="flex min-w-0 flex-col">
+        <span className="text-body-2-medium text-text-primary">{name}</span>
+        <span className="text-caption-1-regular text-text-tertiary">{hint}</span>
+      </span>
+    </span>
+  );
+}
+
+function TypeRow({ edit, saved }: { edit: Edit; saved: boolean }) {
+  const type = edit.draft.dataType;
+  const Icon = typeIcons[type];
+
+  return (
+    <Row label="Type" description={saved ? `${typeHints[type]} Fixed once saved.` : typeHints[type]}>
+      <Select
+        aria-label="Type"
+        size="sm"
+        className="w-56"
+        popoverClassName="w-80"
+        isDisabled={saved}
+        selectedKey={type}
+        onSelectionChange={(next) => edit.set({ dataType: next as ConversationAttributeType })}
+        renderValue={
+          <span className="flex items-center gap-2">
+            <Icon aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+            {conversationAttributeTypes[type]}
+          </span>
+        }
+      >
+        {(Object.keys(conversationAttributeTypes) as ConversationAttributeType[]).map((t) => (
+          <SelectItem key={t} id={t} textValue={conversationAttributeTypes[t]}>
+            <Option icon={typeIcons[t]} name={conversationAttributeTypes[t]} hint={typeHints[t]} />
+          </SelectItem>
+        ))}
+      </Select>
+    </Row>
+  );
+}
+
 function BasicsSection({ edit, saved, locked }: { edit: Edit; saved: boolean; locked: boolean }) {
   return (
     <Section title="Basics">
@@ -241,42 +296,7 @@ function BasicsSection({ edit, saved, locked }: { edit: Edit; saved: boolean; lo
           onChange={edit.setKey}
         />
       </Row>
-    </Section>
-  );
-}
-
-function TypeSection({ edit, saved }: { edit: Edit; saved: boolean }) {
-  const type = edit.draft.dataType;
-
-  if (saved) {
-    const Icon = typeIcons[type];
-    return (
-      <Section title="Type" description="Fixed once saved.">
-        <Row label={conversationAttributeTypes[type]} description={typeHints[type]}>
-          <Icon aria-hidden className="size-5 text-foreground-icon-secondary" />
-        </Row>
-      </Section>
-    );
-  }
-
-  return (
-    <Section title="Type" description="What the value is. You can't change it once saved." bare>
-      <RadioGroup
-        aria-label="Type"
-        value={type}
-        onChange={(next) => edit.set({ dataType: next as ConversationAttributeType })}
-        className="grid grid-cols-1 gap-2 sm:grid-cols-2"
-      >
-        {(Object.keys(conversationAttributeTypes) as ConversationAttributeType[]).map((t) => (
-          <RadioCard
-            key={t}
-            value={t}
-            icon={typeIcons[t]}
-            title={conversationAttributeTypes[t]}
-            description={typeHints[t]}
-          />
-        ))}
-      </RadioGroup>
+      <TypeRow edit={edit} saved={saved || locked} />
     </Section>
   );
 }
@@ -321,46 +341,76 @@ function DescriptionSection({ edit, locked }: { edit: Edit; locked: boolean }) {
   );
 }
 
-function FillSection({ edit, locked }: { edit: Edit; locked: boolean }) {
+function FillRow({ edit, locked }: { edit: Edit; locked: boolean }) {
   const canAI = aiFillable(edit.draft.dataType);
   const value: FilledBy = canAI ? edit.draft.filledBy : "teammates";
+  const order: FilledBy[] = ["both", "teammates", "ai"];
 
   return (
-    <Section
-      title="Who fills it"
+    <Row
+      label="Who fills it"
       description={
-        canAI ? undefined : `The AI can't fill ${conversationAttributeTypes[edit.draft.dataType].toLowerCase()} values.`
+        canAI
+          ? fillHints[value]
+          : `The AI can't fill ${conversationAttributeTypes[edit.draft.dataType].toLowerCase()} values.`
       }
-      bare
     >
-      <RadioGroup
+      <Select
         aria-label="Who fills it"
-        value={value}
+        size="sm"
+        className="w-56"
+        popoverClassName="w-80"
         isDisabled={locked}
-        onChange={(next) => edit.set({ filledBy: next as FilledBy })}
-        className="flex flex-col gap-2"
+        selectedKey={value}
+        disabledKeys={canAI ? [] : ["both", "ai"]}
+        onSelectionChange={(next) => edit.set({ filledBy: next as FilledBy })}
+        renderValue={filledByLabels[value]}
       >
-        <RadioCard
-          value="both"
-          isDisabled={!canAI}
-          title={filledByLabels.both}
-          description="The AI fills it as the customer writes. A teammate's value always wins."
-        />
-        <RadioCard value="teammates" title={filledByLabels.teammates} description="The AI leaves it alone." />
-        <RadioCard
-          value="ai"
-          isDisabled={!canAI}
-          title={filledByLabels.ai}
-          description="Teammates see the value but can't change it."
-        />
-      </RadioGroup>
-    </Section>
+        {order.map((f) => (
+          <SelectItem key={f} id={f} textValue={filledByLabels[f]}>
+            <Option name={filledByLabels[f]} hint={fillHints[f]} />
+          </SelectItem>
+        ))}
+      </Select>
+    </Row>
   );
 }
 
-function ClosingSection({ edit, locked }: { edit: Edit; locked: boolean }) {
+function TeamsRow({ edit, locked }: { edit: Edit; locked: boolean }) {
+  const workspace = useAccount().workspace.id;
+  const { data: teams = [] } = useQuery(teamsQuery(workspace));
+  const picked = edit.draft.teams;
+
   return (
-    <Section title="Closing">
+    <Row
+      label="Visible to"
+      description={
+        picked.length === 0 ? "Every team sees and fills it." : "Only these teams see it, in the inbox and the API."
+      }
+    >
+      {locked ? (
+        <span className="text-body-2-regular text-text-secondary">
+          {picked.length === 0 ? "Every team" : `${picked.length} teams`}
+        </span>
+      ) : (
+        <MultiPick
+          label="Teams"
+          choices={teams.map((t) => [t.id, t.name] as const)}
+          value={picked}
+          allLabel="Every team"
+          empty="No teams yet"
+          className="w-56"
+          onChange={(next) => edit.set({ teams: next })}
+        />
+      )}
+    </Row>
+  );
+}
+
+function BehaviourSection({ edit, locked }: { edit: Edit; locked: boolean }) {
+  return (
+    <Section title="Filling and visibility">
+      <FillRow edit={edit} locked={locked} />
       <Row
         label="Required before closing"
         description="Teammates can't close a conversation in dimmi while it's empty."
@@ -373,47 +423,7 @@ function ClosingSection({ edit, locked }: { edit: Edit; locked: boolean }) {
           onChange={(required) => edit.set({ required })}
         />
       </Row>
-    </Section>
-  );
-}
-
-function TeamsSection({ edit, locked }: { edit: Edit; locked: boolean }) {
-  const workspace = useAccount().workspace.id;
-  const { data: teams = [] } = useQuery(teamsQuery(workspace));
-  const toggle = (id: string, on: boolean) =>
-    edit.set({ teams: on ? [...edit.draft.teams, id] : edit.draft.teams.filter((t) => t !== id) });
-
-  return (
-    <Section title="Visible to" description="Hidden attributes stay out of the inbox and the API for other teams." bare>
-      <RadioGroup
-        aria-label="Visible to"
-        value={edit.draft.everyTeam ? "every" : "some"}
-        isDisabled={locked}
-        onChange={(next) => edit.set({ everyTeam: next === "every" })}
-        className="flex flex-col gap-2"
-      >
-        <RadioCard value="every" title="Every team" description="Everyone sees and fills it." />
-        <RadioCard value="some" title="Only these teams" description="Only members of the teams you pick." />
-      </RadioGroup>
-      {edit.draft.everyTeam ? null : (
-        <div className="flex flex-col rounded-2xl bg-background-secondary-default ps-3">
-          {teams.length === 0 ? <Empty>No teams yet. Add one in Settings → Teams.</Empty> : null}
-          {teams.map((team) => (
-            <Row
-              key={team.id}
-              label={team.name}
-              description={team.member_count === 1 ? "1 member" : `${team.member_count} members`}
-            >
-              <Checkbox
-                aria-label={team.name}
-                isDisabled={locked}
-                isSelected={edit.draft.teams.includes(team.id)}
-                onChange={(on) => toggle(team.id, on)}
-              />
-            </Row>
-          ))}
-        </div>
-      )}
+      <TeamsRow edit={edit} locked={locked} />
     </Section>
   );
 }
@@ -600,12 +610,9 @@ function Editor({ attribute }: { attribute: ConversationAttribute | null }) {
     >
       <BackToList />
       <BasicsSection edit={edit} saved={saved} locked={locked} />
-      <TypeSection edit={edit} saved={saved} />
       {choosable.includes(edit.draft.dataType) ? <OptionsSection edit={edit} locked={locked} /> : null}
       <DescriptionSection edit={edit} locked={locked} />
-      <FillSection edit={edit} locked={locked} />
-      <ClosingSection edit={edit} locked={locked} />
-      <TeamsSection edit={edit} locked={locked} />
+      <BehaviourSection edit={edit} locked={locked} />
       {attribute && !locked ? <DangerSection attribute={attribute} /> : null}
     </SettingsPage>
   );
