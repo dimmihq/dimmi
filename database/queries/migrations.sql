@@ -310,3 +310,8 @@ UNION ALL SELECT id FROM hc UNION ALL SELECT id FROM note UNION ALL SELECT id FR
 UNION ALL SELECT id FROM sched UNION ALL SELECT id FROM contact UNION ALL SELECT id FROM company
 UNION ALL SELECT id FROM team UNION ALL SELECT id FROM tag UNION ALL SELECT id FROM attr
 UNION ALL SELECT id FROM ttype UNION ALL SELECT id FROM file;
+
+-- name: ShareMigration :one
+-- ShareMigration holds the migration against an undo until the
+-- transaction ends, while other batches of it still run.
+SELECT * FROM migrations WHERE workspace_id = @workspace_id AND id = @id FOR SHARE;

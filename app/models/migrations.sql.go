@@ -1261,6 +1261,41 @@ func (q *Queries) SaveMigrationRecord(ctx context.Context, arg SaveMigrationReco
 	return i, err
 }
 
+const shareMigration = `-- name: ShareMigration :one
+SELECT id, workspace_id, source, source_account, name, format_version, status, created_by_member_id, last_record_at, rollback_by_member_id, rollback_requested_at, rollback_finished_at, rollback_removed, rollback_error, created_at, updated_at FROM migrations WHERE workspace_id = $1 AND id = $2 FOR SHARE
+`
+
+type ShareMigrationParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// ShareMigration holds the migration against an undo until the
+// transaction ends, while other batches of it still run.
+func (q *Queries) ShareMigration(ctx context.Context, arg ShareMigrationParams) (Migration, error) {
+	row := q.db.QueryRow(ctx, shareMigration, arg.WorkspaceID, arg.ID)
+	var i Migration
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Source,
+		&i.SourceAccount,
+		&i.Name,
+		&i.FormatVersion,
+		&i.Status,
+		&i.CreatedByMemberID,
+		&i.LastRecordAt,
+		&i.RollbackByMemberID,
+		&i.RollbackRequestedAt,
+		&i.RollbackFinishedAt,
+		&i.RollbackRemoved,
+		&i.RollbackError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const touchMigration = `-- name: TouchMigration :exec
 UPDATE migrations SET last_record_at = $1::timestamptz, updated_at = $1::timestamptz WHERE workspace_id = $2 AND id = $3
 `

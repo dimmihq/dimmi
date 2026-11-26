@@ -253,10 +253,13 @@ func (r *runner) inTx(ctx context.Context, tx *database.Tx, rec record, res *Res
 		return fmt.Errorf("tag imported history: %w", err)
 	}
 
-	if _, err := q.LockMigration(ctx, models.LockMigrationParams{
-		WorkspaceID: r.row.WorkspaceID, ID: r.row.ID,
-	}); err != nil {
+	held, err := q.ShareMigration(ctx, models.ShareMigrationParams{WorkspaceID: r.row.WorkspaceID, ID: r.row.ID})
+	if err != nil {
 		return fmt.Errorf("hold migration: %w", err)
+	}
+
+	if held.Status == "rolling_back" || held.Status == "rolled_back" {
+		return ErrClosed
 	}
 
 	prev, err := r.ledgerRow(ctx, q, rec.kind, rec.base.SourceID)
