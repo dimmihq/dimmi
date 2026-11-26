@@ -59,11 +59,13 @@ The API, the AI agent, workflows, the customer, Slack and imports still close co
 
 Pick teams under **Visible to** to show an attribute only to their members. Everyone else doesn't see it in the inbox or through the API, can't set it, and isn't held back by it when they close. Leave it empty for every team.
 
-### Archive an attribute
+Click an attribute to open its page, where every setting lies flat. Changes wait until you press **Save** in the bar at the bottom. On the list, drag attributes by their handle to set the order the **Details** panel shows them in.
 
-Archiving takes an attribute out of the **Details** panel, and nobody fills it any more. Conversations keep their values, so workflows, views and reports that read it keep working. Restore it from the **Archived** tab.
+### Archive or delete an attribute
 
-Drag attributes by their handle to set the order the **Details** panel shows them in. Every change on this page waits in a draft until you press **Save** in the bar at the bottom.
+Archiving takes an attribute out of the **Details** panel, and nobody fills it any more. Conversations keep their values, so workflows, views and reports that read it keep working. Restore it from the attribute's page.
+
+You can delete an attribute only while nothing uses it: no conversation holds a value, and no workflow or view reads or sets it. The attribute's **Danger zone** says what uses it; archive it instead when something does.
 
 ## Fill attributes in the inbox
 
@@ -111,7 +113,7 @@ A value that doesn't fit is refused with `attribute_values_invalid`, and `proble
 
 `POST /api/v1/conversations` takes the same `attributes` object, and so does an import (a request with `external_id` or `created_at`). An import sets even the attributes only the AI fills.
 
-Manage attributes at `/api/v1/conversation-attributes`, and set their order with `PUT /api/v1/conversation-attributes/order`. Each value's `set_by` carries the AI's `reason` and `sureness` (0 to 1) when it set the value. Files are set as the ids of uploads from `POST /api/v1/attachments`, contacts and companies as their ids.
+Manage attributes at `/api/v1/conversation-attributes`, see what uses one at `GET /api/v1/conversation-attributes/{attribute}/usage`, delete an unused one with `DELETE`, and set their order with `PUT /api/v1/conversation-attributes/order`. Each value's `set_by` carries the AI's `reason` and `sureness` (0 to 1) when it set the value. Files are set as the ids of uploads from `POST /api/v1/attachments`, contacts and companies as their ids.
 
 The older `/api/v1/ai/conversation-attributes` and `/api/v1/conversations/{conversation}/ai-attributes` endpoints keep working until 1 December 2027.
 

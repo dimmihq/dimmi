@@ -175,3 +175,23 @@ export const filledByLabels: Record<FilledBy, string> = {
   teammates: "Teammates only",
   ai: "AI only",
 };
+
+export interface ConversationAttributeUsage {
+  object: "conversation_attribute_usage";
+  conversations: number;
+  workflows: { id: string; name: string }[];
+  views: { id: string; name: string }[];
+  deletable: boolean;
+}
+
+export function conversationAttributeUsageQuery(workspace: string, id: string) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "conversation-attributes", id, "usage"],
+    queryFn: () =>
+      request<ConversationAttributeUsage>("GET", `/conversation-attributes/${id}/usage`, undefined, { workspace }),
+  });
+}
+
+export function deleteConversationAttribute(workspace: string, id: string): Promise<void> {
+  return request<void>("DELETE", `/conversation-attributes/${id}`, undefined, { workspace });
+}
