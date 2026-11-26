@@ -65,12 +65,14 @@ export function LanguageMenu({
           search: lang === center.locale ? {} : { lang },
         });
       }}
+      className="shrink-0"
+      triggerClassName="sm:min-w-36"
       popoverClassName="w-72"
       popoverPlacement="bottom end"
       renderValue={
         <span className="flex items-center gap-1.5">
           <RiTranslate2 aria-hidden className="size-4 text-foreground-icon-secondary" />
-          {name(current)}
+          <span className="max-sm:sr-only">{name(current)}</span>
         </span>
       }
     >
