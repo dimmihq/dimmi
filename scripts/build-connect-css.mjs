@@ -21,7 +21,11 @@ const stylesDir = path.join(root, "resources/js/styles");
 const candidates = new Set();
 for (const file of [page, help]) {
   for (const m of readFileSync(file, "utf8").matchAll(/class="([^"]+)"/g)) {
-    for (const c of m[1].split(/\s+/)) if (c && !c.includes("{")) candidates.add(c);
+    for (const c of m[1].split(/\s+/)) {
+      if (c && !c.includes("{")) {
+        candidates.add(c);
+      }
+    }
   }
 }
 
@@ -49,9 +53,10 @@ const require = createRequire(import.meta.url);
 // Resolves the stylesheets the entry imports: tailwindcss's own and the
 // theme files beside globals.css.
 async function loadStylesheet(id, base) {
-  const file = id === "tailwindcss" || id.startsWith("tailwindcss/")
-    ? require.resolve(id === "tailwindcss" ? "tailwindcss/index.css" : `${id}.css`.replace(/\.css\.css$/, ".css"))
-    : path.resolve(base, id);
+  const file =
+    id === "tailwindcss" || id.startsWith("tailwindcss/")
+      ? require.resolve(id === "tailwindcss" ? "tailwindcss/index.css" : `${id}.css`.replace(/\.css\.css$/, ".css"))
+      : path.resolve(base, id);
 
   return { path: file, base: path.dirname(file), content: readFileSync(file, "utf8") };
 }
@@ -65,15 +70,17 @@ let css = compiler.build([...candidates]);
 function darkRules(source) {
   const rules = [];
   const re = /(?:^|\n)(\.dark[^{\n]*)\{/g;
-  let m;
-
-  while ((m = re.exec(source))) {
+  for (let m = re.exec(source); m !== null; m = re.exec(source)) {
     let depth = 1;
     let i = m.index + m[0].length;
 
     while (i < source.length && depth > 0) {
-      if (source[i] === "{") depth++;
-      if (source[i] === "}") depth--;
+      if (source[i] === "{") {
+        depth++;
+      }
+      if (source[i] === "}") {
+        depth--;
+      }
       i++;
     }
 
@@ -86,7 +93,8 @@ function darkRules(source) {
 }
 
 const dark = darkRules(css);
-if (dark.length) css += `\n@media (prefers-color-scheme: dark) {\n${dark.join("\n")}\n}\n`;
+if (dark.length) {
+  css += `\n@media (prefers-color-scheme: dark) {\n${dark.join("\n")}\n}\n`;
+}
 
 writeFileSync(out, css);
-console.log(`wrote ${path.relative(root, out)}: ${candidates.size} classes, ${(css.length / 1024).toFixed(1)} KB`);
