@@ -410,7 +410,7 @@ func (c *Client) Lookup(ctx context.Context, id string, kind format.Kind, ids []
 	var out struct {
 		Data []struct {
 			SourceID string `json:"source_id"`
-			ID       string `json:"id"`
+			Status   string `json:"status"`
 		} `json:"data"`
 	}
 
@@ -425,7 +425,7 @@ func (c *Client) Lookup(ctx context.Context, id string, kind format.Kind, ids []
 
 	found := map[string]bool{}
 	for _, r := range out.Data {
-		found[r.SourceID] = r.ID != ""
+		found[r.SourceID] = r.Status == "applied" || r.Status == "unsupported"
 	}
 
 	return found, nil

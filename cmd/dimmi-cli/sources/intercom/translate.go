@@ -797,17 +797,16 @@ func translateSchedule(s schedule, exceptions []scheduleException, first bool) f
 
 	for _, e := range exceptions {
 		if e.Type == "closed" {
-			sch.Holidays = append(sch.Holidays, format.Holiday{Date: e.Date, Name: text(e.Name), Recurring: e.RecurringAnnually})
+			sch.Holidays = append(sch.Holidays, format.Holiday{Date: e.Date, Name: text(e.Name), Yearly: e.RecurringAnnually})
 
 			continue
 		}
 
-		ex := format.Exception{Date: e.Date, Name: text(e.Name), Recurring: e.RecurringAnnually}
 		for _, iv := range e.Intervals {
-			ex.Hours = append(ex.Hours, format.Span{Start: clock(iv.StartMinute), End: clock(iv.EndMinute)})
+			sch.Exceptions = append(sch.Exceptions, format.Exception{
+				Date: e.Date, Name: text(e.Name), Start: clock(iv.StartMinute), End: clock(iv.EndMinute), Yearly: e.RecurringAnnually,
+			})
 		}
-
-		sch.Exceptions = append(sch.Exceptions, ex)
 	}
 
 	return format.NewRecord(format.KindSchedule, sch.SourceID, sch)

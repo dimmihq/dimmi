@@ -384,30 +384,25 @@ type Hours struct {
 }
 
 /*
-Holiday is a day off, YYYY-MM-DD.
+Holiday is a day off, YYYY-MM-DD; Yearly repeats it every year.
 */
 type Holiday struct {
-	Date      string `json:"date"`
-	Name      string `json:"name,omitempty"`
-	Recurring bool   `json:"recurring_annually,omitempty"`
+	Date   string `json:"date"`
+	Name   string `json:"name,omitempty"`
+	Yearly bool   `json:"yearly,omitempty"`
 }
 
 /*
-Exception is a day open at other hours than usual.
+Exception is a day that differs from the week: closed, or open from
+Start to End, HH:MM.
 */
 type Exception struct {
-	Date      string `json:"date"`
-	Name      string `json:"name,omitempty"`
-	Hours     []Span `json:"hours"`
-	Recurring bool   `json:"recurring_annually,omitempty"`
-}
-
-/*
-Span is a stretch of a day, HH:MM to HH:MM.
-*/
-type Span struct {
-	Start string `json:"start"`
-	End   string `json:"end"`
+	Date   string `json:"date"`
+	Name   string `json:"name,omitempty"`
+	Closed bool   `json:"closed,omitempty"`
+	Start  string `json:"start,omitempty"`
+	End    string `json:"end,omitempty"`
+	Yearly bool   `json:"yearly,omitempty"`
 }
 
 /*

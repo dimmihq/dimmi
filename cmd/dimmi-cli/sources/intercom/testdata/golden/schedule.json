@@ -32,19 +32,15 @@
         {
           "date": "2026-12-25",
           "name": "Christmas",
-          "recurring_annually": true
+          "yearly": true
         }
       ],
       "exceptions": [
         {
           "date": "2026-12-24",
           "name": "Christmas Eve",
-          "hours": [
-            {
-              "start": "09:00",
-              "end": "13:00"
-            }
-          ]
+          "start": "09:00",
+          "end": "13:00"
         }
       ],
       "default": true
