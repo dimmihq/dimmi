@@ -25,6 +25,7 @@
 | time came are sent. Every minute webhook deliveries due a retry are
 | queued, every five minutes failing webhook endpoints are checked, and
 | every night the webhook delivery log past its retention is pruned.
+| Every minute the conversations whose snooze ran out open again.
 | Report facts are refreshed every few seconds, each workspace's backlog
 | is counted hourly once its day ends, and report digests go out every
 | five minutes as they come due.
@@ -130,10 +131,12 @@ func scheduleWebhooks(a *app.App) {
 
 /*
 scheduleNotifications declares the teammate notification jobs: the
-Slack digests, the quiet hours summaries and the delivery log's prune.
+Slack digests, the quiet hours summaries and the delivery log's prune;
+and the wake-up of expired snoozes, every minute.
 */
 func scheduleNotifications(a *app.App) {
 	a.Schedule.Job(jobs.SendNotificationDigestsArgs{}).EveryMinute()
+	a.Schedule.Job(jobs.WakeExpiredSnoozesArgs{}).EveryMinute()
 	a.Schedule.Job(jobs.SendQuietHoursSummariesArgs{}).Cron("*/5 * * * *")
 	a.Schedule.Job(jobs.PruneNotificationDeliveriesArgs{}).DailyAt("03:25")
 }
