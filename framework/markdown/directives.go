@@ -436,8 +436,15 @@ func attachButtonLink(n *directiveNode) {
 }
 
 /*
-safeHref reports whether a button may link to an address: http, https
+SafeLink reports whether a button may link to an address: http, https
 and mailto, or a path or fragment on the same site.
+*/
+func SafeLink(href string) bool {
+	return safeHref(href)
+}
+
+/*
+safeHref is SafeLink.
 */
 func safeHref(href string) bool {
 	if href == "" {

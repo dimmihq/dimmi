@@ -1,6 +1,7 @@
 package markdown_test
 
 import (
+	"encoding/json"
 	"regexp"
 	"strings"
 	"testing"
@@ -261,47 +262,20 @@ func TestBlocks(t *testing.T) {
 func TestResolveEmbed(t *testing.T) {
 	t.Parallel()
 
-	for raw, want := range map[string]string{
-		"https://www.youtube.com/watch?v=dQw4w9WgXcQ":                 "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
-		"https://youtube.com/shorts/dQw4w9WgXcQ":                      "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
-		"https://www.youtube.com/embed/dQw4w9WgXcQ":                   "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
-		"https://youtu.be/dQw4w9WgXcQ?t=90s":                          "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=90",
-		"https://vimeo.com/76979871":                                  "https://player.vimeo.com/video/76979871",
-		"https://vimeo.com/76979871/a1b2c3d4e5":                       "https://player.vimeo.com/video/76979871?h=a1b2c3d4e5",
-		"https://player.vimeo.com/video/76979871":                     "https://player.vimeo.com/video/76979871",
-		"https://www.loom.com/share/0281766fa2d04bb788eaf19e65135184": "https://www.loom.com/embed/0281766fa2d04bb788eaf19e65135184",
-		"https://acme.wistia.com/medias/e4a27b971d":                   "https://fast.wistia.net/embed/iframe/e4a27b971d",
-		"https://fast.wistia.net/embed/iframe/e4a27b971d":             "https://fast.wistia.net/embed/iframe/e4a27b971d",
-		"https://share.vidyard.com/watch/v3x8bz9Lg8H1rA2pHP7nYA":      "https://play.vidyard.com/v3x8bz9Lg8H1rA2pHP7nYA",
-		"https://app.arcade.software/share/TqmPcv0fEXrYr5LhLwTh":      "https://demo.arcade.software/TqmPcv0fEXrYr5LhLwTh?embed",
-		"https://app.supademo.com/demo/clx1y2z3a0001":                 "https://app.supademo.com/embed/clx1y2z3a0001",
-		"https://app.storylane.io/share/abcd1234efgh":                 "https://app.storylane.io/demo/abcd1234efgh",
-		"https://www.tella.tv/video/my-walkthrough-abcd":              "https://www.tella.tv/video/my-walkthrough-abcd/embed",
-		"https://capture.navattic.com/clabc123def":                    "https://capture.navattic.com/clabc123def",
-	} {
+	// The writer reads the same cases, so both sides accept the same links.
+	var cases struct {
+		Resolves map[string]string `json:"resolves"`
+		Rejects  []string          `json:"rejects"`
+	}
+	require.NoError(t, json.Unmarshal(fixture(t, "embeds.json"), &cases))
+
+	for raw, want := range cases.Resolves {
 		embed, ok := markdown.ResolveEmbed(raw)
 		if assert.True(t, ok, raw) {
 			assert.Equal(t, want, embed.Player, raw)
 		}
 	}
-
-	for _, raw := range []string{
-		"",
-		"javascript:alert(1)",
-		"ftp://youtu.be/dQw4w9WgXcQ",
-		"https://youtu.be.evil.example/dQw4w9WgXcQ",
-		"https://evil.example/?u=https://youtu.be/dQw4w9WgXcQ",
-		"https://user:pass@youtu.be/dQw4w9WgXcQ",
-		"https://youtu.be:8443/dQw4w9WgXcQ",
-		"https://www.youtube.com/watch?v=short",
-		"https://www.youtube.com/watch?v=dQw4w9WgXcQ%22",
-		"https://www.youtube.com/embed/../../evil",
-		"https://vimeo.com/channels/staff",
-		"https://a.b.wistia.com/medias/e4a27b971d",
-		"https://wistia.com/medias/e4a27b971d",
-		"https://www.loom.com/share/not-a-loom-id",
-		"https://demo.arcade.software/x/y",
-	} {
+	for _, raw := range cases.Rejects {
 		_, ok := markdown.ResolveEmbed(raw)
 		assert.False(t, ok, raw)
 	}

@@ -83,6 +83,16 @@
       "Block": {
         "additionalProperties": false,
         "properties": {
+          "blocks": {
+            "description": "The blocks a details block holds, in order. Absent on every other kind of block.",
+            "items": {
+              "$ref": "#/components/schemas/Block"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "items": {
             "description": "The entries of a list or steps block as plain text, one per item. Absent on every other kind of block.",
             "items": {
@@ -94,11 +104,11 @@
             ]
           },
           "kind": {
-            "description": "What the block is: h2 (heading), p (paragraph), list (bulleted), steps (numbered), code, note (quote or callout) or image.",
+            "description": "What the block is: h2 (heading), p (paragraph), list (bulleted), steps (numbered), code, note (quote or callout), image, embed (a video or demo to open), button (a link drawn as a button) or details (a collapsible section).",
             "type": "string"
           },
           "text": {
-            "description": "The block's plain text: the heading, paragraph or note wording, the source of a code block, or the alt text of an image. Absent on list and steps blocks.",
+            "description": "The block's plain text: the heading, paragraph or note wording, the source of a code block, the alt text of an image, the label of an embed or a button, or the summary of a details block. Absent on list and steps blocks.",
             "type": "string"
           },
           "tokens": {
@@ -110,6 +120,10 @@
               "array",
               "null"
             ]
+          },
+          "url": {
+            "description": "Where an embed or a button goes: the video or demo page, or the button's link. Absent on every other kind of block.",
+            "type": "string"
           }
         },
         "required": [

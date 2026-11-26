@@ -10,14 +10,16 @@
 | language also comes as tokens, still only text, each marked keyword,
 | string, number or comment when it is one, which the messenger colors
 | like the help center does. Articles also carry their blocks: an embed
-| and a button come as their label and the address they open, and a
-| details block as its summary with its own blocks inside.
+| and a button come as their label and the absolute address they open,
+| and a details block as its summary with its own blocks inside. An
+| address that is not a web or mail one never reaches the messenger.
 |
 */
 
 package helpcenters
 
 import (
+	"net/url"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/markdown"
@@ -75,10 +77,41 @@ func Blocks(body string) []Block {
 
 /*
 ArticleBlocks turns an article's Markdown, with its embeds, buttons and
-details, into the messenger's blocks.
+details, into the messenger's blocks. Links on the help center's own
+pages, such as "/billing", resolve against base, the help center's
+address.
 */
-func ArticleBlocks(body string) []Block {
-	return blocksOf(markdown.ParseArticle([]byte(body)).Children)
+func ArticleBlocks(body, base string) []Block {
+	return absolute(blocksOf(markdown.ParseArticle([]byte(body)).Children), base)
+}
+
+/*
+absolute resolves the blocks' links against base and turns a link that
+cannot reach a visitor into its label.
+*/
+func absolute(blocks []Block, base string) []Block {
+	root, err := url.Parse(base)
+	if err != nil || !root.IsAbs() {
+		root = nil
+	}
+	for i, b := range blocks {
+		b.Blocks = absolute(b.Blocks, base)
+		if b.Kind != "embed" && b.Kind != "button" {
+			blocks[i] = b
+			continue
+		}
+		link, err := url.Parse(b.URL)
+		switch {
+		case err != nil || !markdown.SafeLink(b.URL) || (b.Kind == "embed" && !link.IsAbs()):
+			b = Block{Kind: "p", Text: b.Text}
+		case !link.IsAbs() && root == nil:
+			b = Block{Kind: "p", Text: b.Text}
+		case !link.IsAbs():
+			b.URL = root.ResolveReference(link).String()
+		}
+		blocks[i] = b
+	}
+	return blocks
 }
 
 func blocksOf(nodes []*markdown.Node) []Block {

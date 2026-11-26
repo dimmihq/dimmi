@@ -128,6 +128,52 @@
   color: var(--accent);
 }
 
+/*
+ * Article blocks: a video or demo as a row that opens it on its own
+ * site, a button as the messenger's primary one, and a collapsible
+ * section that opens below its title.
+ */
+.prose .embed,
+.details {
+  border: 1px solid var(--border-button);
+}
+
+.button-row {
+  display: flex;
+}
+
+.prose .button {
+  text-decoration: none;
+}
+
+.details {
+  padding: 10px 14px;
+  border-radius: 12px;
+}
+
+.details > summary {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.details .chevron {
+  inline-size: 18px;
+  transition: rotate 150ms;
+}
+
+.details[open] .chevron {
+  rotate: 90deg;
+}
+
+.details > :not(summary) {
+  margin: 10px 0 0;
+}
+
 .figure {
   display: grid;
   gap: 8px;

@@ -80,10 +80,16 @@ export interface Token {
 }
 
 export interface Block {
-  kind: "p" | "h2" | "list" | "steps" | "code" | "note" | "image";
+  kind: "p" | "h2" | "list" | "steps" | "code" | "note" | "image" | "embed" | "button" | "details";
   text?: string;
   items?: string[];
   tokens?: Token[];
+  /*
+   * url is where an embed or a button goes, and blocks what a details
+   * block holds.
+   */
+  url?: string;
+  blocks?: Block[];
 }
 
 export interface Article {

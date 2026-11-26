@@ -144,8 +144,9 @@ func (c *HelpController) answer(ctx context.Context, resolved actions.Resolved, 
 		return nil, err
 	}
 
-	out.Body.Data = indexOf(snap)
-	out.Body.Data.URL = c.Addresses.Root(snap.HelpCenter)
+	root := c.Addresses.Root(snap.HelpCenter)
+	out.Body.Data = indexOf(snap, root)
+	out.Body.Data.URL = root
 
 	return out, nil
 }
@@ -181,9 +182,10 @@ func (c *HelpController) readsAs(ctx context.Context, auth actions.Authenticated
 }
 
 /*
-indexOf shapes a help center for the Help tab.
+indexOf shapes a help center for the Help tab, its articles' links on
+the help center's own pages resolved against its root address.
 */
-func indexOf(snap helpcenters.Snapshot) HelpIndex {
+func indexOf(snap helpcenters.Snapshot, root string) HelpIndex {
 	out := HelpIndex{Collections: []HelpCollection{}, Articles: []HelpArticle{}, Popular: []string{}}
 	slugs := map[string][]string{}
 	for i, a := range snap.Articles {
@@ -192,7 +194,7 @@ func indexOf(snap helpcenters.Snapshot) HelpIndex {
 		}
 		out.Articles = append(out.Articles, HelpArticle{
 			Slug: a.Slug, Title: a.Title, Summary: deref(a.Description), Updated: a.VersionCreatedAt,
-			Body: helpcenters.ArticleBlocks(a.BodyMarkdown),
+			Body: helpcenters.ArticleBlocks(a.BodyMarkdown, root),
 		})
 		if len(out.Popular) < 5 {
 			out.Popular = append(out.Popular, a.Slug)
