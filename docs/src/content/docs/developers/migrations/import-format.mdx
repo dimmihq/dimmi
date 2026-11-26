@@ -1,0 +1,169 @@
+---
+title: "Import format"
+description: "Every kind of record the migrations API reads, version 1: its fields, how it is matched, and how records name each other."
+---
+
+The import format is dimmi's own shape for history from another help desk. A client translates the other tool's records into these kinds and sends them to the [migrations API](/developers/migrations/migrations-api/).
+
+The format is versioned. This page is **version 1**, and its JSON Schema is published at [`/docs/migrations/import-format-v1.schema.json`](/docs/migrations/import-format-v1.schema.json). New optional fields may join version 1; nothing in it is removed or changed.
+
+## What every record carries
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `source_id` | string | The record's stable id in the other tool, 1 to 255 characters. Required. |
+| `source_updated_at` | time | When it last changed there. Optional. |
+
+- **References** name another record by its `source_id`, in fields ending in `_ref` or `_refs`.
+- **Times** are RFC 3339, such as `2024-03-03T09:00:00Z`.
+- **Bodies** are Markdown, except a saved reply's, which is dimmi Liquid.
+- **Unknown fields** are ignored, so a newer client still works with an older server.
+
+## Authors
+
+Entries, notes, articles and tickets name who wrote them:
+
+| `type` | Also send | Shown as |
+| --- | --- | --- |
+| `teammate` | `ref`: a teammate's `source_id` | The member, or their imported name when they are not a member here yet |
+| `contact` | `ref`: a contact's `source_id` | The customer |
+| `ai_agent` | `label`, such as `Fin (imported)` | An AI agent with that label |
+| `system` | nothing | dimmi |
+
+## Directory kinds
+
+| Kind | Required fields | Matched to the workspace by |
+| --- | --- | --- |
+| `teammate` | `email` | Email, any member status. A teammate with no member here comes back `unsupported`. |
+| `team` | `name`; `member_refs` | Name. Members are added when they are active here. |
+| `tag` | `name`; `color` | Name, ignoring case. |
+| `attribute_definition` | `object` (`contact`, `company`, `conversation`), `key`, `type` | Key. Types: `string`, `number`, `boolean`, `date`, `list` with up to 200 `options`. |
+| `company` | `name`, `external_id`, `domain`, `custom_attributes`, `tag_refs`, `created_at` | `external_id`, then `domain`. |
+| `contact` | see below | `external_id`, then `email`. |
+| `contact_note` | `contact_ref` or `company_ref`, `author`, `body`, `created_at` | Its `source_id`. |
+
+A **contact** takes `kind` (`user` or `lead`), `external_id`, `email`, `name`, `phone`, `avatar_url`, `locale`, `timezone`, `location` (`city`, `region`, `country`), `first_seen_at`, `last_seen_at`, `created_at`, `custom_attributes`, `tag_refs` and `companies`.
+
+`companies` is a list of `{"ref": "co-1", "default": true}`, with at most one default. `external_id` is your own id of the user, the one the messenger signs, so signed-in identity keeps working after the switch.
+
+## Help center kinds
+
+| Kind | Fields |
+| --- | --- |
+| `help_center` | `name`, `default_locale`, `locales` |
+| `collection` | `help_center_ref`, `parent_ref`, `name`, `description`, `translations` |
+| `article` | `help_center_ref`, `collection_ref`, `title`, `description`, `body`, `state` (`published` or `draft`), `visibility` (`public` or `agent_only`), `author`, `created_at`, `updated_at`, `redirects`, `translations`, `blocks` |
+| `snippet` | `title`, `body`, `help_center_ref`, `author`, `created_at` |
+
+- **Help centers** reuse the one with the same name, or fill the workspace's default help center while it has no articles.
+- **Collections** deeper than 3 levels fold into the deepest level, named `Parent / Child`.
+- **Redirects** are old addresses or paths, such as `https://help.acme.test/en/articles/1-refunds`; each leads to the new article for good.
+- **Snippets** become articles only teammates see.
+
+## Saved replies and schedules
+
+A `saved_reply` takes `title`, `body`, `shortcut`, `shared`, `owner_ref` and `actions`. Each action has a `type`:
+
+| `type` | Also send |
+| --- | --- |
+| `tag` | `tag_ref` |
+| `assign` | `assignee_ref`, `team_ref` |
+| `status` | `status`: `open`, `closed` or `snoozed` |
+| `priority` | `status`: the priority |
+
+A `schedule` takes `name`, `timezone` (such as `Europe/Paris`), `default`, `weekly` and `holidays`:
+
+```json
+{
+  "source_id": "hours-1",
+  "name": "Office hours",
+  "timezone": "Europe/Paris",
+  "weekly": [{"day": "mon", "start": "09:00", "end": "17:00"}],
+  "holidays": [{"date": "2024-12-25", "name": "Christmas", "yearly": true}]
+}
+```
+
+## Conversations
+
+A conversation carries every entry it had and the state it ended in:
+
+```json
+{
+  "source_id": "215",
+  "contact_ref": "6512ab",
+  "channel": "email",
+  "subject": "Refund for order 1042",
+  "created_at": "2024-03-03T09:00:00Z",
+  "status": "closed",
+  "priority": "high",
+  "assignee_ref": "adm-7",
+  "tag_refs": ["vip"],
+  "rating": {"score": 5, "remark": "Quick and kind", "created_at": "2024-03-03T10:00:00Z"},
+  "entries": [
+    {"source_id": "p1", "type": "message", "created_at": "2024-03-03T09:00:00Z", "author": {"type": "contact", "ref": "6512ab"},
+     "body": "Where is my refund?", "email": {"message_id": "<p1@mail.acme.test>"}},
+    {"source_id": "p2", "type": "event", "created_at": "2024-03-03T09:02:00Z", "author": {"type": "teammate", "ref": "adm-7"},
+     "event": {"type": "assignment", "assignee_ref": "adm-7"}},
+    {"source_id": "p3", "type": "reply", "created_at": "2024-03-03T09:05:00Z", "author": {"type": "teammate", "ref": "adm-7"},
+     "body": "Refunded, here is the receipt.", "attachments": ["att_01jc8q3x7m2n4p5r6s7t8v9w0y"]},
+    {"source_id": "p4", "type": "event", "created_at": "2024-03-03T09:06:00Z", "author": {"type": "teammate", "ref": "adm-7"},
+     "event": {"type": "status", "status": "closed"}}
+  ]
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `contact_ref` | The customer. Required. |
+| `channel` | Channel type, such as `widget`, `email` or `whatsapp`. The conversation lands on a channel of that type in the default inbox, else its API channel. Nothing is sent on it. |
+| `source` | `type`: the other tool's name for the channel; `visitor_ref`: the anonymous visitor who started it. |
+| `status`, `snoozed_until`, `priority`, `assignee_ref`, `team_ref`, `tag_refs` | The state it ended in, applied after the entries when sent. |
+| `rating` | `score` 1 to 5, `remark`, `created_at`. Kept only on a closed conversation. |
+| `entries` | 1 to 5,000 entries, at least one a `message` or `reply`. |
+
+### Entries
+
+Every entry has a `source_id` unique in its conversation, a `type`, a `created_at` and an `author`.
+
+- **`message`** is the customer's, **`reply`** a teammate's or AI agent's, **`note`** an internal note. Each takes `body`, `attachments` (file ids), `email` (`message_id`, `in_reply_to`, `references`) and `redacted`.
+- **`event`** takes an `event` object, below.
+
+An entry older than the conversation's latest is written at the latest time, with a warning.
+
+### Events
+
+| `event.type` | Also send | What happens |
+| --- | --- | --- |
+| `assignment` | `assignee_ref`, empty for nobody | Assigns the teammate. One not active here joins the timeline as text. |
+| `team_assignment` | `team_ref`, empty for none | Assigns the team. |
+| `status` | `status`; `until` for `snoozed` | Opens, closes or snoozes it at that time. |
+| `priority` | `priority`: `none`, `low`, `medium`, `high`, `urgent` | Sets the priority. |
+| `tag` | `added_tag_refs`, `removed_tag_refs` | Tags and untags it. |
+| `attribute` | `attribute`, `value` | Not applied yet; comes back as a warning. |
+| `custom` | `raw_type`, `text` | Joins the timeline with the other tool's own type and text, so nothing is dropped. |
+
+## Tickets
+
+A `ticket_type` takes `kind` (`customer`, `back_office` or `tracker`), `name`, `description`, `fields` and `states`. The first state is where new tickets start.
+
+| Part | Fields |
+| --- | --- |
+| `states[]` | `source_id` unique in the type, `group` (`submitted`, `in_progress`, `waiting_customer`, `waiting_team`, `resolved`), `name`, `customer_label` |
+| `fields[]` | `source_id`, `key`, `label`, `type` (`string`, `text`, `list`, or a ticket field type such as `number` or `date`), `options`, `customer_visible` |
+
+A `ticket` takes `ticket_type_ref`, `state_ref`, `title`, `description`, `values` by field key, `priority`, `contact_ref`, `assignee_ref`, `conversation_ref`, `author`, `created_at`, `updated_at` and `state_history`, a list of `{"state_ref": "...", "at": "..."}` oldest first.
+
+`state_ref` and `state_history` name states by their `source_id` within the ticket's type. The ticket starts in its first state at `created_at`, then moves through each later state at its time.
+
+## Results
+
+| `status` | Meaning |
+| --- | --- |
+| `created` | Applied for the first time. |
+| `updated` | Applied again with changes. |
+| `unchanged` | Sent before exactly as it is, and skipped. |
+| `deferred` | Waits for the records in `waiting_for`. |
+| `failed` | Not applied; `error` says why. |
+| `unsupported` | Not applied, as dimmi cannot apply it yet; send it again later. |
+
+`warnings` list fields left out, with a `code` such as `not_supported_yet`, `teammate_unavailable` or `file_unavailable`. `conflicts` list fields a teammate changed in dimmi, which a sync left as they are.

@@ -3,7 +3,7 @@ title: "API rate limits"
 description: "See the default rate limit windows for API tokens and workspaces, and the headers to inspect on 429 responses."
 ---
 
-dimmi enforces four rate limit windows. Crossing any window returns `429` with `code: "too_many_requests"`.
+dimmi enforces five rate limit windows. Crossing any window returns `429` with `code: "too_many_requests"`.
 
 ## Default windows
 
@@ -15,6 +15,9 @@ Self-hosted installs can tune these in [configuration options](/self-hosting/con
 | `token` | Single API token | 600 requests / minute |
 | `workspace` | All API tokens in a workspace | 6,000 requests / minute |
 | `user` | Signed-in user (session auth) | 1,200 requests / minute |
+| `migration` | All [migrations API](/developers/migrations/migrations-api/) requests of a workspace | 1,200 requests / minute |
+
+Migrations API requests count only against `migration`, so a migration never slows your other integrations.
 
 Any IP address that sends 60 rejected token requests in 1 minute also receives `429` until the minute resets.
 

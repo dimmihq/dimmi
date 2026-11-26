@@ -1,0 +1,1658 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trydimmi.com/docs/migrations/import-format-v1.schema.json",
+  "title": "dimmi import format, version 1",
+  "description": "One batch of records sent to POST /api/v1/migrations/{migration}/records.",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "teammate",
+        "team",
+        "tag",
+        "attribute_definition",
+        "company",
+        "contact",
+        "contact_note",
+        "ticket_type",
+        "help_center",
+        "collection",
+        "article",
+        "snippet",
+        "saved_reply",
+        "schedule",
+        "conversation",
+        "ticket"
+      ]
+    },
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100
+    }
+  },
+  "required": [
+    "kind",
+    "records"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "teammate"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/teammate"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "team"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/team"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "tag"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/tag"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "attribute_definition"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/attribute_definition"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "company"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/company"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "contact"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/contact"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "contact_note"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/contact_note"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "ticket_type"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/ticket_type"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "help_center"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/help_center"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "collection"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/collection"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "article"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/article"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "snippet"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/snippet"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "saved_reply"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/saved_reply"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "schedule"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/schedule"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "conversation"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/conversation"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "ticket"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "items": {
+              "$ref": "#/$defs/ticket"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "author": {
+      "type": "object",
+      "description": "Who wrote an entry or made a change.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "teammate, contact, ai_agent or system.",
+          "enum": [
+            "teammate",
+            "contact",
+            "ai_agent",
+            "system"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "description": "source_id of the teammate or contact; required for those types."
+        },
+        "label": {
+          "type": "string",
+          "description": "Name an AI agent showed, such as \"Fin (imported)\"."
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    "translation": {
+      "type": "object",
+      "description": "Text in another language.",
+      "properties": {
+        "locale": {
+          "type": "string",
+          "description": "Language tag, such as fr or pt-BR."
+        },
+        "name": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string",
+          "description": "Markdown."
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "published",
+            "draft"
+          ]
+        },
+        "author": {
+          "$ref": "#/$defs/author"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "locale"
+      ]
+    },
+    "teammate": {
+      "type": "object",
+      "description": "A person who worked in the source tool. Matched by email to a member of the workspace.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "name": {
+          "type": "string"
+        },
+        "avatar_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "owner",
+            "admin",
+            "member"
+          ]
+        }
+      },
+      "required": [
+        "source_id",
+        "email"
+      ],
+      "additionalProperties": true
+    },
+    "team": {
+      "type": "object",
+      "description": "A group of teammates. Matched by name.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "name": {
+          "type": "string"
+        },
+        "member_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "source_id of a teammate record.",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        }
+      },
+      "required": [
+        "source_id",
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "tag": {
+      "type": "object",
+      "description": "A label on contacts, companies and conversations. Matched by name, ignoring case.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "attribute_definition": {
+      "type": "object",
+      "description": "A custom field. Matched by key.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "object": {
+          "type": "string",
+          "enum": [
+            "contact",
+            "company",
+            "conversation"
+          ]
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "string",
+            "number",
+            "boolean",
+            "date",
+            "list"
+          ]
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 200
+        },
+        "description": {
+          "type": "string"
+        },
+        "archived": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "source_id",
+        "object",
+        "key",
+        "type"
+      ],
+      "additionalProperties": true
+    },
+    "company": {
+      "type": "object",
+      "description": "An organisation. Matched by external_id, then domain.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "external_id": {
+          "type": "string",
+          "description": "Your own id of the company."
+        },
+        "name": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "custom_attributes": {
+          "type": "object"
+        },
+        "tag_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "source_id of a tag record.",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "source_id"
+      ],
+      "additionalProperties": true
+    },
+    "contact": {
+      "type": "object",
+      "description": "A customer. Matched by external_id, then email.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "user",
+            "lead"
+          ]
+        },
+        "external_id": {
+          "type": "string",
+          "description": "Your own id of the user, as the messenger signs it."
+        },
+        "email": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "avatar_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "locale": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string"
+            },
+            "region": {
+              "type": "string"
+            },
+            "country": {
+              "type": "string"
+            }
+          }
+        },
+        "first_seen_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_seen_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "custom_attributes": {
+          "type": "object"
+        },
+        "tag_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "source_id of a tag record.",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "companies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ref": {
+                "type": "string",
+                "description": "source_id of a company record.",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "default": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "ref"
+            ]
+          }
+        }
+      },
+      "required": [
+        "source_id"
+      ],
+      "additionalProperties": true
+    },
+    "contact_note": {
+      "type": "object",
+      "description": "A teammate's note about one contact or one company.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "contact_ref": {
+          "type": "string",
+          "description": "source_id of a contact record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "company_ref": {
+          "type": "string",
+          "description": "source_id of a company record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "author": {
+          "$ref": "#/$defs/author"
+        },
+        "body": {
+          "type": "string",
+          "description": "Markdown, up to 10,000 characters."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "source_id",
+        "author",
+        "body",
+        "created_at"
+      ],
+      "additionalProperties": true
+    },
+    "ticket_type": {
+      "type": "object",
+      "description": "A kind of ticket with its fields and states; the first state is where tickets start.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "customer",
+            "back_office",
+            "tracker"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source_id": {
+                "type": "string"
+              },
+              "key": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,39}$"
+              },
+              "label": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "description": "string, text, list, or a ticket field type such as number, decimal, boolean, date, single_choice, multiple_choice."
+              },
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "customer_visible": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "source_id",
+              "key"
+            ]
+          }
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source_id": {
+                "type": "string",
+                "description": "Unique within the type."
+              },
+              "group": {
+                "type": "string",
+                "enum": [
+                  "submitted",
+                  "in_progress",
+                  "waiting_customer",
+                  "waiting_team",
+                  "resolved"
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "customer_label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "source_id",
+              "group"
+            ]
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "source_id",
+        "kind",
+        "name",
+        "states"
+      ],
+      "additionalProperties": true
+    },
+    "ticket": {
+      "type": "object",
+      "description": "A ticket with the states it went through.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "ticket_type_ref": {
+          "type": "string",
+          "description": "source_id of a ticket_type record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "state_ref": {
+          "type": "string",
+          "description": "source_id of one of the type's states."
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "values": {
+          "type": "object",
+          "description": "Field values by key."
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "urgent"
+          ]
+        },
+        "contact_ref": {
+          "type": "string",
+          "description": "source_id of a contact record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "assignee_ref": {
+          "type": "string",
+          "description": "source_id of a teammate record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "conversation_ref": {
+          "type": "string",
+          "description": "source_id of a conversation record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "author": {
+          "$ref": "#/$defs/author"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "state_history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "state_ref": {
+                "type": "string"
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "state_ref",
+              "at"
+            ]
+          }
+        }
+      },
+      "required": [
+        "source_id",
+        "ticket_type_ref",
+        "state_ref",
+        "title",
+        "created_at"
+      ],
+      "additionalProperties": true
+    },
+    "help_center": {
+      "type": "object",
+      "description": "A help center. Matched by name; the first one fills the workspace's empty default help center.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "name": {
+          "type": "string"
+        },
+        "default_locale": {
+          "type": "string"
+        },
+        "locales": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "source_id",
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "collection": {
+      "type": "object",
+      "description": "A group of articles, under a parent or at the top.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "help_center_ref": {
+          "type": "string",
+          "description": "source_id of a help_center record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "parent_ref": {
+          "type": "string",
+          "description": "source_id of a collection record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "translations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/translation"
+          }
+        }
+      },
+      "required": [
+        "source_id",
+        "help_center_ref",
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "article": {
+      "type": "object",
+      "description": "A help center article.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "help_center_ref": {
+          "type": "string",
+          "description": "source_id of a help_center record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "collection_ref": {
+          "type": "string",
+          "description": "source_id of a collection record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string",
+          "description": "Markdown. Pictures uploaded to the migration are named as dimmi-file:<file id>."
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "published",
+            "draft"
+          ]
+        },
+        "visibility": {
+          "type": "string",
+          "enum": [
+            "public",
+            "agent_only"
+          ]
+        },
+        "author": {
+          "$ref": "#/$defs/author"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "redirects": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Old address or path that should lead to the article."
+          }
+        },
+        "translations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/translation"
+          }
+        },
+        "blocks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Kinds of block the body uses that Markdown cannot say yet."
+          }
+        }
+      },
+      "required": [
+        "source_id",
+        "help_center_ref",
+        "title",
+        "body"
+      ],
+      "additionalProperties": true
+    },
+    "snippet": {
+      "type": "object",
+      "description": "Reusable text; becomes an article only teammates see.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "help_center_ref": {
+          "type": "string",
+          "description": "source_id of a help_center record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string",
+          "description": "Markdown."
+        },
+        "author": {
+          "$ref": "#/$defs/author"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "source_id",
+        "title",
+        "body"
+      ],
+      "additionalProperties": true
+    },
+    "saved_reply": {
+      "type": "object",
+      "description": "A canned answer and what sending it does.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string",
+          "description": "dimmi Liquid, such as Hi {{ contact.name }}."
+        },
+        "shortcut": {
+          "type": "string"
+        },
+        "shared": {
+          "type": "boolean"
+        },
+        "owner_ref": {
+          "type": "string",
+          "description": "source_id of a teammate record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "tag",
+                  "assign",
+                  "status",
+                  "priority"
+                ]
+              },
+              "tag_ref": {
+                "type": "string",
+                "description": "source_id of a tag record.",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "assignee_ref": {
+                "type": "string",
+                "description": "source_id of a teammate record.",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "team_ref": {
+                "type": "string",
+                "description": "source_id of a team record.",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "status": {
+                "type": "string",
+                "description": "A status (open, closed, snoozed) or, for priority, a priority."
+              }
+            },
+            "required": [
+              "type"
+            ]
+          }
+        }
+      },
+      "required": [
+        "source_id",
+        "title",
+        "body"
+      ],
+      "additionalProperties": true
+    },
+    "schedule": {
+      "type": "object",
+      "description": "Office hours with days off.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "name": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA time zone, such as Europe/Paris."
+        },
+        "default": {
+          "type": "boolean"
+        },
+        "weekly": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "day": {
+                "type": "string",
+                "enum": [
+                  "mon",
+                  "tue",
+                  "wed",
+                  "thu",
+                  "fri",
+                  "sat",
+                  "sun"
+                ]
+              },
+              "start": {
+                "type": "string",
+                "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+              },
+              "end": {
+                "type": "string",
+                "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+              }
+            },
+            "required": [
+              "day",
+              "start",
+              "end"
+            ]
+          }
+        },
+        "holidays": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "format": "date"
+              },
+              "name": {
+                "type": "string"
+              },
+              "yearly": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "date"
+            ]
+          }
+        }
+      },
+      "required": [
+        "source_id",
+        "name",
+        "timezone",
+        "weekly"
+      ],
+      "additionalProperties": true
+    },
+    "event": {
+      "type": "object",
+      "description": "What an event entry did.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "assignment",
+            "team_assignment",
+            "status",
+            "priority",
+            "tag",
+            "attribute",
+            "custom"
+          ]
+        },
+        "assignee_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Teammate assigned; empty or null for nobody."
+        },
+        "team_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Team assigned; empty or null for none."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "closed",
+            "snoozed"
+          ]
+        },
+        "until": {
+          "type": "string",
+          "format": "date-time",
+          "description": "End of a snooze."
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "urgent"
+          ]
+        },
+        "added_tag_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "source_id of a tag record.",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "removed_tag_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "source_id of a tag record.",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "attribute": {
+          "type": "string",
+          "description": "Key of a conversation attribute."
+        },
+        "value": {},
+        "raw_type": {
+          "type": "string",
+          "description": "The source tool's own name for a custom event."
+        },
+        "text": {
+          "type": "string",
+          "description": "What a custom event says."
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    "entry": {
+      "type": "object",
+      "description": "One entry of a conversation.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Unique within the conversation."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "message",
+            "reply",
+            "note",
+            "event"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "author": {
+          "$ref": "#/$defs/author"
+        },
+        "body": {
+          "type": "string",
+          "description": "Markdown."
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "File id a file upload returned."
+          }
+        },
+        "email": {
+          "type": "object",
+          "properties": {
+            "message_id": {
+              "type": "string"
+            },
+            "in_reply_to": {
+              "type": "string"
+            },
+            "references": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "redacted": {
+          "type": "boolean"
+        },
+        "event": {
+          "$ref": "#/$defs/event"
+        }
+      },
+      "required": [
+        "source_id",
+        "type",
+        "created_at",
+        "author"
+      ]
+    },
+    "conversation": {
+      "type": "object",
+      "description": "A conversation with every entry, oldest first, and the state it ended in.",
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "description": "Stable id of the record in the source tool.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "source_updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the record last changed in the source tool."
+        },
+        "contact_ref": {
+          "type": "string",
+          "description": "source_id of a contact record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "participant_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "source_id of a contact record.",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "channel": {
+          "type": "string",
+          "description": "Channel type, such as widget, email, whatsapp or api."
+        },
+        "subject": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "The source tool's name for the channel."
+            },
+            "visitor_ref": {
+              "type": "string",
+              "description": "Reference to the anonymous visitor who started it."
+            }
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "closed",
+            "snoozed"
+          ]
+        },
+        "snoozed_until": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "none",
+            "low",
+            "medium",
+            "high",
+            "urgent"
+          ]
+        },
+        "assignee_ref": {
+          "type": "string",
+          "description": "source_id of a teammate record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "team_ref": {
+          "type": "string",
+          "description": "source_id of a team record.",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "tag_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "source_id of a tag record.",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "custom_attributes": {
+          "type": "object"
+        },
+        "rating": {
+          "type": "object",
+          "properties": {
+            "score": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            },
+            "remark": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "score",
+            "created_at"
+          ]
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entry"
+          },
+          "minItems": 1,
+          "maxItems": 5000
+        }
+      },
+      "required": [
+        "source_id",
+        "contact_ref",
+        "created_at",
+        "entries"
+      ],
+      "additionalProperties": true
+    }
+  }
+}
