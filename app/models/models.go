@@ -2147,6 +2147,48 @@ type MessageReaction struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type Migration struct {
+	ID                  ids.UUID   `json:"id"`
+	WorkspaceID         ids.UUID   `json:"workspace_id"`
+	Source              string     `json:"source"`
+	SourceAccount       string     `json:"source_account"`
+	Name                *string    `json:"name"`
+	FormatVersion       int32      `json:"format_version"`
+	Status              string     `json:"status"`
+	CreatedByMemberID   *ids.UUID  `json:"created_by_member_id"`
+	LastRecordAt        *time.Time `json:"last_record_at"`
+	RollbackByMemberID  *ids.UUID  `json:"rollback_by_member_id"`
+	RollbackRequestedAt *time.Time `json:"rollback_requested_at"`
+	RollbackFinishedAt  *time.Time `json:"rollback_finished_at"`
+	RollbackRemoved     int32      `json:"rollback_removed"`
+	RollbackError       *string    `json:"rollback_error"`
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
+}
+
+type MigrationRecord struct {
+	ID              ids.UUID        `json:"id"`
+	WorkspaceID     ids.UUID        `json:"workspace_id"`
+	MigrationID     ids.UUID        `json:"migration_id"`
+	Kind            string          `json:"kind"`
+	SourceID        string          `json:"source_id"`
+	Status          string          `json:"status"`
+	RecordID        *ids.UUID       `json:"record_id"`
+	Created         bool            `json:"created"`
+	Label           *string         `json:"label"`
+	ContentHash     string          `json:"content_hash"`
+	SourceUpdatedAt *time.Time      `json:"source_updated_at"`
+	Payload         json.RawMessage `json:"payload"`
+	WaitingFor      json.RawMessage `json:"waiting_for"`
+	State           json.RawMessage `json:"state"`
+	Error           json.RawMessage `json:"error"`
+	Warnings        json.RawMessage `json:"warnings"`
+	Conflicts       json.RawMessage `json:"conflicts"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+	UndoneAt        *time.Time      `json:"undone_at"`
+}
+
 type Notification struct {
 	ID             ids.UUID        `json:"id"`
 	NotifiableType string          `json:"notifiable_type"`

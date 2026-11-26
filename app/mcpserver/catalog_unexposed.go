@@ -32,6 +32,7 @@ func unexposedDocs() map[string]Doc {
 		unexposedDocsFromIntegrationsMemberGrantsStore(),
 		unexposedDocsFromMagicLinksStore(),
 		unexposedDocsFromMembersSignInLockDestroy(),
+		unexposedDocsFromMigrationsRecordsStore(),
 		unexposedDocsFromNotificationUnsubscribesDestroy(),
 		unexposedDocsFromOauthAuthorizationShow(),
 		unexposedDocsFromOrganizationDomainsChecksStore(),

@@ -294,6 +294,7 @@ off.
 */
 func (u *undo) writer(ctx context.Context) (*tickets.Writer, error) {
 	r := &run{importer: u.importer, row: u.row, src: named(u.row.Source)}
+	r.w = u.importer.writerFor(r)
 
 	return r.writer(ctx, u.tx, u.importer.Clock.Now())
 }

@@ -13,12 +13,14 @@ package config
 
 /*
 APILimitsConfig holds requests a minute per token, per signed-in person,
-per workspace's tokens together, and per address that keeps sending bad
-credentials.
+per workspace's tokens together, per address that keeps sending bad
+credentials, and per workspace for migrations from other tools, which
+have a minute of their own.
 */
 type APILimitsConfig struct {
 	TokenPerMinute         int64 `default:"600"  koanf:"token_per_minute"`
 	UserPerMinute          int64 `default:"1200" koanf:"user_per_minute"`
 	WorkspacePerMinute     int64 `default:"6000" koanf:"workspace_per_minute"`
 	BadCredentialPerMinute int   `default:"60"   koanf:"bad_credential_per_minute"`
+	MigrationPerMinute     int64 `default:"1200" koanf:"migration_per_minute"`
 }

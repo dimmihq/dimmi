@@ -22,7 +22,7 @@ func peopleDocs() map[string]Doc {
 	for _, part := range []map[string]Doc{
 		contactWriteDocs(), contactRemovalDocs(), contactInsightDocs(), contactCompanyDocs(),
 		companyDocs(), companyChangeDocs(),
-		exportErasureAudienceDocs(), attributeEventDocs(), importDocs(), importRollbackDocs(),
+		exportErasureAudienceDocs(), attributeEventDocs(), importDocs(), importRollbackDocs(), migrationDocs(),
 	} {
 		maps.Copy(out, part)
 	}

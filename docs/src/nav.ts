@@ -188,6 +188,14 @@ export const sidebar: Group[] = [
     ],
   },
   {
+    label: "Migrations",
+    collapsed: true,
+    items: [
+      { label: "Migrations API", link: "/developers/migrations/migrations-api/" },
+      { label: "Import format", link: "/developers/migrations/import-format/" },
+    ],
+  },
+  {
     label: "SDKs",
     collapsed: true,
     items: [

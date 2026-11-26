@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -105,6 +106,7 @@ func (i *Importer) Import(ctx context.Context, m authz.Membership, src Source) (
 	}
 
 	r := &run{importer: i, row: row, src: src, made: map[string]madeTicket{}}
+	r.w = i.writerFor(r)
 
 	runErr := r.all(ctx)
 
@@ -118,7 +120,7 @@ type run struct {
 	importer *Importer
 	row      models.TicketImport
 	src      Source
-	mapped   mapping
+	w        *Writer
 	made     map[string]madeTicket
 	pending  []RowError
 }
@@ -272,6 +274,26 @@ type touched struct {
 	kind, external string
 	id             ids.UUID
 	created        bool
+}
+
+/*
+writerFor returns the writer of the run's tickets, keeping what it
+touches on the import.
+*/
+func (i *Importer) writerFor(r *run) *Writer {
+	name := r.src.Name()
+
+	return &Writer{
+		Clock: i.Clock, Events: i.Events, Tickets: i.Tickets, WorkspaceID: r.row.WorkspaceID,
+		Actor: strings.ToUpper(name[:1]) + name[1:], Ledger: r,
+	}
+}
+
+/*
+Keep keeps one record the import made or found.
+*/
+func (r *run) Keep(ctx context.Context, q *models.Queries, k Kept) error {
+	return r.record(ctx, q, touched{kind: k.Kind, external: k.External, id: k.ID, created: k.Created})
 }
 
 /*

@@ -109,6 +109,8 @@ func bookkeepingTables() map[string]string {
 		"import_changes":                "bookkeeping: what an import can undo",
 		"ticket_imports":                "bookkeeping: ticket imports",
 		"ticket_import_records":         "bookkeeping: what a ticket import can undo",
+		"migrations":                    "bookkeeping: migrations from other tools",
+		"migration_records":             "bookkeeping: what a migration brought and can undo",
 		"channel_contact_states":        "state: reply windows per channel",
 		"channel_conversation_posts":    "state: where a channel posted a conversation",
 		"channel_message_refs":          "state: providers' ids of sent messages",
