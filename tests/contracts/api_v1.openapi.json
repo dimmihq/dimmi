@@ -67409,6 +67409,7 @@
     },
     "/migrations": {
       "get": {
+        "description": "Lists the workspace's migrations from other tools with where each stands. Returns up to 100 migrations, newest first.",
         "operationId": "migrations.index",
         "responses": {
           "200": {
@@ -67432,11 +67433,13 @@
             "description": "Error"
           }
         },
+        "summary": "List migrations",
         "x-abilities": [
           "settings:write"
         ]
       },
       "post": {
+        "description": "Starts a migration of history from another tool for one account there, or returns the one under way for the same source and account. Records are sent by the dimmi-migrate CLI. Needs imports:manage. Returns the migration with its progress.",
         "operationId": "migrations.store",
         "requestBody": {
           "content": {
@@ -67470,6 +67473,7 @@
             "description": "Error"
           }
         },
+        "summary": "Start or resume a migration",
         "x-abilities": [
           "settings:write"
         ]
@@ -67477,10 +67481,11 @@
     },
     "/migrations/{migration}": {
       "get": {
+        "description": "Reads one migration: how many records of each kind were applied, wait for another record, failed or are not supported yet, and the latest problems with why. Returns the migration with counts per kind and its latest problems.",
         "operationId": "migrations.show",
         "parameters": [
           {
-            "description": "Migration: text.",
+            "description": "The migration's id (mig_...), as starting or listing migrations returns it. Such as mig_01jc8q3x7m2n4p5r6s7t8v9w0y.",
             "in": "path",
             "name": "migration",
             "required": true,
@@ -67511,6 +67516,7 @@
             "description": "Error"
           }
         },
+        "summary": "Get a migration",
         "x-abilities": [
           "settings:write"
         ]
@@ -67569,10 +67575,11 @@
     },
     "/migrations/{migration}/rollbacks": {
       "post": {
+        "description": "Undoes everything the migration created, in the background: conversations, contacts, articles and tickets go to the trash, tags, notes and replies are deleted. Records others now use are kept. Needs imports:rollback. Returns the migration with status rolling_back; poll it until rolled_back.",
         "operationId": "migrations.rollbacks.store",
         "parameters": [
           {
-            "description": "Migration: text.",
+            "description": "The migration (mig_...) to undo, as starting or listing migrations returns it. Such as mig_01jc8q3x7m2n4p5r6s7t8v9w0y.",
             "in": "path",
             "name": "migration",
             "required": true,
@@ -67603,6 +67610,7 @@
             "description": "Error"
           }
         },
+        "summary": "Undo a migration",
         "x-abilities": [
           "settings:write"
         ]
