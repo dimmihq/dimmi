@@ -140,7 +140,7 @@ func secure(next http.Handler) http.Handler {
 		h := w.Header()
 		h.Set("Cache-Control", "no-store")
 		h.Set("X-Frame-Options", "DENY")
-		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("Referrer-Policy", "same-origin")
 		h.Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https:; base-uri 'none'; frame-ancestors 'none'")
 		next.ServeHTTP(w, r)
 	})
@@ -194,12 +194,21 @@ func (s *Server) home(w http.ResponseWriter, r *http.Request) {
 }
 
 /*
-sameOrigin refuses form posts from any other page.
+sameOrigin refuses form posts from any other page. Browsers send the
+page's origin with a post; some send "null" or nothing, and then
+Sec-Fetch-Site still says whether the post came from this page.
 */
 func (s *Server) sameOrigin(r *http.Request) bool {
-	o := r.Header.Get("Origin")
+	switch o := r.Header.Get("Origin"); o {
+	case s.origin:
+		return true
+	case "", "null":
+		site := r.Header.Get("Sec-Fetch-Site")
 
-	return o == "" || o == s.origin
+		return site == "same-origin" || site == ""
+	default:
+		return false
+	}
 }
 
 func (s *Server) startDimmi(w http.ResponseWriter, r *http.Request) {

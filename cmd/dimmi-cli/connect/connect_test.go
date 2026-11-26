@@ -59,4 +59,24 @@ func TestPageIsSecretAndRefusesOtherOrigins(t *testing.T) {
 	if _, err := http.DefaultClient.Do(req); err != nil || saved != "abc" {
 		t.Fatalf("the page's own post was refused: %v saved %q", err, saved)
 	}
+
+	saved = ""
+	req, _ = http.NewRequest(http.MethodPost, addr+"source", strings.NewReader("region=us&token=def"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "null")
+	req.Header.Set("Sec-Fetch-Site", "same-origin")
+
+	if _, err := http.DefaultClient.Do(req); err != nil || saved != "def" {
+		t.Fatalf("a same-origin post with a null origin was refused: %v saved %q", err, saved)
+	}
+
+	saved = ""
+	req, _ = http.NewRequest(http.MethodPost, addr+"source", strings.NewReader("region=us&token=ghi"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "null")
+	req.Header.Set("Sec-Fetch-Site", "cross-site")
+
+	if res, err := http.DefaultClient.Do(req); err != nil || res.StatusCode != http.StatusForbidden || saved != "" {
+		t.Fatalf("a cross-site post with a null origin was taken: %v saved %q", err, saved)
+	}
 }
