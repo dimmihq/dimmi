@@ -36,18 +36,19 @@ reopenDays is the reopen window of a type an import adds.
 const reopenDays = 7
 
 /*
-mapping is the other tool's setup in the workspace's terms.
+Mapping is the other tool's setup in the workspace's terms: its types
+and states by their ids there.
 */
-type mapping struct {
-	types  map[string]models.TicketType
-	states map[string]ids.UUID
+type Mapping struct {
+	Types  map[string]models.TicketType
+	States map[string]ids.UUID
 }
 
 /*
 setupStep is the setup being mapped in one transaction.
 */
 type setupStep struct {
-	run   *run
+	w     *Writer
 	q     *models.Queries
 	setup tickets.Setup
 	added counts
@@ -57,36 +58,45 @@ type setupStep struct {
 mapSetup maps the catalog in one transaction.
 */
 func (r *run) mapSetup(ctx context.Context, catalog Catalog) error {
-	r.mapped = mapping{types: map[string]models.TicketType{}, states: map[string]ids.UUID{}}
-
 	var added counts
 
 	err := r.importer.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		w, err := r.writer(ctx, tx, r.importer.Clock.Now())
-		if err != nil {
-			return err
-		}
+		var err error
+		added, err = r.w.MapSetup(ctx, tx, catalog)
 
-		s := &setupStep{run: r, q: w.Q, setup: w.Setup}
-		if err := s.states(ctx, catalog.States); err != nil {
-			return err
-		}
-
-		for _, t := range catalog.Types {
-			if err := s.kind(ctx, t, catalog.States); err != nil {
-				return err
-			}
-		}
-
-		added = s.added
-
-		return nil
+		return err
 	})
 	if err != nil {
 		return err
 	}
 
 	return r.progress(ctx, added)
+}
+
+/*
+MapSetup maps the catalog inside the transaction, adding to the
+writer's mapping, and counts what it added.
+*/
+func (w *Writer) MapSetup(ctx context.Context, tx *database.Tx, catalog Catalog) (counts, error) {
+	w.ensureMapping()
+
+	tw, err := w.TicketWriter(ctx, tx, w.Clock.Now())
+	if err != nil {
+		return counts{}, err
+	}
+
+	s := &setupStep{w: w, q: tw.Q, setup: tw.Setup}
+	if err := s.states(ctx, catalog.States); err != nil {
+		return s.added, err
+	}
+
+	for _, t := range catalog.Types {
+		if err := s.kind(ctx, t, catalog.States); err != nil {
+			return s.added, err
+		}
+	}
+
+	return s.added, nil
 }
 
 /*
@@ -103,8 +113,8 @@ func (s *setupStep) states(ctx context.Context, states []State) error {
 			return have.ArchivedAt == nil && have.StateGroup == st.Group && strings.EqualFold(have.Name, name)
 		})
 		if i >= 0 {
-			s.run.mapped.states[st.ExternalID] = s.setup.States[i].ID
-			if err := s.run.record(ctx, s.q, touched{
+			s.w.Mapping.States[st.ExternalID] = s.setup.States[i].ID
+			if err := s.w.keep(ctx, s.q, touched{
 				kind: "state", external: st.ExternalID,
 				id: s.setup.States[i].ID,
 			}); err != nil {
@@ -132,18 +142,18 @@ func (s *setupStep) addState(ctx context.Context, st State, name string) error {
 	}
 
 	row, err := s.q.CreateTicketState(ctx, models.CreateTicketStateParams{
-		WorkspaceID: s.run.row.WorkspaceID, StateGroup: st.Group, Name: name, CustomerLabel: label,
-		NotifyCustomer: true, Now: s.run.importer.Clock.Now(),
+		WorkspaceID: s.w.WorkspaceID, StateGroup: st.Group, Name: name, CustomerLabel: label,
+		NotifyCustomer: true, Now: s.w.Clock.Now(),
 	})
 	if err != nil {
 		return fmt.Errorf("add imported state: %w", err)
 	}
 
-	s.run.mapped.states[st.ExternalID] = row.ID
+	s.w.Mapping.States[st.ExternalID] = row.ID
 	s.setup.States = append(s.setup.States, row)
 	s.added.states++
 
-	return s.run.record(ctx, s.q, touched{kind: "state", external: st.ExternalID, id: row.ID, created: true})
+	return s.w.keep(ctx, s.q, touched{kind: "state", external: st.ExternalID, id: row.ID, created: true})
 }
 
 /*
@@ -173,9 +183,9 @@ func (s *setupStep) kind(ctx context.Context, t Type, states []State) error {
 		created = true
 	}
 
-	s.run.mapped.types[t.ExternalID] = ty
+	s.w.Mapping.Types[t.ExternalID] = ty
 
-	if err := s.run.record(ctx, s.q, touched{
+	if err := s.w.keep(ctx, s.q, touched{
 		kind: "type", external: t.ExternalID, id: ty.ID,
 		created: created,
 	}); err != nil {
@@ -198,9 +208,9 @@ func (s *setupStep) addType(ctx context.Context, t Type, name string) (models.Ti
 	}
 
 	row, err := s.q.CreateTicketType(ctx, models.CreateTicketTypeParams{
-		WorkspaceID: s.run.row.WorkspaceID, Kind: t.Kind, Name: name, Icon: "ticket",
+		WorkspaceID: s.w.WorkspaceID, Kind: t.Kind, Name: name, Icon: "ticket",
 		Description: cut(t.Description, 500), CustomerVisible: t.Kind == tickets.KindCustomer,
-		ReopenDays: reopenDays, Now: s.run.importer.Clock.Now(),
+		ReopenDays: reopenDays, Now: s.w.Clock.Now(),
 	})
 	if err != nil {
 		return row, fmt.Errorf("add imported type: %w", err)
@@ -237,7 +247,7 @@ func (s *setupStep) allow(ctx context.Context, ty models.TicketType, states []St
 	first, resolved := created, false
 
 	for _, st := range states {
-		id, ok := s.run.mapped.states[st.ExternalID]
+		id, ok := s.w.Mapping.States[st.ExternalID]
 		if !ok || s.setup.Allows(ty.ID, id) {
 			continue
 		}
@@ -275,7 +285,7 @@ func (s *setupStep) fields(ctx context.Context, ty models.TicketType, fields []F
 
 		row, err := s.q.CreateTicketField(ctx, models.CreateTicketFieldParams{
 			WorkspaceID: ty.WorkspaceID, TypeID: ty.ID, Key: f.Key, Label: cut(f.Label, 80), DataType: f.DataType,
-			Options: options(f.Options), VisibleCustomer: f.Customer, Now: s.run.importer.Clock.Now(),
+			Options: options(f.Options), VisibleCustomer: f.Customer, Now: s.w.Clock.Now(),
 		})
 		if errors.Is(err, database.ErrNotFound) {
 			continue
@@ -288,7 +298,7 @@ func (s *setupStep) fields(ctx context.Context, ty models.TicketType, fields []F
 		have = append(have, row)
 		s.added.fields++
 
-		err = s.run.record(ctx, s.q, touched{
+		err = s.w.keep(ctx, s.q, touched{
 			kind: "field", external: ty.ID.String() + ":" + f.ExternalID,
 			id: row.ID, created: true,
 		})

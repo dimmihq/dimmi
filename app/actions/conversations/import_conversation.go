@@ -40,6 +40,15 @@ type ConversationImport struct {
 	Backfill
 	Closed   bool
 	ClosedAt *time.Time
+	// Opener, when set, writes the first message as this actor, such as
+	// an AI agent or the system, instead of the customer or AuthorID.
+	Opener *Actor
+	// OpeningKey and OpeningMetadata, when set, are the first message's
+	// dedupe key and metadata.
+	OpeningKey      *string
+	OpeningMetadata json.RawMessage
+	// Source, when set, is kept as the conversation's source.
+	Source json.RawMessage
 }
 
 /*
@@ -214,23 +223,35 @@ func (a *CreateConversation) replay(ctx context.Context, w *Writer, run importRu
 		return models.Conversation{}, err
 	}
 
+	if imp.Source != nil {
+		o.source = imp.Source
+	}
+
 	c, err := o.insert(ctx, w)
 	if err != nil {
 		return c, err
 	}
 
 	author := w.AsContact(o.contact)
-	if !in.ByContact {
+
+	switch {
+	case imp.Opener != nil:
+		author = w.As(*imp.Opener)
+	case !in.ByContact:
 		if author, err = w.AsAuthor(ctx, c.WorkspaceID, imp.AuthorID); err != nil {
 			return c, err
 		}
 	}
 
 	msg, err := ImportedMessage(ImportedEntry{
-		Kind: string(enums.MessageTypeMessage), Body: in.Body, ByMember: !in.ByContact,
+		Kind: string(enums.MessageTypeMessage), Body: in.Body, ByMember: !in.ByContact, Key: imp.OpeningKey,
 	}, imp.Backfill)
 	if err != nil {
 		return c, err
+	}
+
+	if imp.OpeningMetadata != nil {
+		msg.Metadata = imp.OpeningMetadata
 	}
 
 	if _, c, err = author.Append(ctx, c, msg); err != nil {

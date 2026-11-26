@@ -347,13 +347,15 @@ gate:
 api:
   version: "2026-11-01"  # DIMMI_API__VERSION
   # APILimitsConfig holds requests a minute per token, per signed-in person,
-  # per workspace's tokens together, and per address that keeps sending bad
-  # credentials.
+  # per workspace's tokens together, per address that keeps sending bad
+  # credentials, and per workspace for migrations from other tools, which
+  # have a minute of their own.
   limits:
     token_per_minute: 600  # DIMMI_API__LIMITS__TOKEN_PER_MINUTE
     user_per_minute: 1200  # DIMMI_API__LIMITS__USER_PER_MINUTE
     workspace_per_minute: 6000  # DIMMI_API__LIMITS__WORKSPACE_PER_MINUTE
     bad_credential_per_minute: 60  # DIMMI_API__LIMITS__BAD_CREDENTIAL_PER_MINUTE
+    migration_per_minute: 1200  # DIMMI_API__LIMITS__MIGRATION_PER_MINUTE
 
 # AuthConfig groups the authentication settings. DisposableEmail is off,
 # flag or block: how a signup from a throwaway mailbox is treated. Terms

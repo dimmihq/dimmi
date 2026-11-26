@@ -51,21 +51,32 @@ writer returns a ticket writer acting as the import at the time,
 setting nothing off.
 */
 func (r *run) writer(ctx context.Context, tx *database.Tx, at time.Time) (*tickets.Writer, error) {
+	return r.w.TicketWriter(ctx, tx, at)
+}
+
+/*
+TicketWriter returns a ticket writer acting as the import at the time,
+setting nothing off.
+*/
+func (w *Writer) TicketWriter(ctx context.Context, tx *database.Tx, at time.Time) (*tickets.Writer, error) {
 	if at.IsZero() {
-		at = r.importer.Clock.Now()
+		at = w.Clock.Now()
 	}
 
 	cw := &conversations.Writer{
-		Q: models.New(tx), Tx: tx, Events: r.importer.Events, Now: at, Imported: true,
-		Actor: conversations.Actor{Type: "integration", Name: strings.ToUpper(r.src.Name()[:1]) + r.src.Name()[1:]},
+		Q: models.New(tx), Tx: tx, Events: w.Events, Now: at, Imported: true,
+		Actor: conversations.Actor{Type: "integration", Name: w.Actor},
+	}
+	if w.ActorID != nil {
+		cw.Actor = conversations.Actor{Type: "member", ID: *w.ActorID, Name: w.Actor}
 	}
 
-	w, err := r.importer.Tickets.Wrap(ctx, cw, r.row.WorkspaceID)
+	tw, err := w.Tickets.Wrap(ctx, cw, w.WorkspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("ticket import writer: %w", err)
 	}
 
-	return w, nil
+	return tw, nil
 }
 
 /*
@@ -78,45 +89,59 @@ func (r *run) ticket(ctx context.Context, t Ticket) (models.Ticket, bool, error)
 	)
 
 	err := r.importer.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		w, err := r.writer(ctx, tx, t.CreatedAt)
-		if err != nil {
-			return err
-		}
+		var err error
+		out, created, err = r.w.Write(ctx, tx, t)
 
-		in, err := r.input(ctx, w, t)
-		if err != nil {
-			return err
-		}
-
-		made, err := w.Create(ctx, r.row.WorkspaceID, in)
-		if err != nil {
-			return err
-		}
-
-		out, created = made.Ticket, made.New
-		if created {
-			if out, err = r.replay(ctx, w, out, t); err != nil {
-				return err
-			}
-		}
-
-		return r.record(ctx, w.Q, touched{kind: "ticket", external: t.ExternalID, id: out.ID, created: created})
+		return err
 	})
 
 	return out, created, err
 }
 
 /*
+Write brings one ticket in inside the transaction, through the mapping,
+reporting whether it made it; a ticket already in with the same id is
+returned as it is.
+*/
+func (w *Writer) Write(ctx context.Context, tx *database.Tx, t Ticket) (models.Ticket, bool, error) {
+	w.ensureMapping()
+
+	tw, err := w.TicketWriter(ctx, tx, t.CreatedAt)
+	if err != nil {
+		return models.Ticket{}, false, err
+	}
+
+	in, err := w.input(ctx, tw, t)
+	if err != nil {
+		return models.Ticket{}, false, err
+	}
+
+	made, err := tw.Create(ctx, w.WorkspaceID, in)
+	if err != nil {
+		return models.Ticket{}, false, err
+	}
+
+	out, created := made.Ticket, made.New
+	if created {
+		if out, err = w.replay(ctx, tw, out, t); err != nil {
+			return out, created, err
+		}
+	}
+
+	return out, created, w.keep(ctx, tw.Q, touched{kind: "ticket", external: t.ExternalID, id: out.ID, created: created})
+}
+
+/*
 input shapes the create: type, starting state, values, requester,
 teammate and conversation.
 */
-func (r *run) input(ctx context.Context, w *tickets.Writer, t Ticket) (tickets.CreateInput, error) {
-	ty, ok := r.mapped.types[t.TypeID]
+func (w *Writer) input(ctx context.Context, tw *tickets.Writer, t Ticket) (tickets.CreateInput, error) {
+	ty, ok := w.Mapping.Types[t.TypeID]
 	if !ok {
 		return tickets.CreateInput{}, ErrUnknownType
 	}
 
-	start, ok := r.mapped.states[startOf(t)]
+	start, ok := w.Mapping.States[startOf(t)]
 	if !ok {
 		return tickets.CreateInput{}, ErrUnknownState
 	}
@@ -128,15 +153,15 @@ func (r *run) input(ctx context.Context, w *tickets.Writer, t Ticket) (tickets.C
 
 	in := tickets.CreateInput{
 		TypeID: ty.ID, StateID: &start, Title: title, Description: cut(t.Description, 20000),
-		Fields: fit(w.Setup.FieldsOf(ty.ID), t.Values), Priority: t.Priority, ExternalID: &t.ExternalID,
+		Fields: fit(tw.Setup.FieldsOf(ty.ID), t.Values), Priority: t.Priority, ExternalID: &t.ExternalID,
 	}
 
-	if !w.Setup.Allows(ty.ID, start) {
+	if !tw.Setup.Allows(ty.ID, start) {
 		in.StateID = nil
 	}
 
 	d := &draft{ty: ty, src: t, in: in}
-	if err := r.people(ctx, w, d); err != nil {
+	if err := w.people(ctx, tw, d); err != nil {
 		return in, err
 	}
 
@@ -165,13 +190,15 @@ type draft struct {
 }
 
 /*
-people finds the requester, the teammate and the conversation.
+people finds the requester, the teammate and the conversation. Ids the
+caller already resolved win over the emails and ids of the other tool.
 */
-func (r *run) people(ctx context.Context, w *tickets.Writer, d *draft) error {
-	ws, t, in := r.row.WorkspaceID, d.src, &d.in
+func (w *Writer) people(ctx context.Context, tw *tickets.Writer, d *draft) error {
+	ws, t, in := w.WorkspaceID, d.src, &d.in
 
-	if t.AssigneeEmail != "" {
-		m, err := w.Q.FindWorkspaceMemberByEmail(ctx, models.FindWorkspaceMemberByEmailParams{
+	in.AssigneeMember = t.AssigneeID
+	if in.AssigneeMember == nil && t.AssigneeEmail != "" {
+		m, err := tw.Q.FindWorkspaceMemberByEmail(ctx, models.FindWorkspaceMemberByEmailParams{
 			WorkspaceID: ws, Email: t.AssigneeEmail,
 		})
 		if err == nil {
@@ -179,15 +206,27 @@ func (r *run) people(ctx context.Context, w *tickets.Writer, d *draft) error {
 		}
 	}
 
+	if t.ConversationID != nil && !w.isTicket(ctx, tw, *t.ConversationID) {
+		in.ConversationID = t.ConversationID
+
+		return nil
+	}
+
 	if t.Conversation != "" {
-		c, err := w.Q.FindConversationByImportExternalID(ctx, models.FindConversationByImportExternalIDParams{
+		c, err := tw.Q.FindConversationByImportExternalID(ctx, models.FindConversationByImportExternalIDParams{
 			WorkspaceID: ws, ExternalID: t.Conversation,
 		})
-		if err == nil && c.DeletedAt == nil && !r.isTicket(ctx, w, c.ID) {
+		if err == nil && c.DeletedAt == nil && !w.isTicket(ctx, tw, c.ID) {
 			in.ConversationID = &c.ID
 
 			return nil
 		}
+	}
+
+	if t.ContactID != nil {
+		in.ContactID = t.ContactID
+
+		return nil
 	}
 
 	if t.RequesterEmail == "" && t.RequesterName == "" {
@@ -198,7 +237,7 @@ func (r *run) people(ctx context.Context, w *tickets.Writer, d *draft) error {
 		return nil
 	}
 
-	contact, err := r.requester(ctx, w.Q, t)
+	contact, err := w.requester(ctx, tw.Q, t)
 	if err != nil {
 		return err
 	}
@@ -211,9 +250,9 @@ func (r *run) people(ctx context.Context, w *tickets.Writer, d *draft) error {
 /*
 isTicket reports whether the conversation is a ticket already.
 */
-func (r *run) isTicket(ctx context.Context, w *tickets.Writer, id ids.UUID) bool {
-	_, err := w.Q.FindConversationTicket(ctx, models.FindConversationTicketParams{
-		WorkspaceID: r.row.WorkspaceID, ConversationID: &id,
+func (w *Writer) isTicket(ctx context.Context, tw *tickets.Writer, id ids.UUID) bool {
+	_, err := tw.Q.FindConversationTicket(ctx, models.FindConversationTicketParams{
+		WorkspaceID: w.WorkspaceID, ConversationID: &id,
 	})
 
 	return err == nil
@@ -223,11 +262,11 @@ func (r *run) isTicket(ctx context.Context, w *tickets.Writer, id ids.UUID) bool
 requester finds the customer with the email, adding them when there is
 none.
 */
-func (r *run) requester(ctx context.Context, q *models.Queries, t Ticket) (ids.UUID, error) {
+func (w *Writer) requester(ctx context.Context, q *models.Queries, t Ticket) (ids.UUID, error) {
 	email := strings.ToLower(strings.TrimSpace(t.RequesterEmail))
 	if email != "" {
 		c, err := q.FindImportContactByEmail(ctx, models.FindImportContactByEmailParams{
-			WorkspaceID: r.row.WorkspaceID, Email: email,
+			WorkspaceID: w.WorkspaceID, Email: email,
 		})
 		if err == nil {
 			return c.ID, nil
@@ -239,8 +278,8 @@ func (r *run) requester(ctx context.Context, q *models.Queries, t Ticket) (ids.U
 	}
 
 	c, err := q.CreateContact(ctx, models.CreateContactParams{
-		WorkspaceID: r.row.WorkspaceID, Kind: "user", Email: orNil(email), Name: orNil(t.RequesterName),
-		CustomAttributes: []byte("{}"), Now: r.importer.Clock.Now(),
+		WorkspaceID: w.WorkspaceID, Kind: "user", Email: orNil(email), Name: orNil(t.RequesterName),
+		CustomAttributes: []byte("{}"), Now: w.Clock.Now(),
 	})
 	if err != nil {
 		return ids.Nil(), fmt.Errorf("add requester: %w", err)
@@ -253,7 +292,7 @@ func (r *run) requester(ctx context.Context, q *models.Queries, t Ticket) (ids.U
 replay moves the new ticket through its later states at their times,
 ending in the state it is in now.
 */
-func (r *run) replay(ctx context.Context, w *tickets.Writer, t models.Ticket, src Ticket) (models.Ticket, error) {
+func (w *Writer) replay(ctx context.Context, tw *tickets.Writer, t models.Ticket, src Ticket) (models.Ticket, error) {
 	moves := src.History
 	if len(moves) > 0 {
 		moves = moves[1:]
@@ -265,17 +304,17 @@ func (r *run) replay(ctx context.Context, w *tickets.Writer, t models.Ticket, sr
 	}
 
 	for _, m := range moves {
-		id, ok := r.mapped.states[m.StateID]
-		if !ok || id == t.StateID || !w.Setup.Allows(t.TypeID, id) {
+		id, ok := w.Mapping.States[m.StateID]
+		if !ok || id == t.StateID || !tw.Setup.Allows(t.TypeID, id) {
 			continue
 		}
 
-		if !m.At.IsZero() && m.At.After(w.Now) {
-			w.Now = m.At
+		if !m.At.IsZero() && m.At.After(tw.Now) {
+			tw.Now = m.At
 		}
 
 		var err error
-		if t, err = w.Apply(ctx, t, tickets.Change{StateID: &id}); err != nil {
+		if t, err = tw.Apply(ctx, t, tickets.Change{StateID: &id}); err != nil {
 			return t, err
 		}
 	}

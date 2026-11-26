@@ -88,6 +88,7 @@ const (
 	PrefixDataExport         Prefix = "dex"
 	PrefixConversationRating Prefix = "crt"
 	PrefixImport             Prefix = "imp"
+	PrefixMigration          Prefix = "mig"
 )
 
 /*
@@ -356,6 +357,8 @@ func platformPublicIDs() []PublicIDEntry {
 		{"impr", "import_runs"},
 		{"impm", "import_mappings"},
 		{"impf", "import_files"},
+		{PrefixMigration, "migrations"},
+		{"migr", "migration_records"},
 		{PrefixIntegrationInstallation, "integration_installations"},
 		{PrefixIntegrationMemberGrant, "integration_member_grants"},
 	}
