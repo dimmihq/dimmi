@@ -257,11 +257,11 @@ func (t *convTranslation) knownEntry(p part, e format.Entry) []format.Entry {
 
 		return out
 	case "open", "timer_unsnooze", "unsnoozed":
-		return eventEntry(p, e, format.Event{Type: format.EventStatus, Status: "open"})
+		return t.withReply(p, e, eventEntry(p, e, format.Event{Type: format.EventStatus, Status: "open"}))
 	case "close", "closed":
-		return eventEntry(p, e, format.Event{Type: format.EventStatus, Status: "closed"})
+		return t.withReply(p, e, eventEntry(p, e, format.Event{Type: format.EventStatus, Status: "closed"}))
 	case "snoozed", "snooze":
-		return eventEntry(p, e, format.Event{Type: format.EventStatus, Status: "snoozed"})
+		return t.withReply(p, e, eventEntry(p, e, format.Event{Type: format.EventStatus, Status: "snoozed"}))
 	case "conversation_attribute_updated_by_admin", "conversation_attribute_updated_by_workflow",
 		"conversation_attribute_updated_by_user":
 		name, value := eventDetails(p.EventDetails)
@@ -404,16 +404,33 @@ func (t *convTranslation) assignment(p part, e format.Entry) []format.Entry {
 		}
 	}
 
-	if body := toMarkdown(p.Body); body != "" {
-		note := e
-		note.SourceID = string(p.ID) + ":note"
-		note.Type, note.Body, note.Event = format.EntryNote, body, nil
-		note.Attachments = t.addFiles(p.Attachments)
+	return t.withReply(p, e, []format.Entry{e})
+}
 
-		return []format.Entry{e, note}
+/*
+withReply keeps what a state or assignment part said. In Intercom a
+teammate who replies and closes, snoozes or assigns at once leaves one
+part, whose body the customer received: it comes before the change as a
+reply of its own.
+*/
+func (t *convTranslation) withReply(p part, e format.Entry, events []format.Entry) []format.Entry {
+	body, pics := t.inline(p.Body)
+	md := toMarkdown(body)
+	files := slices.Concat(pics, t.addFiles(p.Attachments))
+
+	if md == "" && len(files) == 0 {
+		return events
 	}
 
-	return []format.Entry{e}
+	reply := e
+	reply.SourceID = string(p.ID) + ":reply"
+	reply.Type, reply.Body, reply.Attachments, reply.Event = format.EntryReply, md, files, nil
+
+	if reply.Author.Type == format.AuthorContact {
+		reply.Type = format.EntryMessage
+	}
+
+	return append([]format.Entry{reply}, events...)
 }
 
 /*

@@ -138,6 +138,8 @@ func TestConversationGolden(t *testing.T) {
 		}
 	}
 
+	checkReplies(t, conv)
+
 	if len(former) != 1 || former[0].ID != "502" {
 		t.Errorf("former teammates %+v, want the note's author 502", former)
 	}
@@ -279,5 +281,33 @@ func TestWeeklySplitsAtMidnight(t *testing.T) {
 	got := weekly([]interval{{StartMinute: 1380, EndMinute: 1500}})
 	if len(got) != 2 || got[0].Day != "mon" || got[0].End != "24:00" || got[1].Day != "tue" || got[1].End != "01:00" {
 		t.Errorf("%+v", got)
+	}
+}
+
+/*
+checkReplies checks that what the customer read stays a reply: a reply
+sent with a close comes before the close event, and no state change
+turns its text into a note.
+*/
+func checkReplies(t *testing.T, conv *format.Conversation) {
+	t.Helper()
+
+	var closing []format.Entry
+
+	for _, e := range conv.Entries {
+		if strings.HasPrefix(e.SourceID, "3008") {
+			closing = append(closing, e)
+		}
+	}
+
+	if len(closing) != 2 || closing[0].Type != format.EntryReply || closing[0].Body == "" ||
+		closing[1].Type != format.EntryEvent || closing[1].Event.Status != "closed" {
+		t.Errorf("a reply sent with a close must stay a reply before the close event: %+v", closing)
+	}
+
+	for _, e := range conv.Entries {
+		if e.Type == format.EntryNote && strings.HasSuffix(e.SourceID, ":note") {
+			t.Errorf("entry %s turned what the customer read into a note", e.SourceID)
+		}
 	}
 }

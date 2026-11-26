@@ -140,6 +140,16 @@
           ]
         },
         {
+          "source_id": "3008:reply",
+          "type": "reply",
+          "created_at": "2025-11-15T09:58:20Z",
+          "author": {
+            "type": "teammate",
+            "ref": "501"
+          },
+          "body": "Refund sent, closing this. Have a great week!"
+        },
+        {
           "source_id": "3008",
           "type": "event",
           "created_at": "2025-11-15T09:58:20Z",
