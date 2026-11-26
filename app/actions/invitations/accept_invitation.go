@@ -54,7 +54,9 @@ type Preview struct {
 }
 
 /*
-PreviewInvitation shows an invitation to whoever holds its link.
+PreviewInvitation shows an invitation to whoever holds its link. The
+placeholder account of an imported teammate counts as no account: the
+person signs up, which makes it theirs.
 
 Errors: [exceptions.ErrNotFound] for a link of no invitation, or of a
 workspace in the trash, or a wrapped database error.
@@ -75,14 +77,14 @@ func (a *PreviewInvitation) Handle(ctx context.Context, token string) (Preview, 
 		return Preview{}, err
 	}
 
-	_, err = q.FindUserByEmail(ctx, inv.Email)
+	account, err := q.FindUserByEmail(ctx, inv.Email)
 	if err != nil && !errors.Is(err, database.ErrNotFound) {
 		return Preview{}, fmt.Errorf("find account: %w", err)
 	}
 
 	status := currentStatus(inv.Status, inv.ExpiresAt, a.Clock.Now())
 
-	return Preview{Invitation: inv, Status: status, HasAccount: err == nil}, nil
+	return Preview{Invitation: inv, Status: status, HasAccount: err == nil && !account.IsPlaceholder()}, nil
 }
 
 /*

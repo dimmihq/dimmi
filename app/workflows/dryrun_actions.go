@@ -50,6 +50,7 @@ func dryActions() map[string]dryAction {
 			id := settings[workflowspec.ApplySLASettings](s).SLAPolicyID
 			return d.act(s, "Would apply an SLA policy", map[string]any{"sla_policy_id": id})
 		},
+		workflowspec.KindSetConversationAttributes: (*dry).attributes,
 	}
 }
 

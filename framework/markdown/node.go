@@ -53,6 +53,9 @@ const (
 	KindImage
 	KindCheckbox
 	KindHTML
+	KindEmbed
+	KindButton
+	KindDetails
 )
 
 /*
@@ -68,6 +71,9 @@ to its kind are set:
   - Ordered and Start: whether a List is numbered and its first number.
   - Header: whether a TableRow is the header row.
   - Checked: whether a Checkbox of a task list item is ticked.
+  - Embed, Button and Details come only from ParseBlocks. An Embed's
+    URL is the address its author gave, a Button's its link, and Text
+    their label; Details holds blocks and Text is its summary.
 */
 type Node struct {
 	Kind     NodeKind
@@ -93,6 +99,19 @@ paragraphs.
 func Parse(src []byte) *Node {
 	root := &Node{Kind: KindDocument}
 	root.Children = convertChildren(parseGFM(src), src)
+
+	return root
+}
+
+/*
+ParseBlocks reads Markdown in the blocks dialect: Parse's, plus
+embeds, buttons, details, centered text and captioned pictures. Centered
+blocks are plain blocks here, and a caption becomes the Title of its
+picture.
+*/
+func ParseBlocks(src []byte) *Node {
+	root := &Node{Kind: KindDocument}
+	root.Children = convertChildren(parseBlocksDialect(src), src)
 
 	return root
 }
@@ -157,9 +176,49 @@ func convertBlock(n ast.Node, src []byte) (*Node, bool) {
 		return &Node{Kind: KindHTML, Text: htmlBlockText(n, src)}, true
 	case *ast.ThematicBreak:
 		return &Node{Kind: KindThematicBreak}, true
+	case *directiveNode:
+		if n.name == DirectiveCenter {
+			return nil, false
+		}
+		return convertDirective(n, src), true
+	case *figureNode:
+		return convertFigure(n, src), true
 	default:
 		return convertTable(n)
 	}
+}
+
+/*
+convertDirective converts an embed, a button or a details block.
+*/
+func convertDirective(n *directiveNode, src []byte) *Node {
+	switch n.name {
+	case DirectiveEmbed:
+		return &Node{Kind: KindEmbed, Text: n.label, URL: n.attr("src"), Children: []*Node{}}
+	case DirectiveButton:
+		return &Node{Kind: KindButton, Text: n.label, URL: n.attr("href"), Children: []*Node{}}
+	default:
+		return &Node{Kind: KindDetails, Text: n.label, Children: convertChildren(n, src)}
+	}
+}
+
+/*
+convertFigure converts a captioned picture to a paragraph holding it,
+the caption its title.
+*/
+func convertFigure(n *figureNode, src []byte) *Node {
+	children := convertChildren(n, src)
+	for _, c := range children {
+		img := c
+		if c.Kind == KindLink && len(c.Children) == 1 {
+			img = c.Children[0]
+		}
+		if img.Kind == KindImage {
+			img.Title = n.caption
+		}
+	}
+
+	return &Node{Kind: KindParagraph, Children: children}
 }
 
 /*
@@ -281,9 +340,10 @@ hasChildren reports whether nodes of a kind hold other nodes.
 */
 func hasChildren(kind NodeKind) bool {
 	switch kind {
-	case KindText, KindCode, KindCodeBlock, KindHTML, KindThematicBreak, KindSoftBreak, KindLineBreak, KindCheckbox:
+	case KindText, KindCode, KindCodeBlock, KindHTML, KindThematicBreak, KindSoftBreak, KindLineBreak, KindCheckbox,
+		KindEmbed, KindButton:
 		return false
-	case KindDocument, KindParagraph, KindHeading, KindBlockquote, KindAlert, KindList, KindListItem,
+	case KindDocument, KindParagraph, KindHeading, KindBlockquote, KindAlert, KindList, KindListItem, KindDetails,
 		KindTable, KindTableRow, KindTableCell, KindEmphasis, KindStrong, KindStrikethrough, KindLink, KindImage:
 		return true
 	}

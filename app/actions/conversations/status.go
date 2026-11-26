@@ -103,6 +103,12 @@ func (w *Writer) ChangeStatus(
 		return c, false, exceptions.ErrInvalidTransition.OnField("status").With("from", from).With("to", to.Status)
 	}
 
+	if to.Status == string(enums.ConversationStatusClosed) {
+		if err := w.checkRequiredToClose(ctx, c); err != nil {
+			return c, false, err
+		}
+	}
+
 	params := models.SetConversationStatusParams{
 		Status: to.Status, Now: w.Now, WorkspaceID: c.WorkspaceID, ID: c.ID,
 	}

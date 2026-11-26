@@ -1,16 +1,20 @@
-import type { AIAttribute } from "@/lib/api/ai-attributes";
+import type { ConversationAttribute } from "@/lib/api/conversation-attributes";
 
 import { aiFilterSummary, aiValueLabel, aiValueOptions, defaultBreakdown, splitsReports } from "./ai-values";
 
-function attribute(over: Partial<AIAttribute>): AIAttribute {
+function attribute(over: Partial<ConversationAttribute>): ConversationAttribute {
   return {
     id: "aia_1",
-    object: "ai_conversation_attribute",
+    object: "conversation_attribute",
     key: "reason",
     label: "Reason",
     description: "",
     data_type: "choice",
     options: ["billing", "bug"],
+    option_descriptions: {},
+    filled_by: "both",
+    required_to_close: false,
+    team_ids: [],
     status: "active",
     created_at: "2026-11-01T00:00:00Z",
     updated_at: "2026-11-01T00:00:00Z",

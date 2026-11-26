@@ -28,6 +28,7 @@ const groups: [string, StepKind[]][] = [
       "tag",
       "untag",
       "priority",
+      "set_conversation_attributes",
       "note",
       "update_contact",
       "snooze",

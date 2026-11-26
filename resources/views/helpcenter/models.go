@@ -76,13 +76,14 @@ type Section struct {
 }
 
 /*
-Person is an author shown with an article or a changelog entry, by name
-and the initials drawn when there is no photo.
+Person is an author shown with an article or a changelog entry, by name,
+the address of their photo and the initials drawn when there is none.
 */
 type Person struct {
 	Name     string
 	Initials string
 	Role     string
+	Photo    string
 }
 
 /*

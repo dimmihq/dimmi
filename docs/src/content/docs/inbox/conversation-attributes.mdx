@@ -1,0 +1,131 @@
+---
+title: "Conversation attributes"
+description: "Note the same facts on every conversation, like issue type or order number, filled by teammates, the AI or both."
+---
+
+Some facts matter on every conversation: why the customer wrote, which order they mean, whether it's a bug. When those facts live in free-text notes, no workflow, view or report can use them.
+
+A **conversation attribute** is one of those facts, defined once in **Settings → Conversation attributes**. Teammates fill it in the conversation's **Details** panel, the AI fills it as the customer writes, or both. Workflows branch and start on the value, inbox views filter by it and reports split by it.
+
+## Define an attribute
+
+Give each attribute a name, a type and a description. The AI reads the description to decide the value, and teammates see it when they hover the attribute's name, so write it the way you'd brief a new teammate.
+
+| Name | Type | Who fills it | Description |
+| --- | --- | --- | --- |
+| Issue type | List: `Billing`, `Bug`, `Question`, `Other` | AI and teammates | The customer's main reason for writing. |
+| Order number | Text | AI and teammates | The order the customer is writing about, such as `A-1042`. |
+| Root cause | Multi-line text | Teammates only | What actually went wrong, once you know. |
+| Affected account | Company | Teammates only | The customer account the problem hit. |
+
+The key (`issue_type`, `order_number`) and the type are fixed once you save. Workflows, views and the API read an attribute by its key.
+
+### Types
+
+| Type | Holds | The AI can fill it |
+| --- | --- | --- |
+| Text | One line, up to 500 characters | Yes |
+| Multi-line text | Several lines, up to 10,000 characters | Yes |
+| Number | A whole number | Yes |
+| Decimal | A number with decimals | Yes |
+| List | One of up to 200 options | Yes |
+| Multi-select | Any of up to 200 options | No |
+| Yes or no | `true` or `false` | Yes |
+| Date | A day, such as `2026-12-01` | Yes |
+| Date and time | A moment, kept in UTC | No |
+| Files | Up to 10 files a teammate uploads | No |
+| Contact | A link to one of your contacts | No |
+| Company | A link to one of your companies | No |
+
+### Describe each option
+
+A list or multi-select can say what each option means, such as **Billing**: "Charges, invoices and refunds". The AI reads these to pick the right option, so describe the ones it could confuse.
+
+### Who fills it
+
+- **AI and teammates:** the AI fills the value as the customer writes, and a teammate can change it. Once a teammate sets a value, the AI never replaces it.
+- **Teammates only:** the AI leaves the attribute alone.
+- **AI only:** teammates see the value in the inbox but can't change it.
+
+Workflows and imports can set any attribute. A value a workflow or an import set is also safe from the AI.
+
+### Required before closing
+
+Turn on **Required before closing** and a teammate can't close a conversation in dimmi while the attribute is empty. dimmi names the empty attributes, such as "Fill Issue type before closing.", and marks them in the **Details** panel. A bulk close closes the conversations that pass and reports how many still need their attributes filled.
+
+The API, the AI agent, workflows, the customer, Slack and imports still close conversations as before.
+
+### Visible to some teams
+
+Pick teams under **Visible to** to show an attribute only to their members. Everyone else doesn't see it in the inbox or through the API, can't set it, and isn't held back by it when they close. Leave it empty for every team.
+
+Click an attribute to open its page, where every setting lies flat. Changes wait until you press **Save** in the bar at the bottom. On the list, drag attributes by their handle to set the order the **Details** panel shows them in.
+
+### Archive or delete an attribute
+
+Archiving takes an attribute out of the **Details** panel, and nobody fills it any more. Conversations keep their values, so workflows, views and reports that read it keep working. Restore it from the attribute's page.
+
+You can delete an attribute only while nothing uses it: no conversation holds a value, and no workflow or view reads or sets it. The attribute's **Danger zone** says what uses it; archive it instead when something does.
+
+## Fill attributes in the inbox
+
+The **Details** panel lists every active attribute your teams see, under **Conversation attributes**. Click a value to change it: text and numbers save when you leave the field or press Enter, and lists, dates, files and links save as you pick them. Press Escape to put a typed value back.
+
+A sparkle marks a value the AI set. Hover any value to see who set it and when; for the AI, also how sure it was and, for text, numbers and dates, its reason, such as "The customer says they upgraded to Pro last month." The list updates on its own when the AI, a workflow or a teammate changes a value.
+
+Every change also lands in the conversation's timeline, such as **Issue type set to Billing by Ada** or **by the AI**.
+
+## How the AI fills values
+
+The decision model reads the whole conversation and answers for every attribute the AI fills. When it fails, it's asked again, then your workspace's own AI provider answers instead.
+
+- **Only sure values are kept.** When the AI isn't sure, the attribute stays as it was. It never guesses to fill the field.
+- **Values update as the conversation goes.** Each customer message starts a fresh check about 20 seconds later, at most once a minute. A sure new value replaces the AI's old one.
+- **A teammate's value wins.** The AI skips an attribute once a teammate, a workflow or an import has set it.
+
+## Use attributes in workflows
+
+Every attribute reads as `conversation.ai.<key>`, whoever set it:
+
+- **Branch** on it, like "Issue type is any of `Billing`".
+- **Start a workflow** with the **Conversation attribute changes** trigger. It fires each time anyone sets, changes or clears a value, and its conditions can read **Changed attribute**, **New attribute value** and **Changed by** (a teammate, the AI, a workflow or an import). The older **AI sets a conversation attribute** trigger fires only for the AI's own changes.
+- **Set values** with the **Set conversation attributes** step. Each value can hold variables, such as `{{run.vars.order_number}}`; an empty value clears the attribute. A value that doesn't fit its attribute fails the step and sets nothing.
+- **Use it in text** as a variable, like `{{conversation.ai.order_number}}`.
+
+## Use attributes in views and reports
+
+In a [view](/inbox/views/), add a condition on **Issue type**, for example, to list every open billing question. Lists, yes or no, text, numbers and dates match a value; every attribute can also match **is set**.
+
+Every report can [filter by an attribute](/reports/reports/#filter-by-a-conversation-attribute), and the **dimmi agent** report splits its conversations by a list or yes-or-no attribute.
+
+## Set values through the API
+
+Read a conversation's values, and who set each, with `GET /api/v1/conversations/{conversation}/attributes`. Set some with `PATCH`, by key; `null` clears one:
+
+```bash
+curl -X PATCH https://app.trydimmi.com/api/v1/conversations/conv_01jz8k3m2q9x7v5t4r6w1y0b2c/attributes \
+  -H "Authorization: Bearer $DIMMI_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"values": {"issue_type": "Billing", "order_number": "A-1042", "root_cause": null}}'
+```
+
+A value that doesn't fit is refused with `attribute_values_invalid`, and `problems` names each key and why, such as `not_whole` or `invalid_option`. Nothing is set when any value is refused.
+
+`POST /api/v1/conversations` takes the same `attributes` object, and so does an import (a request with `external_id` or `created_at`). An import sets even the attributes only the AI fills.
+
+Manage attributes at `/api/v1/conversation-attributes`, see what uses one at `GET /api/v1/conversation-attributes/{attribute}/usage`, delete an unused one with `DELETE`, and set their order with `PATCH /api/v1/conversation-attributes/order`. Each value's `set_by` carries the AI's `reason` and `sureness` (0 to 1) when it set the value. Files are set as the ids of uploads from `POST /api/v1/attachments`, contacts and companies as their ids.
+
+The older `/api/v1/ai/conversation-attributes` and `/api/v1/conversations/{conversation}/ai-attributes` endpoints keep working until 1 December 2027.
+
+## Rules and limits
+
+| Rule | Limit |
+| --- | --- |
+| Active attributes per workspace | 200 |
+| Options of a list or multi-select | 1 to 200, 80 characters each |
+| Description of one option | 300 characters |
+| Files per value | 10 |
+| Name | 80 characters |
+| Description | 500 characters |
+| Teams an attribute shows to | 100 |
+| How often the AI reads a conversation again | About 20 seconds after a customer message, at most once a minute |

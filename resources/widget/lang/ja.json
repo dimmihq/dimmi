@@ -44,6 +44,8 @@
   "office_hours_text": "",
   "offline_message": "ただいま不在です。メッセージを残していただければメールでご返信します。",
   "open_in_help_center": "ヘルプセンターで開く",
+  "written_by": "作成者: {name}",
+  "updated_ago": "{time}に更新",
   "popular": "人気の記事",
   "privacy_notice": "お客様のデータはプライバシーポリシーに従って取り扱います。",
   "rated_thanks": "フィードバックありがとうございます！",

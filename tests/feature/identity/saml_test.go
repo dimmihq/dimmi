@@ -11,6 +11,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/saml/samltest"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
+	"github.com/dimmihq/dimmi/app/actions/importedteammates"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/database/factories"
@@ -175,5 +176,29 @@ func TestSAMLSignIn(t *testing.T) {
 
 		assert.Contains(t, res.Header.Get("Content-Type"), "samlmetadata")
 		assert.Contains(t, string(res.Body), appURL+"/auth/saml/"+c.id+"/acs")
+	})
+}
+
+func TestSAMLImportedTeammate(t *testing.T) {
+	t.Parallel()
+
+	t.Run("an imported teammate proves the address but waits for an admin", func(t *testing.T) {
+		t.Parallel()
+		c := newCompany(t, true)
+		teammate, err := c.tc.App.Actions.CreateImportedTeammate.Handle(t.Context(),
+			importedteammates.CreateImportedTeammateInput{
+				WorkspaceID: c.tc.Workspace.Workspace.ID, Email: "ada@acme.example", Name: "Ada",
+				Role: enums.RoleMember, Source: "intercom",
+			})
+		require.NoError(t, err)
+
+		res := c.signIn(t, person{subject: "ada-1", email: "ada@acme.example"})
+
+		assert.Equal(t, "/login?error=access_awaiting_enable", landing(res))
+		c.tc.Table("users").AssertCount(1, testkit.Row{"email": "ada@acme.example"})
+		c.tc.Table("workspace_members").AssertHas(testkit.Row{
+			"id": teammate.Member.ID, "status": "deactivated", "import_pending": true,
+		})
+		c.tc.Table("workspace_members").AssertCount(1, testkit.Row{"user_id": teammate.User.ID})
 	})
 }

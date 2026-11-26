@@ -1,7 +1,7 @@
 /*
-Package aiattributes holds a workspace's AI conversation attributes:
-the fields it defines once, which the decision model fills in on every
-conversation and checks again as the customer writes, for workflows,
-inbox views and the team to read.
+Package aiattributes holds a workspace's conversation attributes: the
+fields it defines once, which teammates, workflows, imports and the AI
+fill in on every conversation, for workflows, inbox views, reports and
+the team to read.
 */
 package aiattributes

@@ -11,6 +11,7 @@ import { Feedback, Prose } from "../components/prose";
 import { ArticleRow } from "../components/rows";
 import { Loadable, SkeletonArticle, SkeletonRows } from "../components/skeleton";
 import type { Article, Collection, Content, Entry } from "../content";
+import { updatedAgo } from "../lib/map";
 import type { Options } from "../options";
 import { initials } from "../text";
 
@@ -56,15 +57,24 @@ function ArticlePage({ article, options, url }: { article: Article; options: Opt
       <article className="page">
         <Loadable skeleton={<SkeletonArticle />}>
           <h1>{article.title}</h1>
-          <p className="byline">
-            <span className="face">{initials(article.author)}</span>
-            <span>{article.author}</span>
-            <span>·</span>
-            <span>{article.updated}</span>
-          </p>
+          <div className="page-meta">
+            {article.author ? (
+              <span className="face">
+                {article.author.avatar_url ? (
+                  <img src={article.author.avatar_url} alt="" />
+                ) : (
+                  initials(article.author.name)
+                )}
+              </span>
+            ) : null}
+            <p>
+              {article.author ? <span>{options.texts.written_by.replace("{name}", article.author.name)}</span> : null}
+              <span>{options.texts.updated_ago.replace("{time}", updatedAgo(article.updated))}</span>
+            </p>
+          </div>
           <Prose blocks={article.body} />
           {url ? (
-            <p className="byline">
+            <p className="page-meta">
               <a
                 href={`${url}/articles/${article.slug}`}
                 target="_blank"
@@ -90,7 +100,7 @@ function EntryPage({ entry, options }: { entry: Entry; options: Options }) {
         <Loadable skeleton={<SkeletonArticle />}>
           {entry.tag ? <em className="badge">{entry.tag}</em> : null}
           <h1>{entry.title}</h1>
-          <p className="byline">
+          <p className="page-meta">
             <time>{entry.date}</time>
           </p>
           <Prose blocks={entry.body} />

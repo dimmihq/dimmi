@@ -32,6 +32,8 @@ const (
 	WarnMissingAlt  = "missing_alt"
 	WarnHeadingSkip = "heading_skip"
 	WarnEmptyBody   = "empty_body"
+	WarnEmbed       = "unsupported_embed"
+	WarnButtonLink  = "invalid_button_link"
 )
 
 /*
@@ -108,6 +110,8 @@ func inspect(doc ast.Node, src []byte, rewrite func(Link) Link) []Warning {
 			ins.image(n)
 		case *ast.Heading:
 			ins.heading(n)
+		case *directiveNode:
+			ins.directive(n)
 		}
 	}
 
@@ -121,7 +125,7 @@ order, so the tree can change while they are visited.
 func collect(n ast.Node, out []ast.Node) []ast.Node {
 	for c := n.FirstChild(); c != nil; c = c.NextSibling() {
 		switch c.Kind() {
-		case ast.KindAutoLink, ast.KindLink, ast.KindImage, ast.KindHeading:
+		case ast.KindAutoLink, ast.KindLink, ast.KindImage, ast.KindHeading, KindDirective:
 			out = append(out, c)
 		}
 
@@ -170,6 +174,23 @@ func (ins *inspector) image(n *ast.Image) {
 		setLink(link, out)
 	default:
 		setImage(n, out)
+	}
+}
+
+/*
+directive warns about an embed from a provider that is not allowed and
+a button without a valid link, which both render as plain text.
+*/
+func (ins *inspector) directive(n *directiveNode) {
+	switch n.name {
+	case DirectiveEmbed:
+		if _, ok := ResolveEmbed(n.attr("src")); !ok {
+			ins.warn(WarnEmbed, n.attr("src"))
+		}
+	case DirectiveButton:
+		if n.ChildCount() == 0 {
+			ins.warn(WarnButtonLink, n.attr("href"))
+		}
 	}
 }
 

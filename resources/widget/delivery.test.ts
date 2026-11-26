@@ -126,14 +126,15 @@ describe("delivery and read receipts", () => {
     await settle();
 
     expect(delivery()?.dataset.delivery).toBe("sent");
-    expect(delivery()?.textContent).toBe("Sent");
+    expect(delivery()?.textContent).toBe("Jan 1 · Sent");
+    expect(shadow().querySelector('.said[data-from="visitor"] .byline')).toBeNull();
 
     widget?.live?.store.apply("conversation.seen_by_team", {
       conversation_id: "conv_1",
       seen_at: "2026-01-01T00:00:05Z",
     });
     expect(delivery()?.dataset.delivery).toBe("seen");
-    expect(delivery()?.textContent).toBe("Seen");
+    expect(delivery()?.textContent).toBe("Jan 1 · Seen");
 
     seen = "2026-01-01T00:00:05Z";
     widget?.live?.store.seen.clear();
