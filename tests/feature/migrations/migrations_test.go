@@ -152,6 +152,7 @@ func TestMigrations(t *testing.T) {
 			"contact_ref": "c-1", "created_at": at(10), "updated_at": at(20),
 			"state_history": []testkit.JSON{{"state_ref": "new", "at": at(10)}, {"state_ref": "done", "at": at(20)}},
 		}).AssertJSONPath("data.results.0.status", "created")
+		assert.Equal(t, 1, d.rows(t, "tickets", `contact_id = (SELECT id FROM contacts WHERE email = 'ada@example.com')`))
 
 		progress := d.client.GetJSON(d.path("")).AssertOK()
 		progress.AssertJSONPath(`data.counts.#(kind=="conversation").applied`, 1).
