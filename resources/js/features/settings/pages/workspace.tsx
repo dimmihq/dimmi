@@ -42,6 +42,7 @@ import { DeleteWorkspace } from "../delete-workspace";
 import { InviteButton, PendingInvitations } from "../invitations";
 import { Item, Row, RowsSkeleton, Section, SettingsPage } from "../layout";
 import { LogoRow } from "../logo-row";
+import { ImportedTeammates } from "../members/imported-teammates";
 import { MemberAccessDialog } from "../members/member-access-dialog";
 import { MemberImportButton } from "../members/member-import-dialog";
 import { type FilterKey, filterFor, filterKeyFrom } from "../members/member-review";
@@ -545,7 +546,7 @@ export function MembersSettings() {
   const manages = caller?.member?.permissions.includes("members:write") ?? false;
   const filter = manages ? filterFor(view) : {};
   const { data: members = [], isPending: loadingMembers } = useQuery({
-    ...membersQuery(workspace, filter),
+    ...membersQuery(workspace, { ...filter, awaitingEnable: false }),
     enabled: caller !== undefined,
   });
   const [pending, setPending] = useState<Pending | null>(null);
@@ -613,7 +614,12 @@ export function MembersSettings() {
           />
         ))}
       </Section>
-      {powers.write ? <PendingInvitations workspace={workspace} /> : null}
+      {powers.write ? (
+        <>
+          <ImportedTeammates workspace={workspace} />
+          <PendingInvitations workspace={workspace} />
+        </>
+      ) : null}
       <Failure error={shownError ?? leave.error} />
       <Section title="Your access">
         <Row label={`Leave ${me.workspace.name}`} description="You lose access to its conversations straight away.">

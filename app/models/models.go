@@ -3479,4 +3479,10 @@ type WorkspaceMember struct {
 	LastAssignedAt               *time.Time      `json:"last_assigned_at"`
 	UndoSendSeconds              *int16          `json:"undo_send_seconds"`
 	CustomRoleID                 *ids.UUID       `json:"custom_role_id"`
+	ImportSource                 *string         `json:"import_source"`
+	ImportRole                   *string         `json:"import_role"`
+	ImportTeamIds                []ids.UUID      `json:"import_team_ids"`
+	ImportPending                bool            `json:"import_pending"`
+	ImportInvitedAt              *time.Time      `json:"import_invited_at"`
+	ImportArrivedAt              *time.Time      `json:"import_arrived_at"`
 }

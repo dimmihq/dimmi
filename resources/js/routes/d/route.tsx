@@ -19,7 +19,7 @@ export const Route = createFileRoute("/d")({
       return { missing };
     }
     if (!current) {
-      throw redirect({ to: "/onboarding" });
+      throw redirect({ to: (me.awaiting_access ?? []).length > 0 ? "/waiting" : "/onboarding" });
     }
     if (stale) {
       showSlug(current.slug);
