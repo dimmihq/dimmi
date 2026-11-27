@@ -87,7 +87,7 @@ func bootInbox(a *app.App) error {
 
 /*
 registerInboxJobs registers the jobs that send channel messages, erase
-their copies and purge stale drafts.
+their copies, purge stale drafts and wake expired snoozes.
 */
 func registerInboxJobs(a *app.App) error {
 	return errors.Join(
@@ -97,6 +97,9 @@ func registerInboxJobs(a *app.App) error {
 		queue.Register(a.Queue, &jobs.EraseMessageCopies{DB: a.DB, Storage: a.Storage, Erasers: a.MessageErasers}),
 		queue.Register(a.Queue, &jobs.PurgeStaleDrafts{
 			DB: a.DB, Clock: a.Clock, RetentionDays: a.Config.Inbox.Drafts.RetentionDays,
+		}),
+		queue.Register(a.Queue, &jobs.WakeExpiredSnoozes{
+			Snoozes: &conversations.WakeExpiredSnoozes{DB: a.DB, Events: a.Events, Clock: a.Clock, Log: a.Log},
 		}),
 	)
 }

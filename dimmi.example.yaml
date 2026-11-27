@@ -82,7 +82,8 @@ log:
 # spans over HTTP to OTLPEndpoint, the full URL that receives traces such
 # as http://collector:4318/v1/traces, with OTLPHeaders on every request.
 # Metrics is none or prometheus, served by MetricsHandler. Errors are
-# reported to Sentry only when SentryDSN is set.
+# reported to Sentry only when SentryDSN is set, each tagged with Release,
+# the build that sent it.
 telemetry:
   service_name: app  # DIMMI_TELEMETRY__SERVICE_NAME
   environment: ""  # DIMMI_TELEMETRY__ENVIRONMENT
@@ -91,6 +92,7 @@ telemetry:
   otlp_headers: {}  # DIMMI_TELEMETRY__OTLP_HEADERS__<NAME>
   metrics: none  # DIMMI_TELEMETRY__METRICS
   sentry_dsn: ""  # DIMMI_TELEMETRY__SENTRY_DSN
+  release: ""  # DIMMI_TELEMETRY__RELEASE
 
 # Config configures the pool.
 #
@@ -481,9 +483,11 @@ tokens:
 # FrontendConfig configures the browser app. HotPath is the file the
 # Vite dev server writes its address to, empty outside development.
 # The key avoids a _FILE ending, which the environment reads as a file
-# holding the value.
+# holding the value. ErrorsDSN is the DSN the browser app reports errors
+# to, empty to report nothing.
 frontend:
   hot_path: public/hot  # DIMMI_FRONTEND__HOT_PATH
+  errors_dsn: ""  # DIMMI_FRONTEND__ERRORS_DSN
 
 # WidgetConfig configures the messenger widget. AssetsBaseURL is the
 # origin serving the widget's hashed files, such as a CDN in front of

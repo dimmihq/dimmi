@@ -2,18 +2,13 @@
 
 /*
 |--------------------------------------------------------------------------
-| Help Center Demo
+| Demo Analytics And Backlog History
 |--------------------------------------------------------------------------
 |
-| Fills a development workspace's help centers with ninety days of
-| analytics, so the analytics page shows what a busy help center looks
-| like: views of every published article on the web and in the
-| messenger, more on weekdays and growing over the weeks, a few articles
-| read far more than the rest; readers' yes and no answers; and searches,
-| some of which found nothing. The changelog gets views of every
-| published update too, most in the days after it went out. It needs
-| published articles to exist, as the demo workspace leaves them, and can
-| be run again: each run replaces what the last one wrote.
+| Fills a seeded workspace with 365 days of historical backlog snapshots
+| (derived from conversation_facts) and 90 days of help center & changelog
+| analytics (article views, helpfulness ratings, search terms with misses
+| and changelog views).
 |
 */
 
@@ -21,18 +16,46 @@ package commands
 
 import (
 	"context"
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
 
-	"github.com/dimmihq/dimmi/framework/console"
 	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/foundation"
-	"github.com/dimmihq/dimmi/framework/tenancy"
-
-	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/framework/ids"
 )
 
 /*
-helpCenterDemoSQL writes the views, answers and searches. $1 is the
-workspace and $2 how many days back they spread.
+backlogHistorySQL counts what was waiting at the end of each past day
+of the workspace ($1), over the days back ($2), from the facts; days
+already counted are kept.
+*/
+const backlogHistorySQL = `
+INSERT INTO backlog_snapshots (workspace_id, day, inbox_id, team_id, open, snoozed, unassigned,
+    under_day, under_three_days, under_week, over_week, taken_at)
+SELECT $1::uuid, d.day, f.inbox_id, f.assignee_team_id, count(*), 0,
+    count(*) FILTER (WHERE f.assignee_member_id IS NULL),
+    count(*) FILTER (WHERE f.started_at > d.ends - interval '1 day'),
+    count(*) FILTER (WHERE f.started_at <= d.ends - interval '1 day' AND f.started_at > d.ends - interval '3 days'),
+    count(*) FILTER (WHERE f.started_at <= d.ends - interval '3 days' AND f.started_at > d.ends - interval '7 days'),
+    count(*) FILTER (WHERE f.started_at <= d.ends - interval '7 days'),
+    d.ends
+FROM (
+    SELECT gs::date AS day, ((gs::date + 1)::timestamp AT TIME ZONE w.tz) AS ends
+    FROM (SELECT COALESCE(nullif(timezone, ''), 'UTC') AS tz FROM workspaces WHERE id = $1) w,
+        generate_series(current_date - $2::int, current_date - 1, interval '1 day') gs
+) d
+JOIN conversation_facts f ON f.workspace_id = $1 AND f.started_at < d.ends
+    AND (f.closed_at IS NULL OR f.closed_at >= d.ends)
+    AND (f.first_closed_at IS NULL OR f.first_closed_at >= d.ends OR f.closed_at IS NULL)
+GROUP BY d.day, d.ends, f.inbox_id, f.assignee_team_id
+ON CONFLICT (workspace_id, day, inbox_id, team_id) DO NOTHING
+`
+
+/*
+helpCenterDemoSQL writes 90 days of article views, helpfulness ratings,
+search terms (with realistic miss rates) and changelog entry views.
+$1 is the workspace id and $2 is how many days back they spread.
 */
 const helpCenterDemoSQL = `
 DELETE FROM article_views WHERE workspace_id = $1;
@@ -107,57 +130,40 @@ CROSS JOIN (SELECT (current_date - n) AS day FROM generate_series(0, $2 - 1) AS 
 WHERE d.day::date >= e.published_at::date;
 `
 
-/*
-HelpCenterDemoCommand seeds a workspace's help center analytics.
-*/
-type HelpCenterDemoCommand struct {
-	App *app.App
-}
+var sqlParamPattern = regexp.MustCompile(`\$(\d+)`)
 
 /*
-Name returns help-center:demo.
+seedAnalytics writes backlog snapshots and help center analytics inside one
+transaction.
 */
-func (c HelpCenterDemoCommand) Name() string {
-	return "help-center:demo"
-}
-
-/*
-Description says what the command does.
-*/
-func (c HelpCenterDemoCommand) Description() string {
-	return "Seed a development workspace's help centers with article views, answers and searches for the analytics page"
-}
-
-/*
-Flags names the workspace and how far back to seed.
-*/
-func (c HelpCenterDemoCommand) Flags(flags *console.Flags) {
-	flags.String("workspace", "", "the workspace's public id, ws_...")
-	flags.String("member", "", "the owner's member public id, mem_...")
-	flags.Int("days", 90, "how many days back the analytics spread")
-}
-
-/*
-Handle replaces the workspace's help center analytics with seeded ones.
-*/
-func (c HelpCenterDemoCommand) Handle(
-	ctx context.Context, _ *foundation.Application, in *console.Input, out *console.Output,
-) error {
-	owner, err := SeriesDemoCommand(c).membership(ctx, in.String("workspace"), in.String("member"))
-	if err != nil {
-		return err
+func seedAnalytics(ctx context.Context, tx *database.Tx, ws ids.UUID) error {
+	if _, err := tx.Exec(ctx, backlogHistorySQL, ws, 365); err != nil {
+		return fmt.Errorf("seed backlog history: %w", err)
 	}
+	return runStatements(ctx, tx, helpCenterDemoSQL, []any{ws, 90})
+}
 
-	ws, days := owner.Workspace.ID, in.Int("days")
+/*
+runStatements runs each statement of the script in turn, each with as
+many of the values as it names.
+*/
+func runStatements(ctx context.Context, tx *database.Tx, script string, args []any) error {
+	for stmt := range strings.SplitSeq(script, ";\n") {
+		if strings.TrimSpace(stmt) == "" {
+			continue
+		}
 
-	err = c.App.DB.Transaction(tenancy.With(ctx, ws.String()), func(ctx context.Context, tx *database.Tx) error {
-		return runStatements(ctx, tx, helpCenterDemoSQL, []any{ws, days})
-	})
-	if err != nil {
-		return err
+		n := 0
+		for _, m := range sqlParamPattern.FindAllStringSubmatch(stmt, -1) {
+			if k, _ := strconv.Atoi(m[1]); k > n {
+				n = k
+			}
+		}
+
+		if _, err := tx.Exec(ctx, stmt, args[:n]...); err != nil {
+			return fmt.Errorf("seed step: %w\n%s", err, stmt)
+		}
 	}
-
-	out.Line("seeded %d days of help center analytics", days)
 
 	return nil
 }

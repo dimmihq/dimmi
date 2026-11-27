@@ -247,6 +247,7 @@ export type Operation = {
   method: string;
   path: string;
   title: string;
+  description: string;
   href: string;
   category: string;
   resource: string;
@@ -266,7 +267,10 @@ function toOperation(path: string, method: string, raw: RawOperation, taken: Set
   const segments = path.split("/").filter(Boolean);
   const resource = segments[0] === "ai" && segments[1] ? `ai/${segments[1]}` : segments[0];
   const category = categoryOf(segments[0]);
+  const upperMethod = method.toUpperCase();
   const title = raw.summary ?? titleFor(raw.operationId, path);
+  const description =
+    raw.description?.replace(/\s+/g, " ").trim() || `${title} via ${upperMethod} /api/v1${path} in the dimmi REST API.`;
   let slug = kebab(title);
   if (taken.has(`${kebab(category)}/${slug}`)) {
     slug = kebab(raw.operationId);
@@ -274,15 +278,55 @@ function toOperation(path: string, method: string, raw: RawOperation, taken: Set
   taken.add(`${kebab(category)}/${slug}`);
   return {
     id: raw.operationId,
-    method: method.toUpperCase(),
+    method: upperMethod,
     path,
     title,
+    description,
     href: `${API_ROOT}${kebab(category)}/${slug}/`,
     category,
     resource,
     abilities: raw["x-abilities"] ?? [],
     raw,
   };
+}
+
+const META_DESCRIPTION_MAX = 160;
+const META_DESCRIPTION_MIN = 60;
+
+/* SEO <title> for an API operation page, keeping the on-page H1 concise. */
+export function operationMetaTitle(op: Operation): string {
+  return `${op.title} | dimmi API`;
+}
+
+/*
+ * SEO <meta name="description"> for an API operation page: enriches very short
+ * or duplicated descriptions with the HTTP method and path, and trims long
+ * ones cleanly on a sentence or word boundary within 160 characters.
+ */
+export function operationMetaDescription(op: Operation): string {
+  const needsEndpoint =
+    op.description.length < META_DESCRIPTION_MIN || (descriptionCounts.get(op.description) ?? 0) > 1;
+  const base = needsEndpoint ? `${op.method} /api/v1${op.path}: ${op.description}` : op.description;
+  if (base.length <= META_DESCRIPTION_MAX) {
+    return base;
+  }
+  // Prefer keeping complete sentences that fit within the meta description budget.
+  const sentences = base.match(/[^.!?]+[.!?]+/g) ?? [];
+  let fitted = "";
+  for (const rawSentence of sentences) {
+    const sentence = rawSentence.trim();
+    const candidate = fitted ? `${fitted} ${sentence}` : sentence;
+    if (candidate.length > META_DESCRIPTION_MAX) {
+      break;
+    }
+    fitted = candidate;
+  }
+  if (fitted.length >= META_DESCRIPTION_MIN) {
+    return fitted;
+  }
+  const cut = base.slice(0, META_DESCRIPTION_MAX - 1);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[.,;:!?-]+$/, "")}…`;
 }
 
 function buildOperations(): Operation[] {
@@ -312,6 +356,11 @@ function buildOperations(): Operation[] {
 }
 
 export const operations = buildOperations();
+
+const descriptionCounts = new Map<string, number>();
+for (const op of operations) {
+  descriptionCounts.set(op.description, (descriptionCounts.get(op.description) ?? 0) + 1);
+}
 
 export function resourceLabel(resource: string): string {
   return capitalize(words(resource.replace(/^ai\//, "")));
@@ -672,7 +721,7 @@ function fieldsMarkdown(fields: Field[], indent = ""): string[] {
 }
 
 export function operationMarkdown(op: Operation): string {
-  const lines = [`# ${op.title}`, "", "```http", `${op.method} ${BASE_URL}${op.path}`, "```", ""];
+  const lines = [`# ${op.title}`, "", op.description, "", "```http", `${op.method} ${BASE_URL}${op.path}`, "```", ""];
   lines.push("## Authorization", "", "Send an API token as `Authorization: Bearer <token>`.");
   if (op.abilities.length) {
     lines.push(`The token needs: ${op.abilities.map((a) => `\`${a}\``).join(", ")}.`);

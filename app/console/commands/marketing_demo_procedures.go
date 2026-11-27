@@ -34,7 +34,7 @@ import (
 actions connects Lumen's billing API and publishes two actions with saved
 test responses so the procedure editor shows real chips and rule fields.
 */
-func (c MarketingDemoCommand) actions(ctx context.Context, owner authz.Membership) (map[string]string, error) {
+func (c lumenSeeder) actions(ctx context.Context, owner authz.Membership) (map[string]string, error) {
 	a := c.App
 	conn, err := a.Actions.AI.ActionConnections.Create(ctx, agentactions.ConnectionInput{
 		Membership: owner, Name: new("Lumen Billing API"), Kind: "http",
@@ -123,7 +123,7 @@ func marketingActionDefs(owner authz.Membership, connID ids.UUID) []agentactions
 procedure saves two published versions of Refund a duplicate charge, using
 @ chips and a code-checked Rule branch, plus three passing simulations.
 */
-func (c MarketingDemoCommand) procedure(
+func (c lumenSeeder) procedure(
 	ctx context.Context, owner authz.Membership, actions map[string]string, teamIDs map[string]ids.UUID,
 ) error {
 	a := c.App
@@ -250,7 +250,7 @@ type seededSim struct {
 seedProcedureSimulations dates the published versions cleanly and writes
 three passing saved simulations with realistic turns and judged checks.
 */
-func (c MarketingDemoCommand) seedProcedureSimulations(
+func (c lumenSeeder) seedProcedureSimulations(
 	ctx context.Context, owner authz.Membership, procID ids.UUID, actions map[string]string,
 ) error {
 	now := c.App.Clock.Now()

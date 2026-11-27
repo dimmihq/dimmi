@@ -43,6 +43,14 @@ patches:
       - op: add
         path: /data/DIMMI_TELEMETRY__METRICS
         value: prometheus
+      # Errors go to the shared tracker (infrastructure/rustrak.yaml): the
+      # app's inside the cluster, the dashboard's through its public host.
+      - op: add
+        path: /data/DIMMI_TELEMETRY__SENTRY_DSN
+        value: http://8de2f491f94f2d93fe021f35484d3077@rustrak.rustrak.svc.cluster.local:8080/1
+      - op: add
+        path: /data/DIMMI_FRONTEND__ERRORS_DSN
+        value: https://76f1924f64f127f474b8cc70bb4a2530@errors.trydimmi.com/2
       - op: add
         path: /data/DIMMI_FILESYSTEMS__DISKS__S3__PUBLIC_ENDPOINT
         value: https://files.staging.trydimmi.com

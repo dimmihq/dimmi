@@ -8,3 +8,4 @@ resources:
   - barman-cloud.yaml
   - observability.yaml
   - clamav.yaml
+  - rustrak.yaml

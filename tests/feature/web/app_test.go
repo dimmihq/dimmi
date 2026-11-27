@@ -99,6 +99,29 @@ func TestAppPage(t *testing.T) {
 		assert.Equal(t, "no-cache", res.Header.Get("Cache-Control"))
 	})
 
+	t.Run("names the error tracker to the app and lets it report there", func(t *testing.T) {
+		t.Parallel()
+		silent := tests.New(t, withBuild())
+		tc := tests.New(t, withBuild(), tests.WithEnv(
+			"DIMMI_FRONTEND__ERRORS_DSN=https://0123abcd@errors.example.com/2",
+			"DIMMI_TELEMETRY__ENVIRONMENT=staging", "DIMMI_APP__RELEASE=abc123",
+		))
+
+		res := tc.Client().Send(fhttp.MethodGet, "/d", nil).AssertOK()
+
+		body := string(res.Body)
+		assert.Contains(t, body, `<meta name="dimmi-errors-dsn" content="https://0123abcd@errors.example.com/2">`)
+		assert.Contains(t, body, `<meta name="dimmi-errors-environment" content="staging">`)
+		assert.Contains(t, body, `<meta name="dimmi-errors-release" content="abc123">`)
+		assert.Contains(t, res.Header.Get("Content-Security-Policy"), " https://errors.example.com")
+		login := tc.Client().Send(fhttp.MethodGet, "/login", nil).AssertOK()
+		assert.Contains(t, string(login.Body), `<meta name="dimmi-errors-dsn"`)
+		assert.Contains(t, login.Header.Get("Content-Security-Policy"), " https://errors.example.com")
+		quiet := silent.Client().Send(fhttp.MethodGet, "/d", nil).AssertOK()
+		assert.NotContains(t, string(quiet.Body), "dimmi-errors")
+		assert.NotContains(t, quiet.Header.Get("Content-Security-Policy"), "errors.example.com")
+	})
+
 	t.Run("serves the same page for every path of the app, with a fresh nonce each time", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, withBuild())

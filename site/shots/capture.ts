@@ -1,14 +1,14 @@
 /*
  * Captures the marketing site's product shots from a running dimmi: it
- * signs in to the Lumen demo workspace that `marketing:demo` seeds,
- * opens each screen, and saves it at twice the pixel density in light
- * and dark mode as WebP into site/public/shots.
+ * signs in to the Lumen demo workspace that `db:seed` creates, opens
+ * each screen, and saves it at twice the pixel density in light and
+ * dark mode as WebP into site/public/shots.
  *
- *   ./tmp/dimmi-shots marketing:demo --owner-email maya@lumen.test
+ *   ./tmp/dimmi-shots db:seed --only lumen --reset
  *   node site/shots/capture.ts [--only inbox]
  *
  * SHOTS_URL points at the app (default http://localhost:8080). The demo
- * owner signs in with the password the demo command prints.
+ * owner signs in with the password db:seed prints.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -17,7 +17,7 @@ import { chromium, type Page } from "@playwright/test";
 
 const base = process.env.SHOTS_URL ?? "http://localhost:8080";
 const email = process.env.SHOTS_EMAIL ?? "maya@lumen.test";
-const password = process.env.SHOTS_PASSWORD ?? "dimmi-demo-team-2026";
+const password = process.env.SHOTS_PASSWORD ?? "stowline-demo-2026";
 const out = fileURLToPath(new URL("../public/shots/", import.meta.url));
 const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1] : undefined;
 

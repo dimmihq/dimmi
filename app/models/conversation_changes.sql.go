@@ -143,6 +143,90 @@ func (q *Queries) LockConversation(ctx context.Context, arg LockConversationPara
 	return i, err
 }
 
+const lockExpiredSnoozes = `-- name: LockExpiredSnoozes :many
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory, ai_agent_id, ai_transferred_from_ids FROM conversations
+WHERE workspace_id = $1 AND status = 'snoozed' AND deleted_at IS NULL
+  AND snoozed_until <= $2::timestamptz
+ORDER BY snoozed_until, id
+LIMIT $3::integer
+FOR UPDATE SKIP LOCKED
+`
+
+type LockExpiredSnoozesParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Now         time.Time `json:"now"`
+	RowLimit    int32     `json:"row_limit"`
+}
+
+// LockExpiredSnoozes holds the workspace's live conversations whose snooze
+// ran out by the time, the earliest first, skipping the ones another
+// worker already holds, so each wakes once.
+func (q *Queries) LockExpiredSnoozes(ctx context.Context, arg LockExpiredSnoozesParams) ([]Conversation, error) {
+	rows, err := q.db.Query(ctx, lockExpiredSnoozes, arg.WorkspaceID, arg.Now, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Conversation
+	for rows.Next() {
+		var i Conversation
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Number,
+			&i.InboxID,
+			&i.ChannelConnectionID,
+			&i.ContactID,
+			&i.Subject,
+			&i.Status,
+			&i.Spam,
+			&i.AssigneeMemberID,
+			&i.AssigneeTeamID,
+			&i.AiState,
+			&i.SnoozedUntil,
+			&i.ExternalThreadKey,
+			&i.Source,
+			&i.FirstCustomerMessageAt,
+			&i.LastCustomerMessageAt,
+			&i.FirstReplyAt,
+			&i.LastReplyAt,
+			&i.LastMessageAt,
+			&i.ClosedAt,
+			&i.MessageCount,
+			&i.DeletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.AiReplyCount,
+			&i.AiCostMicros,
+			&i.AiLanguage,
+			&i.AiHandedOffAt,
+			&i.AiHandoffReason,
+			&i.MergedIntoID,
+			&i.IsTest,
+			&i.PreviousConversationID,
+			&i.AssignmentWaitReason,
+			&i.AssignmentWaitingSince,
+			&i.WaitingSince,
+			&i.LastActivityAt,
+			&i.LastMessageID,
+			&i.Search,
+			&i.Priority,
+			&i.WorkflowRunID,
+			&i.AiMode,
+			&i.AiMemory,
+			&i.AiAgentID,
+			&i.AiTransferredFromIds,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const recordConversationMessage = `-- name: RecordConversationMessage :one
 UPDATE conversations
 SET message_count = message_count + 1,

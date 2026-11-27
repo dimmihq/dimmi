@@ -17,7 +17,7 @@ The pictures in the docs are captured from a running dimmi, never drawn or mocke
 2. Serve it on its own database with the `dimmi-shots` launch configuration (port 8085). Seed the demo workspace once, on that database only:
 
    ```bash
-   ./tmp/dimmi-shots marketing:demo --owner-email maya@lumen.test
+   ./tmp/dimmi-shots db:seed --only lumen --reset
    ```
 
 3. Create the extra data the docs' shots show (below), once.

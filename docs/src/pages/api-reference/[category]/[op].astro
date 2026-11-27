@@ -11,6 +11,8 @@ import {
   type Operation,
   example,
   fieldsOf,
+  operationMetaDescription,
+  operationMetaTitle,
   operations,
   parameterFields,
   requestSchema,
@@ -28,6 +30,8 @@ export function getStaticPaths() {
 }
 
 const { op } = Astro.props as { op: Operation };
+const metaTitle = operationMetaTitle(op);
+const metaDescription = operationMetaDescription(op);
 const params = [
   { title: "Path parameters", fields: parameterFields(op, "path") },
   { title: "Query parameters", fields: parameterFields(op, "query") },
@@ -50,6 +54,13 @@ const auth = [
 <StarlightPage
   frontmatter={{
     title: op.title,
+    description: op.description,
+    head: [
+      { tag: "title", content: metaTitle },
+      { tag: "meta", attrs: { name: "description", content: metaDescription } },
+      { tag: "meta", attrs: { property: "og:title", content: metaTitle } },
+      { tag: "meta", attrs: { property: "og:description", content: metaDescription } },
+    ],
     tableOfContents: false,
     editUrl: false,
     lastUpdated: false,

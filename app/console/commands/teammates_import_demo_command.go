@@ -30,6 +30,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/importedteammates"
+	"github.com/dimmihq/dimmi/app/demo/stowline"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -141,7 +142,7 @@ func (c TeammatesImportDemoCommand) Handle(
 				return err
 			}
 
-			state = "signed up, password " + demoPassword
+			state = "signed up, password " + stowline.DefaultPassword
 		}
 
 		out.Line("%s <%s> %s, %s", person.name, email, person.role, state)
@@ -177,7 +178,7 @@ signUp makes the placeholder the teammate's own, as signing up and
 proving the address would, and records that they wait.
 */
 func (c TeammatesImportDemoCommand) signUp(ctx context.Context, workspace ids.UUID, user models.User) error {
-	hash, err := c.App.Hash.Make(ctx, demoPassword)
+	hash, err := c.App.Hash.Make(ctx, stowline.DefaultPassword)
 	if err != nil {
 		return fmt.Errorf("hash demo password: %w", err)
 	}

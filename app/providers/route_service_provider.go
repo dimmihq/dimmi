@@ -206,9 +206,11 @@ func messengerSources(a *app.App) []string {
 /*
 pageSources returns the extra sources of the pages a csp middleware
 covers: every page may load the captcha provider when one is on and the
-messenger from wherever it is served. Pages that show articles, the help
-center ("embeds") and the dashboard's writer, frame the allowed video and
-demo players; the dashboard also shows pictures Meta serves.
+messenger from wherever it is served, and send the browser app's error
+reports to the tracker its DSN names, since the sign-in pages run the app
+too. Pages that show articles, the help center ("embeds") and the
+dashboard's writer, frame the allowed video and demo players; the dashboard
+also shows pictures Meta serves.
 */
 func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources {
 	extra := captchaSources(p.App)
@@ -220,6 +222,7 @@ func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources
 	extra.Scripts = append(extra.Scripts, messenger...)
 	extra.Connect = append(extra.Connect, messenger...)
 	extra.Images = append(extra.Images, messenger...)
+	extra.Connect = append(extra.Connect, errorsSources(p.App)...)
 	if slices.Contains(params, "embeds") || slices.Contains(params, "dashboard") {
 		extra.Frames = append(extra.Frames, markdown.EmbedOrigins()...)
 	}
@@ -230,6 +233,20 @@ func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources
 	extra.Images = append(extra.Images, metaImageHosts()...)
 
 	return extra
+}
+
+/*
+errorsSources returns the origin the browser app reports its errors to,
+none when it reports nothing. A DSN names the tracker's host, with the
+project's key as its user, which the origin leaves out.
+*/
+func errorsSources(a *app.App) []string {
+	u, err := url.Parse(a.Config.Frontend.ErrorsDSN)
+	if err != nil || u.Host == "" || (u.Scheme != "https" && u.Scheme != "http") {
+		return nil
+	}
+
+	return []string{u.Scheme + "://" + u.Host}
 }
 
 /*

@@ -15,10 +15,21 @@ import "github.com/dimmihq/dimmi/resources/views/theme"
 Shell is the page every route of the browser app starts from: the
 document the app mounts into, in the browser's theme, with the tags
 that load it. The app sits behind a sign-in, so search engines are
-asked not to index it.
+asked not to index it. When the app reports its errors, the page names
+where to, and which environment and release the reports come from.
 */
 
-func Shell(lang, chosenTheme string, assets templ.Component) templ.Component {
+/*
+Reporting is where the browser app sends its errors: an empty DSN sends
+nothing.
+*/
+type Reporting struct {
+	DSN         string
+	Environment string
+	Release     string
+}
+
+func Shell(lang, chosenTheme string, reporting Reporting, assets templ.Component) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -50,7 +61,7 @@ func Shell(lang, chosenTheme string, assets templ.Component) templ.Component {
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templruntime.NewAttributeExpression(lang).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `spa/shell.templ`, Line: 14, Col: 18}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `spa/shell.templ`, Line: 25, Col: 18}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
 			if templ_7745c5c3_Err != nil {
@@ -88,7 +99,56 @@ func Shell(lang, chosenTheme string, assets templ.Component) templ.Component {
 			}
 			templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><meta name=\"robots\" content=\"noindex\"><meta name=\"color-scheme\" content=\"light dark\"><title>Dimmi</title><link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCA0MCI+PHN0eWxlPmd7ZmlsbDojMDAwMDAwfUBtZWRpYSAocHJlZmVycy1jb2xvci1zY2hlbWU6ZGFyayl7Z3tmaWxsOiNGRkZGRkZ9fTwvc3R5bGU+PGcgZmlsbC1ydWxlPSJldmVub2RkIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNCwtNCkiPjxwYXRoIGQ9Ik00LDI0IEEyMCwyMCAwIDAgMSAxOC44NjksNC42NjkgTDQzLjMzMSwyOS4xMzEgQTIwLDIwIDAgMCAxIDI0LDQ0IEwxMSw0NCBBNyw3IDAgMCAxIDQsMzcgWiIvPjxwYXRoIGQ9Ik0yMS45MSw0LjExIEEyMCwyMCAwIDAgMSAzMC4xNzgsNC45NzggTDQzLjAyMiwxNy44MjIgQTIwLDIwIDAgMCAxIDQzLjg5LDI2LjA5IFoiLz48L2c+PC9nPjwvc3ZnPg==\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><meta name=\"robots\" content=\"noindex\"><meta name=\"color-scheme\" content=\"light dark\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if reporting.DSN != "" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<meta name=\"dimmi-errors-dsn\" content=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var5 string
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templruntime.NewAttributeExpression(reporting.DSN).Resolve(ctx)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `spa/shell.templ`, Line: 32, Col: 57}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\"><meta name=\"dimmi-errors-environment\" content=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var6 string
+			templ_7745c5c3_Var6, templ_7745c5c3_Err = templruntime.NewAttributeExpression(reporting.Environment).Resolve(ctx)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `spa/shell.templ`, Line: 33, Col: 73}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\"><meta name=\"dimmi-errors-release\" content=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var7 string
+			templ_7745c5c3_Var7, templ_7745c5c3_Err = templruntime.NewAttributeExpression(reporting.Release).Resolve(ctx)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `spa/shell.templ`, Line: 34, Col: 65}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<title>Dimmi</title><link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCA0MCI+PHN0eWxlPmd7ZmlsbDojMDAwMDAwfUBtZWRpYSAocHJlZmVycy1jb2xvci1zY2hlbWU6ZGFyayl7Z3tmaWxsOiNGRkZGRkZ9fTwvc3R5bGU+PGcgZmlsbC1ydWxlPSJldmVub2RkIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNCwtNCkiPjxwYXRoIGQ9Ik00LDI0IEEyMCwyMCAwIDAgMSAxOC44NjksNC42NjkgTDQzLjMzMSwyOS4xMzEgQTIwLDIwIDAgMCAxIDI0LDQ0IEwxMSw0NCBBNyw3IDAgMCAxIDQsMzcgWiIvPjxwYXRoIGQ9Ik0yMS45MSw0LjExIEEyMCwyMCAwIDAgMSAzMC4xNzgsNC45NzggTDQzLjAyMiwxNy44MjIgQTIwLDIwIDAgMCAxIDQzLjg5LDI2LjA5IFoiLz48L2c+PC9nPjwvc3ZnPg==\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -100,7 +160,7 @@ func Shell(lang, chosenTheme string, assets templ.Component) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</head><body class=\"bg-background-full\"><div id=\"root\"></div></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</head><body class=\"bg-background-full\"><div id=\"root\"></div></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

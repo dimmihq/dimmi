@@ -28,13 +28,14 @@ import (
 	"github.com/dimmihq/dimmi/app/http/controllers/web"
 	"github.com/dimmihq/dimmi/app/http/controllers/widget"
 	"github.com/dimmihq/dimmi/app/support/helpsample"
+	spaview "github.com/dimmihq/dimmi/resources/views/spa"
 )
 
 /*
 Web declares the browser page routes.
 */
 func Web(a *app.App) {
-	spa := &web.AppController{Vite: a.Vite, Errors: a.Errors}
+	spa := &web.AppController{Vite: a.Vite, Errors: a.Errors, Reporting: reporting(a)}
 	redirect := &web.OAuthRedirectController{
 		Providers: a.Providers, Attempts: a.OAuthAttempts, Cookies: a.Cookies, Clock: a.Clock,
 		ConfirmationTTL: a.Config.Auth.PasswordConfirmation.TTL, Errors: a.Errors,
@@ -263,4 +264,16 @@ func changelogPages(get, post func(path, name string, h fhttp.HandlerFunc), cl w
 	post("/changelog/subscribers/{subscriber}/{purpose}/{token}", "hc.changelog.subscribers.update",
 		cl.SubscriberAction)
 	post("/changelog/{slug}/reactions", "hc.changelog.entries.reactions.store", cl.React)
+}
+
+/*
+reporting tells the browser app where to report its errors, and which
+environment and release they come from.
+*/
+func reporting(a *app.App) spaview.Reporting {
+	return spaview.Reporting{
+		DSN:         a.Config.Frontend.ErrorsDSN,
+		Environment: a.Application.Config.Telemetry.Environment,
+		Release:     a.Application.Config.App.Release,
+	}
 }

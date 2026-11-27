@@ -55,7 +55,11 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Pushes to main upload the dashboard's source maps to the error
+      # tracker, then delete them, so they never ship in the image.
       - run: pnpm build
+        env:
+          SENTRY_AUTH_TOKEN: ${{ env.PUSH == 'true' && secrets.RUSTRAK_CI_TOKEN || '' }}
       - name: Build the cloud binary
         run: |
           mkdir -p "$RUNNER_TEMP/image"
