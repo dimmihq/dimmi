@@ -677,6 +677,303 @@ export const RIVALS: Record<string, Rival> = {
       },
     ],
   },
+  crisp: {
+    slug: "crisp",
+    name: "Crisp",
+    tone: "#1972f5",
+    pricingUrl: "https://crisp.chat/en/pricing/",
+    checkedOn: CHECKED_ON_ISO,
+    checkedOnLabel: CHECKED_ON,
+    aiUnit: "credit",
+    aiPrice: 0.055,
+    aiNote:
+      "Crisp bundles monthly AI credits ($5 on Mini, $25 on Essentials, $75 on Plus); extra usage consumes credits rather than direct BYO model keys.",
+    plans: [
+      {
+        name: "Free",
+        seatPrice: null,
+        flatMonthly: 0,
+        includedSeats: 2,
+        extraSeatPrice: 10,
+        billingNote: "$0/workspace/mo (2 seats, 100 profiles)",
+        highlights: ["Website chat widget", "Shared inbox", "Mobile apps", "2 seats included"],
+        missing: ["Email domain inbox", "Knowledge base", "Workflow builder", "AI credits"],
+      },
+      {
+        name: "Mini",
+        seatPrice: null,
+        flatMonthly: 45,
+        includedSeats: 4,
+        extraSeatPrice: 10,
+        billingNote: "$45/workspace/mo (4 seats, 5,000 profiles)",
+        highlights: ["Shared email inbox", "Custom email domain", "4 seats (+$10/seat)", "$5/mo AI credits"],
+        missing: ["WhatsApp and Instagram", "Knowledge base", "Workflow builder"],
+      },
+      {
+        name: "Essentials",
+        seatPrice: null,
+        flatMonthly: 95,
+        includedSeats: 10,
+        extraSeatPrice: 10,
+        billingNote: "$95/workspace/mo (10 seats, 50,000 profiles)",
+        highlights: [
+          "10 seats (+$10/seat)",
+          "WhatsApp, Instagram, SMS",
+          "Knowledge base & workflows",
+          "$25/mo AI credits",
+        ],
+        missing: ["Ticketing system (Plus $295)", "White labelling", "Unlimited sub-inboxes"],
+      },
+      {
+        name: "Plus",
+        seatPrice: null,
+        flatMonthly: 295,
+        includedSeats: 20,
+        extraSeatPrice: 10,
+        billingNote: "$295/workspace/mo (20+ seats, 200,000 profiles)",
+        highlights: ["20 seats (+$10/seat)", "Ticketing system", "5 sub-inboxes", "$75/mo AI credits"],
+      },
+    ],
+    addOns: [
+      { name: "Additional agent seat", price: 10, unit: "seat/mo", note: "$10/agent/mo above the workspace seat cap." },
+    ],
+    facts: [
+      {
+        label: "Seat cap model",
+        rival: "2 seats Free, 4 on Mini ($45), 10 on Essentials ($95), 20 on Plus ($295), then $10/seat",
+        dimmi: "Unlimited free seats on every workspace",
+        source: "https://crisp.chat/en/pricing/",
+        checkedOn: CHECKED_ON_ISO,
+      },
+    ],
+    rivalWins: [
+      "Polished all-in-one chat, status page, and CRM toolkit built specifically for small businesses.",
+      "Predictable flat workspace plans ($45 Mini, $95 Essentials) when your team stays inside the seat cap.",
+      "Long track record since 2015 with mature native mobile apps and 100+ integrations.",
+      "Built-in live chat features like MagicBrowse co-browsing that dimmi does not ship yet.",
+    ],
+    dimmiWins: [
+      "Unlimited free teammate seats from day one so engineers and product managers never hit a 4-seat or 10-seat cap.",
+      "Ticketing, workflows, knowledge base, and SAML SSO unlocked on every workspace instead of gated on Plus ($295/mo).",
+      "Bring your own OpenAI or Anthropic key with no monthly AI credit allowance cap.",
+      "100% MIT open-source codebase you can self-host on your own Linux server for $0 software fees.",
+    ],
+    switchTriggers: [
+      {
+        trigger: "Fixed workspace seat caps (+$10/seat overage)",
+        rivalReality:
+          "Mini caps at 4 seats ($45) and Essentials caps at 10 seats ($95); inviting engineers costs $10/seat/mo each.",
+        dimmiReality: "Invite your entire engineering, product, and support org for $0 per seat.",
+        sourceLabel: "Crisp pricing",
+        sourceUrl: "https://crisp.chat/en/pricing/",
+      },
+      {
+        trigger: "Ticketing locked on Plus ($295/workspace/mo)",
+        rivalReality:
+          "Structured ticketing and 5 sub-inboxes jump the workspace bill from $95 Essentials to $295 Plus.",
+        dimmiReality: "Custom ticket types, states, incident trackers, and unlimited inboxes ship on every workspace.",
+        sourceLabel: "Crisp pricing",
+        sourceUrl: "https://crisp.chat/en/pricing/",
+      },
+      {
+        trigger: "Bundled AI credit ceilings ($5 to $75/mo)",
+        rivalReality:
+          "Mini includes $5 (~90 AI chats) and Essentials includes $25 (~450 AI chats) with no BYO LLM key option.",
+        dimmiReality: "Connect your own OpenAI, Anthropic, or OpenRouter key directly on Cloud or self-hosted.",
+        sourceLabel: "Crisp pricing",
+        sourceUrl: "https://crisp.chat/en/pricing/",
+      },
+      {
+        trigger: "Closed cloud with no self-hosting",
+        rivalReality: "Crisp is closed-source SaaS hosted on Crisp's infrastructure only.",
+        dimmiReality: "Full MIT Go and React repository you can run on your own server and Postgres database.",
+        sourceLabel: "dimmi GitHub",
+        sourceUrl: "https://github.com/dimmihq/dimmi",
+      },
+    ],
+    teams: [
+      {
+        profile: "3-person SaaS with heavy manual live chat (no ticketing)",
+        seats: 3,
+        conversations: 2500,
+        aiShare: 0.1,
+        pick: "rival",
+        reason: "Crisp Mini ($45/mo flat for 4 seats) is predictable and polished if you rarely use AI or ticketing.",
+        rivalPlanLabel: "Crisp Mini ($45 flat)",
+      },
+      {
+        profile: "8-person team wanting ticketing, workflows, and WhatsApp",
+        seats: 8,
+        conversations: 2000,
+        aiShare: 0.7,
+        pick: "dimmi",
+        reason:
+          "Crisp Plus ($295/mo) is required for structured ticketing; dimmi unlocks tickets and workflows at $0 seats.",
+        rivalPlanLabel: "Crisp Plus ($295 flat)",
+      },
+      {
+        profile: "25-person product org where engineers jump into customer threads",
+        seats: 25,
+        conversations: 3000,
+        aiShare: 0.75,
+        pick: "dimmi",
+        reason: "Crisp Plus ($295) + 5 extra seats ($50) starts at $345/mo before AI overages; dimmi seats are free.",
+        rivalPlanLabel: "Crisp Plus + 5 seats",
+      },
+      {
+        profile: "Self-hosted engineering team owning its data in Postgres",
+        seats: 6,
+        conversations: 1500,
+        aiShare: 0.8,
+        pick: "dimmi",
+        reason: "dimmi self-hosts under MIT on one Linux box for $0 software fees and supports your own model keys.",
+        rivalPlanLabel: "Crisp Essentials ($95)",
+      },
+    ],
+  },
+  "tawk-to": {
+    slug: "tawk-to",
+    name: "Tawk.to",
+    tone: "#03a84e",
+    pricingUrl: "https://www.tawk.to/pricing/",
+    checkedOn: CHECKED_ON_ISO,
+    checkedOnLabel: CHECKED_ON,
+    aiUnit: "included",
+    aiPrice: 0,
+    aiNote:
+      "Tawk.to core live chat is $0 forever for unlimited agents; removing 'Powered by tawk.to' branding costs $29/mo and paid AI Assist plans start at $29/mo.",
+    plans: [
+      {
+        name: "Free Forever",
+        seatPrice: null,
+        flatMonthly: 0,
+        billingNote: "$0 forever (unlimited agents, Powered by tawk.to branding)",
+        highlights: ["Unlimited free live chat agents", "Basic ticketing", "Knowledge base", "Contacts CRM"],
+        missing: [
+          "White-label widget ($29/mo)",
+          "BYO OpenAI or Anthropic key",
+          "Product changelog & feedback board",
+          "MIT self-hosting",
+        ],
+      },
+    ],
+    addOns: [
+      {
+        name: "Remove branding",
+        price: 29,
+        unit: "workspace/mo",
+        note: "$29/mo to remove 'Powered by tawk.to' from the widget.",
+      },
+      {
+        name: "AI Assist (paid tier)",
+        price: 29,
+        unit: "workspace/mo",
+        note: "Paid AI Assist plans start from $29/mo.",
+      },
+      {
+        name: "Hired live chat agents",
+        price: 1,
+        unit: "flat/mo",
+        note: "Optional outsourced agents starting from $1/hour.",
+      },
+    ],
+    facts: [
+      {
+        label: "Core chat price",
+        rival: "$0 forever with unlimited agents (branding removal $29/mo)",
+        dimmi: "100 free conversations/mo on Cloud, or $0 forever self-hosted under MIT",
+        source: "https://www.tawk.to/pricing/",
+        checkedOn: CHECKED_ON_ISO,
+      },
+    ],
+    rivalWins: [
+      "Core live chat is genuinely $0 forever for unlimited teammates and unlimited manual chats.",
+      "Zero friction to start on a small website when you only need basic human live chat.",
+      "Large install base across millions of small business websites and optional $1/hour hired chat agents.",
+    ],
+    dimmiWins: [
+      "Run AI support agents on your own OpenAI, Anthropic, DeepSeek, or Mistral keys with Policy Procedures and simulations.",
+      "Help center, product changelog, feedback board, workflows, and shared omnichannel inbox live in one platform.",
+      "100% MIT open-source code you can self-host on your own Linux server and own every database row.",
+      "Clean API, signed webhooks, 12 typed SDKs, and an MCP server built for software teams.",
+    ],
+    switchTriggers: [
+      {
+        trigger: "Branding removal and paid AI Assist add-ons ($29 + $29/mo)",
+        rivalReality:
+          "Removing 'Powered by tawk.to' ($29/mo) and upgrading AI Assist (from $29/mo) quickly brings a 'free' setup to $58+/mo.",
+        dimmiReality:
+          "Self-host dimmi under MIT for $0 software cost with full white-label control and your own AI keys.",
+        sourceLabel: "Tawk.to pricing",
+        sourceUrl: "https://www.tawk.to/pricing/",
+      },
+      {
+        trigger: "No BYO model keys or policy procedures",
+        rivalReality:
+          "Tawk.to AI Assist is closed-box and cannot execute approval-gated API procedures on your own OpenAI/Anthropic key.",
+        dimmiReality: "Connect your own LLM keys, enforce hard Policy Procedures, and test replies with simulations.",
+        sourceLabel: "Tawk.to pricing",
+        sourceUrl: "https://www.tawk.to/pricing/",
+      },
+      {
+        trigger: "Closed source with no data ownership or self-hosting",
+        rivalReality:
+          "Proprietary cloud widget monetized by add-ons and staffed agent services, with no self-host option.",
+        dimmiReality: "MIT open-source binary running in your own Postgres database with full ZIP exports.",
+        sourceLabel: "dimmi GitHub",
+        sourceUrl: "https://github.com/dimmihq/dimmi",
+      },
+      {
+        trigger: "Missing product changelog, feedback board, and developer SDKs",
+        rivalReality:
+          "Focused on basic website chat and ticketing; messaging connectors like Facebook and SMS are marked Beta.",
+        dimmiReality:
+          "Ships help center, changelog, feature requests, workflows, REST API, 12 SDKs, and MCP in one workspace.",
+        sourceLabel: "Tawk.to pricing",
+        sourceUrl: "https://www.tawk.to/pricing/",
+      },
+    ],
+    teams: [
+      {
+        profile: "Local business needing only free human live chat",
+        seats: 4,
+        conversations: 1200,
+        aiShare: 0,
+        pick: "rival",
+        reason:
+          "If you only need free human website chat and do not mind Tawk.to branding, Tawk.to Free ($0 forever) is hard to beat.",
+        rivalPlanLabel: "Tawk.to Free ($0)",
+      },
+      {
+        profile: "Bootstrapped SaaS wanting white-label chat, help center, and changelog",
+        seats: 3,
+        conversations: 600,
+        aiShare: 0.7,
+        pick: "dimmi",
+        reason:
+          "Avoids stacking $29 branding removal + AI Assist + separate changelog tools; dimmi Cloud starts with 100 free chats.",
+        rivalPlanLabel: "Tawk.to + Branding + AI ($58+)",
+      },
+      {
+        profile: "Engineering team running AI support agents on its own OpenAI key",
+        seats: 8,
+        conversations: 2500,
+        aiShare: 0.8,
+        pick: "dimmi",
+        reason: "dimmi runs approval-gated Procedures, MCP tools, and BYO model keys with zero vendor lock-in.",
+        rivalPlanLabel: "Tawk.to + Add-ons",
+      },
+      {
+        profile: "Privacy-conscious business self-hosting customer chats",
+        seats: 5,
+        conversations: 1500,
+        aiShare: 0.6,
+        pick: "dimmi",
+        reason: "Tawk.to cannot be self-hosted; dimmi runs under MIT on a $24-$48 Linux VPS with your own Postgres.",
+        rivalPlanLabel: "Cloud-only (cannot self-host)",
+      },
+    ],
+  },
 };
 
 const COMPETITOR_SLUGS = ["intercom", "zendesk", "help-scout", "front", "freshdesk"] as const;
