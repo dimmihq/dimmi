@@ -1,9 +1,9 @@
 ---
 title: "Monitor your server"
-description: "Check health endpoints, tail JSON logs, scrape Prometheus metrics, send OpenTelemetry traces or Sentry errors, and record dashboard sessions."
+description: "Check health endpoints, tail JSON logs, scrape Prometheus metrics, and send OpenTelemetry traces or Sentry errors."
 ---
 
-dimmi exposes two public health checks out of the box and optionally exports Prometheus metrics, OpenTelemetry (OTLP) traces, Sentry errors, and recordings of your team's dashboard sessions.
+dimmi exposes two public health checks out of the box and optionally exports Prometheus metrics, OpenTelemetry (OTLP) traces, and Sentry errors.
 
 ## Health checks
 
@@ -62,21 +62,3 @@ With a DSN set, the tracker also gets:
 - **Cron monitors.** Every scheduled job checks in when it starts and ends, so a missed, failed or stuck run is flagged.
 - **AI runs.** Each agent turn and Operator run is a trace of its model and tool calls.
 - **Web vitals.** The dashboard times page loads and route changes: all of them outside production, a fifth in production.
-
-## Session recordings
-
-Point the dashboard at a [kimmi](https://github.com/dimmihq/kimmi) server and you can replay what a teammate saw when a page broke. Your server records nothing until you set both of these with [`dimmictl set`](/self-hosting/configuration/):
-
-| Variable | Value |
-| --- | --- |
-| `DIMMI_FRONTEND__SESSIONS_HOST` | Origin of your kimmi server, such as `https://sessions.example.com`. Must be reachable from your team's browsers. |
-| `DIMMI_FRONTEND__SESSIONS_KEY` | Public key of the kimmi project to record into, such as `km_pub_0123abcd`. |
-
-dimmi refuses to start with only one of them set, or with a host that carries a path.
-
-Once a teammate signs in, the dashboard loads `kimmi.js` from that host and names the teammate by their dimmi user ID, name, email, and workspace. Signing out stops the recording. Help centers, the messenger and your customers' sites never load the recorder, and only the dashboard's Content-Security-Policy allows its host.
-
-On the kimmi side:
-
-- **Allowed origins.** Add your dimmi address, such as `https://support.example.com`, to the project's origins.
-- **Masking.** The project's privacy settings decide what leaves the browser. Turn on text and input masking unless your team agrees to record what it reads and types.
