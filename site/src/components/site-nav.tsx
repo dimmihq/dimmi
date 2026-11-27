@@ -13,7 +13,7 @@ import { GitHubStars } from "./github-stars";
 import { SiteNavMobile } from "./site-nav-mobile";
 
 const links = [
-  { label: "Self-host", href: "/#self-host" },
+  { label: "Self-host", href: "/self-host" },
   { label: "Pricing", href: "/pricing" },
 ];
 
@@ -203,7 +203,7 @@ function ProductMenu({ path }: { path: string }) {
               Open source under MIT. On our cloud or your own servers.
             </span>
             <a
-              href="/#self-host"
+              href="/self-host"
               className="inline-flex shrink-0 items-center gap-1 text-[13px] leading-5 font-medium text-text-primary hover:underline underline-offset-4"
             >
               Self-host it

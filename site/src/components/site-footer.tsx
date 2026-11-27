@@ -11,7 +11,7 @@ const pages = new Map<string, string>([
   ...PRODUCT_GROUPS.flatMap((group) => group.products.map((p) => [p.name, p.href] as const)),
   ...CHANNELS.map((c) => [c.name, c.href] as const),
   ["Pricing", "/pricing"],
-  ["Self-host", "/#self-host"],
+  ["Self-host", "/self-host"],
   ["dimmi Cloud", `${APP_URL}/signup`],
   ["Docs", "/docs"],
   ["API reference", "/docs/api-reference"],
