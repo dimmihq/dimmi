@@ -14,7 +14,8 @@ func (r *Runner) tracedTurn(ctx context.Context, st *run, args Args) *decision {
 	ctx, span := r.Telemetry.StartAI(ctx, "gen_ai.invoke_agent", "answer conversation")
 	defer span.End()
 
-	span.Set("gen_ai.agent.name", "agent")
+	span.Set("gen_ai.agent.name", st.env.Agent.Name)
+	span.Set("gen_ai.agent.id", st.env.Agent.ID.String())
 	span.Set("gen_ai.conversation.id", args.ConversationID.String())
 	span.Set("dimmi.workspace_id", args.WorkspaceID.String())
 
@@ -22,13 +23,18 @@ func (r *Runner) tracedTurn(ctx context.Context, st *run, args Args) *decision {
 }
 
 /*
-callTool runs one tool the model asked for inside a tool span.
+callTool runs one tool the model asked for inside a tool span that
+records what it was given and what it returned.
 */
 func (r *Runner) callTool(ctx context.Context, st *run, call contracts.ToolCall) (string, bool) {
 	ctx, span := r.Telemetry.StartAI(ctx, "gen_ai.execute_tool", "execute_tool "+call.Name)
 	defer span.End()
 
 	span.Set("gen_ai.tool.name", call.Name)
+	span.Set("gen_ai.tool.input", string(call.Arguments))
 
-	return r.runTool(ctx, st, call)
+	result, refused := r.runTool(ctx, st, call)
+	span.Set("gen_ai.tool.output", result)
+
+	return result, refused
 }

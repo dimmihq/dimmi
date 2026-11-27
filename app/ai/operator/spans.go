@@ -12,6 +12,7 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 	defer span.End()
 
 	span.Set("gen_ai.agent.name", "operator")
+	span.Set("gen_ai.agent.id", s.agent.ID.String())
 	span.Set("gen_ai.conversation.id", s.thread.ID.String())
 	span.Set("dimmi.workspace_id", s.thread.WorkspaceID.String())
 
@@ -24,16 +25,21 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 }
 
 /*
-runCall runs one call inside a tool span.
+runCall runs one call inside a tool span that records what it was given
+and what it returned.
 */
 func (e *Engine) runCall(ctx context.Context, s *session, p *pending) {
 	ctx, span := e.Telemetry.StartAI(ctx, "gen_ai.execute_tool", "execute_tool "+p.call.Name)
 	defer span.End()
 
 	span.Set("gen_ai.tool.name", p.call.Name)
+	span.Set("gen_ai.tool.input", string(p.call.Arguments))
 
 	e.execCall(ctx, s, p)
+	span.Set("gen_ai.tool.output", p.out.text)
+
 	if p.err != nil {
 		span.Fail()
+		span.Set("gen_ai.tool.error", p.err.Error())
 	}
 }

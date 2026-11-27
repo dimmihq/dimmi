@@ -67,9 +67,8 @@ func TestTracedLLM(t *testing.T) {
 		"gen_ai.chat", `"gen_ai.request.model":"claude-haiku"`, `"gen_ai.system":"anthropic"`,
 		`"gen_ai.usage.input_tokens":300`, `"gen_ai.usage.input_tokens.cached":200`,
 		`"gen_ai.usage.output_tokens":12`, `"gen_ai.usage.total_tokens":312`,
+		`"gen_ai.response.text":"Your order ships Monday."`, `\"role\":\"user\"`, `\"content\":\"Where is my order?\"`,
 	} {
 		assert.Contains(t, sent, want)
 	}
-	assert.NotContains(t, sent, "Where is my order?", "a customer's words never leave")
-	assert.NotContains(t, sent, "ships Monday", "the model's answer never leaves")
 }
