@@ -2,6 +2,7 @@
  * Canonical URLs, Open Graph/Twitter metadata, and JSON-LD structured data
  * emitted for every prerendered page and kept in sync on client navigation.
  */
+import { getAuthor } from "./data/authors";
 import { GITHUB_URL } from "./links";
 import { BANDS, cents, FREE_CONVERSATIONS } from "./pricing/prices";
 import { DEFAULT_TITLE, type Route } from "./routes";
@@ -159,6 +160,17 @@ function breadcrumbLabel(route: Route): string {
   return beforePipe || route.path;
 }
 
+function personSchema(authorId: string) {
+  const person = getAuthor(authorId);
+  return {
+    "@type": "Person",
+    name: person.name,
+    jobTitle: person.role,
+    url: person.url,
+    sameAs: person.sameAs,
+  };
+}
+
 export function pageSchemas(route: Route | undefined): Record<string, unknown>[] {
   if (!route) {
     return [];
@@ -174,6 +186,9 @@ export function pageSchemas(route: Route | undefined): Record<string, unknown>[]
   if (route.path.startsWith("/channels/")) {
     items.push({ "@type": "ListItem", position: 2, name: "Channels", item: `${SITE_URL}/channels` });
     items.push({ "@type": "ListItem", position: 3, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
+  } else if (route.path.startsWith("/vs/")) {
+    items.push({ "@type": "ListItem", position: 2, name: "Compare", item: `${SITE_URL}/vs` });
+    items.push({ "@type": "ListItem", position: 3, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
   } else {
     items.push({ "@type": "ListItem", position: 2, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
   }
@@ -188,6 +203,23 @@ export function pageSchemas(route: Route | undefined): Record<string, unknown>[]
 
   if (route.path === "/pricing") {
     schemas.push(SOFTWARE_SCHEMA);
+  }
+
+  if (route.meta && (route.path === "/vs" || route.path.startsWith("/vs/"))) {
+    const webPage: Record<string, unknown> = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: route.title,
+      description: route.description,
+      url: canonicalUrl(route.path),
+      datePublished: route.meta.published,
+      dateModified: route.meta.updated,
+      author: personSchema(route.meta.author),
+    };
+    if (route.meta.reviewedBy) {
+      webPage.reviewedBy = personSchema(route.meta.reviewedBy);
+    }
+    schemas.push(webPage);
   }
 
   return schemas;

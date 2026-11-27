@@ -17,20 +17,43 @@ const rays = Array.from({ length: 34 }, (_, i) => {
   };
 });
 
-export function FinalCta() {
+export type FinalCtaLink = {
+  label: string;
+  href: string;
+  variant?: "primary" | "secondary";
+  icon?: "arrow" | "github";
+};
+
+export function FinalCta({
+  title = "Try dimmi free on our cloud, or self-host it and pay us $0.",
+  links,
+}: {
+  title?: string;
+  links?: FinalCtaLink[];
+} = {}) {
+  const resolvedLinks: FinalCtaLink[] = links ?? [
+    { label: "Start free, no card", href: `${APP_URL}/signup`, variant: "primary", icon: "arrow" },
+    { label: "Self-host on GitHub", href: GITHUB_URL, variant: "secondary", icon: "github" },
+  ];
+
   return (
     <Section tone="brand" flush frameClassName="overflow-hidden">
       <div className="relative flex flex-col items-center gap-8 px-5 pt-24 pb-56 text-center sm:px-12 md:pt-28">
         <h2 className="max-w-xl text-[40px] leading-[1.12] font-medium tracking-[-0.025em] text-balance text-text-primary max-sm:text-[30px]">
-          Try dimmi free on our cloud, or self-host it and pay us $0.
+          {title}
         </h2>
         <div className="flex flex-wrap justify-center gap-3">
-          <ButtonLink href={`${APP_URL}/signup`} trailingIcon={RiArrowRightLine}>
-            Start free, no card
-          </ButtonLink>
-          <ButtonLink href={GITHUB_URL} variant="secondary" leadingIcon={RiGithubFill}>
-            Self-host on GitHub
-          </ButtonLink>
+          {resolvedLinks.map((item) => (
+            <ButtonLink
+              key={item.href + item.label}
+              href={item.href}
+              variant={item.variant === "secondary" ? "secondary" : undefined}
+              leadingIcon={item.icon === "github" ? RiGithubFill : undefined}
+              trailingIcon={item.icon === "arrow" ? RiArrowRightLine : undefined}
+            >
+              {item.label}
+            </ButtonLink>
+          ))}
         </div>
       </div>
       <svg

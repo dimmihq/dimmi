@@ -1,26 +1,20 @@
-import { RiArrowRightLine, RiCheckLine, RiCloseLine, RiExternalLinkLine, RiSubtractLine } from "@remixicon/react";
-import { Fragment } from "react";
+import { RiArrowRightLine } from "@remixicon/react";
 
 import { ButtonLink } from "@/components/base/buttons/button";
 import { cx } from "@/utils/cx";
 
 import { Intro, MonoLink, Section, Tag } from "../components/container";
 import { Questions } from "../components/product-page";
-import { APP_URL, GITHUB_URL, HELP_URL } from "../links";
+import { APP_URL, GITHUB_URL } from "../links";
 import { CompareBars } from "../pricing/comparison";
 import { CHECKED_ON, COMPETITORS, RESOLUTION_RATE, SCENARIOS } from "../pricing/competitors";
 import { bill, dollars } from "../pricing/prices";
 import { SDK_COUNT } from "../sdks";
 import { FinalCta } from "../sections/final-cta";
+import { type MatrixCell, CapabilityMatrix as SharedCapabilityMatrix } from "../vs/vs-matrix";
 
 const mono = "font-mono text-[12px] leading-5 font-medium tracking-[0.04em] uppercase";
 
-function requestUrl(title: string): string {
-  return `${HELP_URL}/feedback/new?${new URLSearchParams({ title }).toString()}`;
-}
-
-type CellStatus = "yes" | "partial" | "no";
-type MatrixCell = { status: CellStatus; label?: string };
 type MatrixRow = {
   feature: string;
   requestTitle?: string;
@@ -524,28 +518,6 @@ const questions = [
   },
 ];
 
-function StatusMark({ status }: { status: CellStatus }) {
-  if (status === "yes") {
-    return (
-      <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-accent-500/15 text-accent-600 dark:text-accent-400">
-        <RiCheckLine className="size-3.5" aria-hidden />
-      </span>
-    );
-  }
-  if (status === "partial") {
-    return (
-      <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-background-secondary-default text-text-tertiary">
-        <RiSubtractLine className="size-3.5" aria-hidden />
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-background-secondary-default text-text-tertiary/65">
-      <RiCloseLine className="size-3.5" aria-hidden />
-    </span>
-  );
-}
-
 function Hero() {
   return (
     <section className="relative bg-background-full">
@@ -577,48 +549,6 @@ function Hero() {
   );
 }
 
-function RequestLink({ title }: { title: string }) {
-  return (
-    <a
-      href={requestUrl(title)}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex items-center gap-1 font-medium text-accent-600 underline-offset-4 hover:underline dark:text-accent-400"
-    >
-      Request
-      <RiExternalLinkLine className="size-3.5" aria-hidden />
-    </a>
-  );
-}
-
-function MatrixDataCell({
-  cell,
-  highlight,
-  requestTitle,
-}: {
-  cell: MatrixCell;
-  highlight: boolean;
-  requestTitle?: string;
-}) {
-  const showRequest = highlight && requestTitle ? requestTitle : null;
-  const labelClass = highlight && cell.status === "yes" ? "font-medium text-text-primary" : "text-text-secondary";
-
-  return (
-    <td
-      className={cx("whitespace-nowrap px-4 py-3.5", highlight && "border-x border-accent-500/15 bg-accent-500/[0.03]")}
-    >
-      <span className="inline-flex items-center gap-2">
-        <StatusMark status={cell.status} />
-        {showRequest ? (
-          <RequestLink title={showRequest} />
-        ) : cell.label ? (
-          <span className={cx("tabular-nums", labelClass)}>{cell.label}</span>
-        ) : null}
-      </span>
-    </td>
-  );
-}
-
 function CapabilityMatrix() {
   const columns = [
     { key: "dimmi", label: "dimmi", highlight: true },
@@ -628,70 +558,25 @@ function CapabilityMatrix() {
   ] as const;
 
   return (
-    <Section frameClassName="flex flex-col gap-12">
-      <Intro
-        title="What we share, where we differ, and what we do not build."
-        body="Every tool here has real strengths. Here is an honest look at where dimmi wins, where competitors match us, and where you should pick someone else."
-      />
-      <div className="overflow-x-auto rounded-2xl border border-border-button-default bg-background-full">
-        <table className="w-full min-w-[880px] table-fixed border-collapse text-start">
-          <colgroup>
-            <col className="w-[36%]" />
-            <col className="w-[16%]" />
-            <col className="w-[16%]" />
-            <col className="w-[16%]" />
-            <col className="w-[16%]" />
-          </colgroup>
-          <thead>
-            <tr className="border-b border-separator-border">
-              <th className={`px-6 py-4 text-start text-text-tertiary ${mono}`}>Capability</th>
-              {columns.map((col) => (
-                <th
-                  key={col.key}
-                  className={cx(
-                    "whitespace-nowrap px-4 py-4 text-start text-[14px] font-medium",
-                    col.highlight
-                      ? "border-x border-accent-500/20 bg-accent-500/[0.08] text-accent-700 dark:text-accent-300"
-                      : "text-text-primary",
-                  )}
-                >
-                  {col.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-separator-border text-[14px] leading-5">
-            {matrixGroups.map((group) => (
-              <Fragment key={group.title}>
-                <tr className="bg-background-secondary-default/60">
-                  <th colSpan={5} scope="colgroup" className={`px-6 py-2.5 text-start text-text-tertiary ${mono}`}>
-                    {group.title}
-                  </th>
-                </tr>
-                {group.rows.map((row) => (
-                  <tr key={row.feature} className="transition-colors hover:bg-background-secondary-default/40">
-                    <th
-                      scope="row"
-                      className="whitespace-nowrap px-6 py-3.5 text-start align-top font-medium text-text-primary"
-                    >
-                      {row.feature}
-                    </th>
-                    {columns.map((col) => (
-                      <MatrixDataCell
-                        key={col.key}
-                        cell={row[col.key]}
-                        highlight={col.highlight}
-                        requestTitle={row.requestTitle}
-                      />
-                    ))}
-                  </tr>
-                ))}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Section>
+    <SharedCapabilityMatrix
+      title="What we share, where we differ, and what we do not build."
+      body="Every tool here has real strengths. Here is an honest look at where dimmi wins, where competitors match us, and where you should pick someone else."
+      columns={columns}
+      minWidthClass="min-w-[880px]"
+      groups={matrixGroups.map((group) => ({
+        title: group.title,
+        rows: group.rows.map((row) => ({
+          feature: row.feature,
+          requestTitle: row.requestTitle,
+          cells: {
+            dimmi: row.dimmi,
+            helply: row.helply,
+            chatbase: row.chatbase,
+            intercom: row.intercom,
+          },
+        })),
+      }))}
+    />
   );
 }
 
