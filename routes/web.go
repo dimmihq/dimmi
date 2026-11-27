@@ -35,7 +35,8 @@ import (
 Web declares the browser page routes.
 */
 func Web(a *app.App) {
-	spa := &web.AppController{Vite: a.Vite, Errors: a.Errors, Reporting: reporting(a), Recording: recording(a)}
+	spa := &web.AppController{Vite: a.Vite, Errors: a.Errors, Reporting: reporting(a), Recording: recording(a),
+		Support: spaview.Support{Messenger: a.Config.Frontend.SupportMessenger}}
 	redirect := &web.OAuthRedirectController{
 		Providers: a.Providers, Attempts: a.OAuthAttempts, Cookies: a.Cookies, Clock: a.Clock,
 		ConfirmationTTL: a.Config.Auth.PasswordConfirmation.TTL, Errors: a.Errors,

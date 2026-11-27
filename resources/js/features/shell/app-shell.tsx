@@ -10,6 +10,8 @@
  * leaves that page. The shell also opens the app's one realtime
  * connection, for the workspace on screen, and says when it drops.
  */
+
+import { Dimmi } from "@dimmi/react";
 import {
   RiAddLine,
   RiLogoutBoxRLine,
@@ -48,6 +50,7 @@ import { notificationCountsQuery } from "@/lib/api/notifications";
 import { callerQuery } from "@/lib/api/workspace";
 import { RealtimeProvider } from "@/lib/realtime/provider";
 import { recordSession } from "@/lib/sessions";
+import { readSupportMessenger } from "@/lib/support";
 
 import { useAvailability } from "./availability";
 import { GetStarted } from "./get-started";
@@ -243,6 +246,8 @@ function SignedInShell({
       recordSession({ id, workspace: { id: workspaceId, name: workspaceName } });
     }
   }, [id, workspaceId, workspaceName]);
+  // The server's own messenger, when its page names one, for the signed-in teammate.
+  const [support] = useState(() => readSupportMessenger());
   const [collapsed, setCollapsed] = useRailCollapse(path);
   const inSettings = path === settingsLink.href || path.startsWith(`${settingsLink.href}/`);
   const { data: counts } = useQuery({ ...countsQuery(workspace?.id ?? ""), enabled: Boolean(workspace) });
@@ -288,6 +293,7 @@ function SignedInShell({
 
   return (
     <RealtimeProvider workspace={workspace?.id ?? null}>
+      {support ? <Dimmi appId={support.appId} host={support.host} /> : null}
       <div className="flex h-dvh flex-col gap-3 bg-background-full p-3 lg:flex-row lg:gap-4">
         <div className="hidden h-full lg:flex">{sidebar(false)}</div>
 

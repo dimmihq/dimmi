@@ -67,6 +67,11 @@ patches:
       - op: add
         path: /data/DIMMI_FRONTEND__SESSIONS_PROJECT_ID
         value: 01a21c12-58c8-7abc-9e53-a1907a9a31be
+      # The dashboard shows its teammates dimmi's own messenger: the team
+      # supports dimmi's customers with dimmi.
+      - op: add
+        path: /data/DIMMI_FRONTEND__SUPPORT_MESSENGER
+        value: wgt_01m89n8mc6e64trfb4yt4xfh1p
       - op: add
         path: /data/DIMMI_FILESYSTEMS__DISKS__S3__PUBLIC_ENDPOINT
         value: https://files.trydimmi.com
