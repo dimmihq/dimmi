@@ -108,6 +108,7 @@ type Telemetry struct {
 	meter     metric.Meter
 	registry  *prometheus.Registry
 	reporter  *sentry.Client
+	hub       *sentry.Hub
 	shutdowns []func(context.Context) error
 }
 

@@ -155,7 +155,7 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 	}
 	if a.LLM == nil {
 		a.LLM = managers.NewLLMManager(managers.LLMDeps{
-			Keys: a.Keys, HTTP: a.HTTP, Config: a.Config.AI, Clock: a.Clock, DB: a.DB,
+			Keys: a.Keys, HTTP: a.HTTP, Config: a.Config.AI, Clock: a.Clock, DB: a.DB, Telemetry: a.Telemetry,
 		})
 	}
 
@@ -166,7 +166,7 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 
 	runner := &pipeline.Runner{
 		DB: a.DB, Clock: a.Clock, LLM: a.LLM, Knowledge: a.Knowledge, Prompts: loader,
-		Prices: loadPrices(a), Events: a.Events, Publisher: a.Broadcast,
+		Prices: loadPrices(a), Events: a.Events, Publisher: a.Broadcast, Telemetry: a.Telemetry,
 		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads,
 		AnswerEffort: contracts.Effort(a.Config.AI.AnswerEffort),
 	}

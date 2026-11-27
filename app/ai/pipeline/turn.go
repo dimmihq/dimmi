@@ -173,10 +173,10 @@ func callLimit(st *run) int {
 }
 
 /*
-callTool runs one tool the model asked for, records it, and returns
+runTool runs one tool the model asked for, records it, and returns
 the result the model reads, which says what went wrong when it failed.
 */
-func (r *Runner) callTool(ctx context.Context, st *run, call contracts.ToolCall) (string, bool) {
+func (r *Runner) runTool(ctx context.Context, st *run, call contracts.ToolCall) (string, bool) {
 	started := r.Clock.Now()
 	t, ok := r.registry(st)[call.Name]
 	allowed := ok && st.settings.allows(call.Name, t.action)

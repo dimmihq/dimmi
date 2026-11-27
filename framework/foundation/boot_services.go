@@ -36,6 +36,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/ratelimit"
 	"github.com/dimmihq/dimmi/framework/schedule"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 )
 
 /*
@@ -101,6 +102,9 @@ func (a *Application) bootQueue(ctx context.Context) error {
 	cfg.NoLeader = !a.Roles.Has(RoleScheduler)
 	cfg.Clock = a.Clock
 	cfg.Report = a.Telemetry.Report
+	cfg.CheckIn = func(m queue.Monitor) func(error) {
+		return a.Telemetry.CheckIn(telemetry.Monitor(m))
+	}
 
 	q, err := queue.New(log.NewContext(ctx, a.Log), a.Config.Database, cfg)
 	if err != nil {

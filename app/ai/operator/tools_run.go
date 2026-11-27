@@ -114,10 +114,10 @@ func (e *Engine) runGroup(ctx context.Context, s *session, group []*pending) {
 }
 
 /*
-runCall runs one call's handler, or refuses a tool the run does not
+execCall runs one call's handler, or refuses a tool the run does not
 offer.
 */
-func (e *Engine) runCall(ctx context.Context, s *session, p *pending) {
+func (e *Engine) execCall(ctx context.Context, s *session, p *pending) {
 	p.started = e.Clock.Now()
 	p.err = errors.New("unknown tool " + p.call.Name)
 	if p.layer {

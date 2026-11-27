@@ -64,12 +64,12 @@ type streamed struct {
 }
 
 /*
-converse runs model calls and tools until the model answers, and
+converseLoop runs model calls and tools until the model answers, and
 returns the answer with how the run ended. Only the last call's text is
 the answer: what the model writes before calling tools is a note among
 the run's steps, where it was written.
 */
-func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
+func (e *Engine) converseLoop(ctx context.Context, s *session) (string, string) {
 	e.openLayer(ctx, s)
 	defer e.saveLayer(ctx, s)
 	p := prompt{system: e.systemPrompt(s), messages: e.transcript(s)}

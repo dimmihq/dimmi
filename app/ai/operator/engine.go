@@ -29,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/actions/ai"
 	"github.com/dimmihq/dimmi/app/actions/audit"
@@ -118,6 +119,8 @@ type Engine struct {
 	Catalog       Catalog
 	RetryWait     time.Duration
 	Finished      PushRun
+	/* Telemetry receives a span for each run and tool call; nil sends none. */
+	Telemetry *telemetry.Telemetry
 }
 
 /*
