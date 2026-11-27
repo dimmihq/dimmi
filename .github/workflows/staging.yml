@@ -6,7 +6,8 @@
 #
 # Staging environment secrets: KUBECONFIG, a kubeconfig for the namespace's
 # deployer account, and GATE_CI_KEY, the key the smoke test passes the gate
-# with.
+# with. The repository secret RUSTRAK_CI_TOKEN, when set, registers the
+# release with the error tracker.
 
 name: staging
 
@@ -109,6 +110,15 @@ jobs:
         env:
           EXPECT_RELEASE: ${{ env.SHA }}
           GATE_KEY: ${{ secrets.GATE_CI_KEY }}
+      # Only a release that passed its smoke test, never a rollback. The
+      # tracker never holds a deploy up or fails it.
+      - name: Register the release with the error tracker
+        if: env.OUTDATED != 'true'
+        continue-on-error: true
+        timeout-minutes: 2
+        run: deploy/release/tracker.sh staging "$SHA"
+        env:
+          TRACKER_TOKEN: ${{ secrets.RUSTRAK_CI_TOKEN }}
       - name: Roll back to the previous release
         if: failure() && env.PREVIOUS != ''
         run: deploy/k8s/scripts/rollback.sh staging "$PREVIOUS"

@@ -9,6 +9,10 @@
  * The docs (docs/, Astro) are part of the site under /docs: `pnpm
  * site:build` builds this site, then the docs into dist/docs. In
  * development /docs is proxied to the docs' own dev server (pnpm docs:dev).
+ *
+ * The build names its release, the commit it was built from (DIMMI_RELEASE,
+ * or GITHUB_SHA in CI), so the site's error reports carry the same release
+ * as the app's.
  */
 import { fileURLToPath } from "node:url";
 
@@ -18,6 +22,8 @@ import { defineConfig } from "vite";
 import { vitePrerenderPlugin } from "vite-prerender-plugin";
 
 import { generateSitemap } from "../scripts/generate-sitemap";
+
+const release = process.env.DIMMI_RELEASE || process.env.GITHUB_SHA || "";
 
 export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
@@ -34,6 +40,7 @@ export default defineConfig({
       },
     },
   ],
+  define: { "import.meta.env.DIMMI_RELEASE": JSON.stringify(release) },
   resolve: {
     dedupe: ["react", "react-dom"],
     alias: {
