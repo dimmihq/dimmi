@@ -145,10 +145,18 @@ export function ModelFragment() {
               <img
                 src={`/logos/${provider.light}.svg`}
                 alt={provider.name}
+                width={16}
+                height={16}
                 className={cx("size-4", provider.dark && "dark:hidden")}
               />
               {provider.dark ? (
-                <img src={`/logos/${provider.dark}.svg`} alt="" className="hidden size-4 dark:block" />
+                <img
+                  src={`/logos/${provider.dark}.svg`}
+                  alt=""
+                  width={16}
+                  height={16}
+                  className="hidden size-4 dark:block"
+                />
               ) : null}
             </span>
             <span className="text-body-medium text-text-primary">{provider.name}</span>

@@ -3,6 +3,7 @@ import { ArrowsClockwise, Broadcast, Code, Key, Plugs, ShieldCheck } from "@phos
 import { ChannelLinks, FeatureGrid, ProductHero, Questions, Rows } from "../../components/product-page";
 import { ShotStill } from "../../components/shot-still";
 import { ShotVideo } from "../../components/shot-video";
+import { SDK_COUNT } from "../../sdks";
 import { FinalCta } from "../../sections/final-cta";
 
 const rows = [
@@ -48,7 +49,7 @@ const rows = [
     visual: (
       <ShotStill
         name="channel-api-sdks"
-        alt="Developer tools overview showing the 11 typed SDKs, OAuth 2 app settings, and remote MCP server URL"
+        alt={`Developer tools overview showing the ${SDK_COUNT} typed SDKs, OAuth 2 app settings, and remote MCP server URL`}
       />
     ),
   },
@@ -105,8 +106,7 @@ const questions = [
   },
   {
     question: "Do we need a higher plan for the API, webhooks, or SDKs?",
-    answer:
-      "No. The API, webhooks, all 11 SDKs, OAuth apps, and MCP are included on dimmi Cloud (with 100 free conversations a month) and in the $0 self-hosted build.",
+    answer: `No. The API, webhooks, all ${SDK_COUNT} SDKs, OAuth apps, and MCP are included on dimmi Cloud (with 100 free conversations a month) and in the $0 self-hosted build.`,
   },
   {
     question: "Can iOS and Android apps use the Messenger API?",

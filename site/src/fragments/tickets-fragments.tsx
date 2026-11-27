@@ -233,7 +233,7 @@ export function TicketsHeroFragment() {
         <Block label="State">
           <span className="flex items-center gap-2">
             <Pill group="in_progress">Investigating</Pill>
-            <span className="truncate text-body-2-regular text-text-tertiary">Customer sees “We're on it”</span>
+            <span className="truncate text-body-2-regular text-text-tertiary">Customer sees "We're on it"</span>
           </span>
         </Block>
         <Block label="Fields">
@@ -388,7 +388,7 @@ export function StatesFragment() {
             </span>
             <span className="flex min-w-0 items-center justify-between gap-3">
               <span className="truncate text-body-medium text-text-primary">{state.name}</span>
-              <span className="truncate text-body-2-regular text-text-tertiary">“{state.customer}”</span>
+              <span className="truncate text-body-2-regular text-text-tertiary">"{state.customer}"</span>
             </span>
           </li>
         ))}

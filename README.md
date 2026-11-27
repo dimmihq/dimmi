@@ -102,7 +102,7 @@ Create your owner account with `dimmictl admin`, read the [self-hosting guide](h
 
 ## Build on dimmi
 
-Use the [REST API](https://trydimmi.com/docs/api-reference/?utm_source=github&utm_medium=readme&utm_content=developers), signed [webhooks](https://trydimmi.com/docs/developers/webhooks/events/?utm_source=github&utm_medium=readme&utm_content=developers), [OAuth apps](https://trydimmi.com/docs/developers/oauth-apps/?utm_source=github&utm_medium=readme&utm_content=developers), `llms.txt`, or the [MCP server](https://trydimmi.com/docs/developers/mcp/?utm_source=github&utm_medium=readme&utm_content=developers). All **11 typed SDKs** live in [`sdk/`](sdk).
+Use the [REST API](https://trydimmi.com/docs/api-reference/?utm_source=github&utm_medium=readme&utm_content=developers), signed [webhooks](https://trydimmi.com/docs/developers/webhooks/events/?utm_source=github&utm_medium=readme&utm_content=developers), [OAuth apps](https://trydimmi.com/docs/developers/oauth-apps/?utm_source=github&utm_medium=readme&utm_content=developers), `llms.txt`, or the [MCP server](https://trydimmi.com/docs/developers/mcp/?utm_source=github&utm_medium=readme&utm_content=developers). All **12 typed SDKs** live in [`sdk/`](sdk).
 
 | SDK | Install |
 | --- | --- |
@@ -112,7 +112,7 @@ Use the [REST API](https://trydimmi.com/docs/api-reference/?utm_source=github&ut
 | <img alt="Laravel" src="https://img.shields.io/badge/Laravel-002C22?style=for-the-badge&logoColor=00D492&logo=laravel"> | `composer require dimmi/dimmi-laravel` |
 | <img alt="Python" src="https://img.shields.io/badge/Python-002C22?style=for-the-badge&logoColor=00D492&logo=python"> | `pip install dimmi-sdk` |
 
-Messenger packages for browser, React, Next.js, Vue, Angular, and Svelte are in the [messenger install guide](https://trydimmi.com/docs/developers/messenger/install/?utm_source=github&utm_medium=readme&utm_content=developers).
+Messenger packages for browser, React, Next.js, Vue, Angular, and Svelte, plus `@dimmi/server` for identity signing, are in the [messenger install guide](https://trydimmi.com/docs/developers/messenger/install/?utm_source=github&utm_medium=readme&utm_content=developers).
 
 ## Open source vs. cloud
 

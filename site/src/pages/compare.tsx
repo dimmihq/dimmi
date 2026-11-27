@@ -10,6 +10,7 @@ import { APP_URL, GITHUB_URL, HELP_URL } from "../links";
 import { CompareBars } from "../pricing/comparison";
 import { CHECKED_ON, COMPETITORS, RESOLUTION_RATE, SCENARIOS } from "../pricing/competitors";
 import { bill, dollars } from "../pricing/prices";
+import { SDK_COUNT } from "../sdks";
 import { FinalCta } from "../sections/final-cta";
 
 const mono = "font-mono text-[12px] leading-5 font-medium tracking-[0.04em] uppercase";
@@ -383,7 +384,7 @@ const matrixGroups: { title: string; rows: MatrixRow[] }[] = [
       },
       {
         feature: "Typed backend & web framework SDKs",
-        dimmi: { status: "yes", label: "11 SDKs" },
+        dimmi: { status: "yes", label: `${SDK_COUNT} SDKs` },
         helply: { status: "no", label: "REST only" },
         chatbase: { status: "no", label: "REST only" },
         intercom: { status: "partial", label: "Community SDKs" },
