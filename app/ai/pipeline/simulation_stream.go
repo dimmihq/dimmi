@@ -85,9 +85,10 @@ func (r *Runner) PublishRun(ctx context.Context, member ids.UUID, data map[strin
 	if r.Publisher == nil {
 		return
 	}
-	_ = r.Publisher.Publish(ctx, []string{appbroadcasting.MemberChannel(member)}, fbroadcasting.Message{
+	saveErr := r.Publisher.Publish(ctx, []string{appbroadcasting.MemberChannel(member)}, fbroadcasting.Message{
 		Event: EventSimulationRun, Ephemeral: true, Data: data,
 	})
+	unsaved(ctx, "simulation_stream_publish_failed", saveErr)
 }
 
 /*
@@ -98,10 +99,12 @@ func (r *Runner) publishStep(ctx context.Context, st *run, step PreviewStep) {
 	if st.sim == nil || st.sim.in.StreamID == "" || r.Publisher == nil {
 		return
 	}
-	_ = r.Publisher.Publish(ctx, []string{appbroadcasting.MemberChannel(st.sim.in.MemberID)}, fbroadcasting.Message{
+	channel := appbroadcasting.MemberChannel(st.sim.in.MemberID)
+	saveErr := r.Publisher.Publish(ctx, []string{channel}, fbroadcasting.Message{
 		Event: EventPreviewStep, Ephemeral: true,
 		Data: map[string]any{"stream_id": st.sim.in.StreamID, "step": step},
 	})
+	unsaved(ctx, "simulation_stream_publish_failed", saveErr)
 }
 
 /*

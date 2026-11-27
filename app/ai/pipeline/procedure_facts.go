@@ -14,10 +14,12 @@ package pipeline
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/audiences"
 	"github.com/dimmihq/dimmi/app/contracts"
@@ -38,7 +40,7 @@ func (r *Runner) procedureFacts(ctx context.Context, st *run) func(string) (any,
 	}
 	var person *audiences.Person
 	if e.Contact != nil {
-		_ = r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		saveErr := r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 			people, err := audiences.LoadPeople(ctx, models.New(tx), e.Workspace.ID, []models.Contact{*e.Contact})
 			if err == nil && len(people) == 1 {
 				p := people[0]
@@ -47,6 +49,7 @@ func (r *Runner) procedureFacts(ctx context.Context, st *run) func(string) (any,
 			}
 			return err
 		})
+		unsaved(ctx, "procedure_state_save_failed", saveErr)
 	}
 	verified := st.actions.identity.Verified
 	return func(field string) (any, bool) {
@@ -114,14 +117,16 @@ func (r *Runner) preloadArticles(ctx context.Context, st *run) {
 	}
 	allowed, filtered, err := r.readerAudiences(ctx, st)
 	if err != nil {
+		telemetry.Recovered(ctx, "procedure_articles_unloaded", "articles_left_out")
 		return
 	}
 	var restrictions audiences.Restrictions
 	if filtered {
-		_ = r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		saveErr := r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 			restrictions, err = audiences.LoadRestrictions(ctx, models.New(tx), st.env.Workspace.ID)
 			return err
 		})
+		unsaved(ctx, "procedure_state_save_failed", saveErr)
 	}
 	for _, public := range refs {
 		id, ok := decodePublic(models.PrefixArticle, public)
@@ -132,6 +137,9 @@ func (r *Runner) preloadArticles(ctx context.Context, st *run) {
 			contracts.KnowledgeVisibilityPublic, contracts.KnowledgeVisibilityAgentOnly,
 		})
 		if err != nil {
+			if !errors.Is(err, database.ErrNotFound) {
+				telemetry.Recovered(ctx, "procedure_articles_unloaded", "articles_left_out")
+			}
 			continue
 		}
 		n := st.sourceFor(contracts.KnowledgeChunk{

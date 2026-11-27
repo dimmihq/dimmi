@@ -51,7 +51,7 @@ publishTyping sends one typing event to the customer's widget; a
 failed relay only costs the indicator.
 */
 func (r *Runner) publishTyping(ctx context.Context, e *env, event string) {
-	_ = r.Publisher.Publish(ctx, []string{appbroadcasting.WidgetContactChannel(e.Conversation.ContactID)},
+	saveErr := r.Publisher.Publish(ctx, []string{appbroadcasting.WidgetContactChannel(e.Conversation.ContactID)},
 		fbroadcasting.Message{
 			ID: ids.Encode("evt", ids.New()), Event: event, Ephemeral: true,
 			Data: typingPayload{
@@ -59,6 +59,7 @@ func (r *Runner) publishTyping(ctx context.Context, e *env, event string) {
 				Name:           e.Agent.Name,
 			},
 		})
+	unsaved(ctx, "typing_publish_failed", saveErr)
 }
 
 /*

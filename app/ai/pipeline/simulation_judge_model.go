@@ -34,6 +34,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -87,6 +88,7 @@ func (r *Runner) JudgeRubrics(ctx context.Context, in Rubrics) ([]procedure.Judg
 		return nil, nil
 	}
 	r.prepare()
+	ctx = telemetry.WithTask(ctx, "simulation_judge")
 	if model := r.judgeModel(in.Wrote); model != "" {
 		if out, ok := r.judgeWithWriter(ctx, in, model); ok {
 			return out, nil
@@ -158,12 +160,13 @@ func (r *Runner) judgeWithWriter(ctx context.Context, in Rubrics, model string) 
 	if out == nil {
 		d = failed("provider_error", ErrNoJudgment)
 	}
-	_ = r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	saveErr := r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		if err := r.finishRun(ctx, tx, st, d); err != nil {
 			return err
 		}
 		return r.recordSpend(ctx, tx, st, d)
 	})
+	unsaved(ctx, "run_step_save_failed", saveErr)
 	return out, out != nil
 }
 

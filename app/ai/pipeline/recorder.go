@@ -138,10 +138,11 @@ func (r *Runner) step(ctx context.Context, st *run, in stepRecord) {
 		params.Status, params.ErrorKind, params.HttpStatus = errorFields(in.err)
 	}
 
-	_ = r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	saveErr := r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		_, err := models.New(tx).CreateRunStep(ctx, params)
 		return err
 	})
+	unsaved(ctx, "run_step_save_failed", saveErr)
 }
 
 /*

@@ -28,6 +28,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	"github.com/dimmihq/dimmi/app/ai/agents"
@@ -197,6 +198,9 @@ func (r *Runner) rankByVector(ctx context.Context, e *env, query string) []ids.U
 	}
 	vector, model, err := r.ProcedureVectors.EmbedQuery(ctx, e.Workspace.ID, query)
 	if err != nil {
+		if ctx.Err() == nil {
+			telemetry.Recovered(ctx, "procedure_embedding_failed", "procedures_unranked")
+		}
 		return nil
 	}
 	var rows []models.RankLiveProceduresRow

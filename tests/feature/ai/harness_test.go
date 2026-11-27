@@ -178,10 +178,10 @@ newHarness boots a desk whose agent answers from the seed articles on
 scripted models. Change edits the agent's settings before they are
 saved.
 */
-func newHarness(t *testing.T, change func(*models.UpdateAgentParams)) *harness {
+func newHarness(t *testing.T, change func(*models.UpdateAgentParams), opts ...tests.Option) *harness {
 	t.Helper()
 
-	d := tests.NewDesk(t)
+	d := tests.NewDesk(t, opts...)
 	h := &harness{t: t, d: d, llm: &router{answer: fake.New(contracts.LLMProviderAnthropic)}}
 	h.player = &scriptedCustomer{}
 	if d.TC.App.Actions.Procedures != nil {

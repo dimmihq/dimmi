@@ -214,13 +214,14 @@ func (e *Engine) earlierLoads(ctx context.Context, s *session, known func(string
 		return nil
 	}
 	var records []json.RawMessage
-	_ = e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	saveErr := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		var err error
 		records, err = models.New(tx).ListRunToolLayers(ctx, models.ListRunToolLayersParams{
 			WorkspaceID: s.m.Workspace.ID, Ids: runs,
 		})
 		return err
 	})
+	unsaved(ctx, "tool_layer_save_failed", saveErr)
 	return toolset.Earlier(records, known)
 }
 
@@ -333,9 +334,10 @@ func (e *Engine) saveLayer(ctx context.Context, s *session) {
 	if err != nil {
 		return
 	}
-	_ = e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	saveErr := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		return models.New(tx).SetRunToolLayer(ctx, models.SetRunToolLayerParams{
 			ToolLayer: body, WorkspaceID: s.run.WorkspaceID, ID: s.run.ID,
 		})
 	})
+	unsaved(ctx, "tool_layer_save_failed", saveErr)
 }

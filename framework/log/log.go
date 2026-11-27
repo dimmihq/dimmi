@@ -53,6 +53,9 @@ type Options struct {
 	Level  string    `default:"info" koanf:"level"`
 	Redact []string  `koanf:"redact"`
 	Writer io.Writer `koanf:"-"`
+	// Forward, set in code, also receives every line at its own level,
+	// scrubbed before it leaves the process: the error tracker's handler.
+	Forward slog.Handler `koanf:"-"`
 }
 
 /*
@@ -71,12 +74,20 @@ func New(opts Options) (Logger, error) {
 
 	handlerOpts := &slog.HandlerOptions{Level: level, ReplaceAttr: redactor(opts.Redact)}
 
+	var handler slog.Handler
+
 	switch opts.Driver {
 	case "json":
-		return slog.New(contextHandler{Handler: slog.NewJSONHandler(w, handlerOpts)}), nil
+		handler = slog.NewJSONHandler(w, handlerOpts)
 	case "text":
-		return slog.New(contextHandler{Handler: slog.NewTextHandler(w, handlerOpts)}), nil
+		handler = slog.NewTextHandler(w, handlerOpts)
+	default:
+		return nil, fmt.Errorf("driver %q: %w", opts.Driver, ErrUnknownDriver)
 	}
 
-	return nil, fmt.Errorf("driver %q: %w", opts.Driver, ErrUnknownDriver)
+	if opts.Forward != nil {
+		handler = tee{primary: handler, forward: newScrubbed(opts.Forward, opts.Redact)}
+	}
+
+	return slog.New(contextHandler{Handler: handler}), nil
 }

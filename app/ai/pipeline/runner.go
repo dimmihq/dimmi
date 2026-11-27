@@ -137,6 +137,17 @@ model failure is an outcome, never an error.
 func (r *Runner) RunConversationTurn(ctx context.Context, args Args, settings *TurnSettings) (*Result, error) {
 	r.prepare()
 
+	ctx, span := r.Telemetry.StartTrace(ctx, "function", "answer conversation")
+	defer span.End()
+
+	return r.answerTurn(ctx, args, settings)
+}
+
+/*
+answerTurn runs the turn of the agent answering now, and the turn of
+the agent it transferred the conversation to, if it did.
+*/
+func (r *Runner) answerTurn(ctx context.Context, args Args, settings *TurnSettings) (*Result, error) {
 	st, early, err := r.open(ctx, args, settings)
 	if err != nil {
 		return nil, fmt.Errorf("pipeline open: %w", err)
@@ -145,22 +156,37 @@ func (r *Runner) RunConversationTurn(ctx context.Context, args Args, settings *T
 		return early, nil
 	}
 
-	d := st.gate
-	if d == nil && r.confirmsResolution(ctx, st) {
-		d = skipped(skipResolutionConfirmed)
+	var res *Result
+	if st.gate != nil {
+		res, err = r.settle(ctx, st, st.gate)
+	} else {
+		res, err = r.tracedRun(ctx, st, runConversation, func(ctx context.Context) (*Result, error) {
+			d := skipped(skipResolutionConfirmed)
+			if !r.confirmsResolution(ctx, st) {
+				d = r.turn(ctx, st)
+			}
+			return r.settle(ctx, st, d)
+		})
 	}
-	if d == nil {
-		d = r.tracedTurn(ctx, st, args)
+	if err != nil {
+		return nil, err
 	}
+	if res.Outcome == outcomeTransferred {
+		return r.answerTurn(ctx, args, settings)
+	}
+	return res, nil
+}
 
+/*
+settle commits the turn's decision and keeps what the conversation
+should remember.
+*/
+func (r *Runner) settle(ctx context.Context, st *run, d *decision) (*Result, error) {
 	res, err := r.close(ctx, st, d)
 	if err != nil {
 		return nil, fmt.Errorf("pipeline commit: %w", err)
 	}
 	r.remember(ctx, st, res)
-	if res.Outcome == outcomeTransferred {
-		return r.RunConversationTurn(ctx, args, settings)
-	}
 	return res, nil
 }
 

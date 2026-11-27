@@ -26,6 +26,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/actions/tickets"
@@ -307,6 +308,9 @@ func keyFor(ctx context.Context, q *models.Queries, workspaceID ids.UUID, keyID 
 	}
 	key, err := q.FindProviderKey(ctx, models.FindProviderKeyParams{WorkspaceID: workspaceID, ID: *keyID})
 	if err != nil {
+		if !errors.Is(err, database.ErrNotFound) {
+			telemetry.Recovered(ctx, "model_key_unloaded", "no_key")
+		}
 		return nil
 	}
 	return &key

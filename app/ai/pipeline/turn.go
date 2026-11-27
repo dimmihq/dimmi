@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/ai/ledger"
 	"github.com/dimmihq/dimmi/app/ai/toolset"
@@ -187,10 +188,8 @@ func (r *Runner) runTool(ctx context.Context, st *run, call contracts.ToolCall) 
 
 	var result string
 	ran := call.Name
-	err := errors.New("there is no tool named " + call.Name + " in this conversation. Nothing was done.")
-	if st.layer != nil && st.layer.set.Has(call.Name) {
-		err = errors.New(st.layer.set.Misdirected(call.Name))
-	}
+	err := unknownTool(st, call.Name)
+	failure := "unknown_tool"
 	blocked, refused := "", false
 	if allowed {
 		blocked, refused = r.gateProcedure(st, call.Name, t)
@@ -198,10 +197,16 @@ func (r *Runner) runTool(ctx context.Context, st *run, call contracts.ToolCall) 
 	switch {
 	case st.layer != nil && (call.Name == toolset.LoadTool || call.Name == toolset.CallTool):
 		ran, result, err = r.layerCall(ctx, st, call)
+		failure = toolErrorType(err)
 	case refused:
 		result, err = blocked, nil
+		telemetry.ToolOutcome(ctx, "refused")
 	case allowed:
 		result, err = t.handle(ctx, st, call.Arguments)
+		failure = toolErrorType(err)
+	}
+	if err != nil {
+		telemetry.FailTool(ctx, failure)
 	}
 
 	r.step(ctx, st, stepRecord{
@@ -215,6 +220,18 @@ func (r *Runner) runTool(ctx context.Context, st *run, call contracts.ToolCall) 
 		return "error: " + err.Error(), true
 	}
 	return result, refused
+}
+
+/*
+unknownTool is the error for a tool the conversation does not have. It
+says where the tool lives when the model reached past its layer for it.
+*/
+func unknownTool(st *run, name string) error {
+	if st.layer != nil && st.layer.set.Has(name) {
+		return errors.New(st.layer.set.Misdirected(name))
+	}
+
+	return errors.New("there is no tool named " + name + " in this conversation. Nothing was done.")
 }
 
 /*
@@ -478,4 +495,15 @@ func (r *Runner) answerEffort() contracts.Effort {
 		return contracts.EffortLow
 	}
 	return r.AnswerEffort
+}
+
+/*
+toolErrorType names how a tool call failed: arguments that do not fit,
+or the error's own type.
+*/
+func toolErrorType(err error) string {
+	if errors.Is(err, errToolArguments) || errors.Is(err, toolset.ErrArguments) {
+		return "invalid_arguments"
+	}
+	return telemetry.ErrorType(err)
 }

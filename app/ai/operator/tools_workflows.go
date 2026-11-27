@@ -23,6 +23,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/contracts"
@@ -432,6 +433,7 @@ func (e *Engine) workflowNames(ctx context.Context, s *session) map[string]strin
 	for _, archived := range []bool{false, true} {
 		list, err := e.Services.Workflows.List(ctx, s.m, archived)
 		if err != nil {
+			telemetry.Recovered(ctx, "workflow_names_unloaded", "ids_only")
 			continue
 		}
 		for _, wf := range list {

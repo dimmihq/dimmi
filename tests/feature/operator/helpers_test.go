@@ -40,9 +40,9 @@ type desk struct {
 /*
 newDesk boots a desk whose AI connection answers from a script.
 */
-func newDesk(t *testing.T) *desk {
+func newDesk(t *testing.T, opts ...tests.Option) *desk {
 	t.Helper()
-	d := tests.NewDesk(t)
+	d := tests.NewDesk(t, opts...)
 	k := &desk{t: t, d: d, llm: fake.New(contracts.LLMProviderAnthropic)}
 	d.TC.App.LLM.Extend(enums.AIProvider("fake"), func(
 		_ context.Context, _ *managers.LLMManager, _ models.AiProviderKey, _ managers.Credentials, _ *httpclient.Client,

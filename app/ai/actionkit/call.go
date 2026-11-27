@@ -63,7 +63,9 @@ type CallInput struct {
 /*
 CallReply is what came of it: the text the model reads, the call row
 when one was written, and whether it succeeded, now waits for the
-customer's confirmation, or waits for a teammate.
+customer's confirmation, or waits for a teammate. Failure is the code
+of a call that failed, such as "invalid_arguments" or "unavailable";
+an answer of no, such as a customer who is not signed in, is none.
 */
 type CallReply struct {
 	Text      string
@@ -71,6 +73,7 @@ type CallReply struct {
 	Succeeded bool
 	Awaiting  bool
 	Pending   bool
+	Failure   string
 }
 
 /*
@@ -124,7 +127,21 @@ func validate(s Spec, args json.RawMessage) (map[string]any, *CallReply) {
 		}
 	}
 	reply := refusal(s, "invalid_arguments", err.Error())
+	reply.Failure = "invalid_arguments"
 	return nil, &reply
+}
+
+/*
+failure is the code of an outcome that did not succeed, or "".
+*/
+func failure(out Outcome) string {
+	if out.Succeeded {
+		return ""
+	}
+	if out.ErrorCode == "" {
+		return "failed"
+	}
+	return out.ErrorCode
 }
 
 /*
@@ -152,7 +169,9 @@ func (k *Kit) runNow(ctx context.Context, in CallInput, input map[string]any, b 
 	if err != nil {
 		return CallReply{}, err
 	}
-	return CallReply{Text: wrap(s, finished, out.Result), Call: &finished, Succeeded: out.Succeeded}, nil
+	return CallReply{
+		Text: wrap(s, finished, out.Result), Call: &finished, Succeeded: out.Succeeded, Failure: failure(out),
+	}, nil
 }
 
 /*

@@ -173,13 +173,14 @@ func (r *Runner) earlierLoads(ctx context.Context, st *run, fixed []string) []st
 		return nil
 	}
 	var records []json.RawMessage
-	_ = r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	saveErr := r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		var err error
 		records, err = models.New(tx).ListConversationToolLayers(ctx, models.ListConversationToolLayersParams{
 			WorkspaceID: st.env.Workspace.ID, ConversationID: &st.env.Conversation.ID, Before: st.rec.Run.ID,
 		})
 		return err
 	})
+	unsaved(ctx, "tool_layer_save_failed", saveErr)
 	registry := r.registry(st)
 	return toolset.Earlier(records, func(name string) bool {
 		t, ok := registry[name]
@@ -287,9 +288,10 @@ func (r *Runner) saveLayer(ctx context.Context, st *run) {
 	if err != nil {
 		return
 	}
-	_ = r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	saveErr := r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		return models.New(tx).SetRunToolLayer(ctx, models.SetRunToolLayerParams{
 			ToolLayer: body, WorkspaceID: st.rec.Run.WorkspaceID, ID: st.rec.Run.ID,
 		})
 	})
+	unsaved(ctx, "tool_layer_save_failed", saveErr)
 }

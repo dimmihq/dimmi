@@ -31,6 +31,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -215,7 +216,7 @@ func (r *Runner) remember(ctx context.Context, st *run, res *Result) {
 	if err != nil {
 		return
 	}
-	_ = r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	saved := r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 		if err := q.SetConversationAiMemory(ctx, models.SetConversationAiMemoryParams{
 			WorkspaceID: e.Conversation.WorkspaceID, ID: e.Conversation.ID, Memory: raw, CostMicros: cost,
@@ -236,6 +237,9 @@ func (r *Runner) remember(ctx context.Context, st *run, res *Result) {
 			cost: cost, input: used.input, cached: used.cached, output: used.output,
 		})
 	})
+	if saved != nil {
+		telemetry.Recovered(ctx, "memory_save_failed", "memory_unchanged")
+	}
 }
 
 /*
@@ -341,6 +345,7 @@ func (r *Runner) summarize(ctx context.Context, st *run, previous string, out []
 	})
 	text := strings.TrimSpace(res.Text)
 	if err != nil || text == "" {
+		telemetry.Recovered(ctx, "memory_summary_failed", "history_unfolded")
 		return "", false
 	}
 	return truncate(text, summaryChars), true

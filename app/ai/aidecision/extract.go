@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/telemetry"
+
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/support/prompts"
 )
@@ -164,8 +166,12 @@ func (d *Decider) extractByDecision(ctx context.Context, e Extraction) (map[stri
 		return nil, nil, false
 	}
 
+	failed := false
 	for range decideTries {
 		res, err := d.Decision.Decide(ctx, contracts.DecisionRequest{State: untrusted(e.Context), Questions: questions})
+		if err != nil {
+			failed = true
+		}
 		if err != nil || res == nil {
 			continue
 		}
@@ -174,6 +180,9 @@ func (d *Decider) extractByDecision(ctx context.Context, e Extraction) (map[stri
 		if ok {
 			return values, sure, true
 		}
+	}
+	if failed {
+		telemetry.Recovered(ctx, "decision_model_failed", "answer_model")
 	}
 
 	return nil, nil, false

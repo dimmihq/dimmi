@@ -102,8 +102,10 @@ func MockCall(in MockInput) MockReply {
 		call.State = "succeeded"
 	}
 	return MockReply{
-		CallReply: CallReply{Text: wrap(s, call, out.Result), Call: &call, Succeeded: out.Succeeded},
-		Input:     input, Result: out.Result,
+		CallReply: CallReply{
+			Text: wrap(s, call, out.Result), Call: &call, Succeeded: out.Succeeded, Failure: failure(out),
+		},
+		Input: input, Result: out.Result,
 	}
 }
 

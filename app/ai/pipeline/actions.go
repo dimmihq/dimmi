@@ -24,6 +24,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
@@ -118,6 +119,7 @@ func (r *Runner) actionHandler(live actionkit.Live) func(context.Context, *run, 
 	return func(ctx context.Context, st *run, args json.RawMessage) (string, error) {
 		write := live.Spec.SideEffect == actionkit.SideEffectWrite
 		if write && st.actions.closed {
+			telemetry.ToolOutcome(ctx, "refused")
 			return oneWritePerTurn, nil
 		}
 		if st.sim != nil {
@@ -133,6 +135,7 @@ func (r *Runner) actionHandler(live actionkit.Live) func(context.Context, *run, 
 		if err != nil {
 			return "", err
 		}
+		traceAction(ctx, reply)
 		st.record(live, reply)
 		var result json.RawMessage
 		if reply.Call != nil {

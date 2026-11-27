@@ -175,7 +175,8 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 	if err != nil {
 		return nil, fmt.Errorf("decision model: %w", err)
 	}
-	runner.Decider, runner.DecisionProvider, runner.DecisionPrice = decides.decider, decides.provider, decides.price
+	runner.Decider = managers.TracedDecider(a.Telemetry, decides.decider, decides.provider)
+	runner.DecisionProvider, runner.DecisionPrice = decides.provider, decides.price
 
 	return runner, nil
 }

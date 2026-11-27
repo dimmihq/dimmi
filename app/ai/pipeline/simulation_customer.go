@@ -52,6 +52,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -189,6 +190,7 @@ PlayCustomer returns the simulated customer's next move.
 */
 func (r *Runner) PlayCustomer(ctx context.Context, in CustomerTurn) (CustomerMove, error) {
 	r.prepare()
+	ctx = telemetry.WithTask(ctx, "simulated_customer")
 	model := r.customerModel()
 	if model == "" {
 		return CustomerMove{}, ErrCustomerUnavailable
@@ -362,12 +364,13 @@ func (r *Runner) closeCustomer(ctx context.Context, st *run, err error) error {
 	if err != nil {
 		d = failed("provider_error", err)
 	}
-	_ = r.DB.Transaction(context.WithoutCancel(ctx), func(ctx context.Context, tx *database.Tx) error {
+	saveErr := r.DB.Transaction(context.WithoutCancel(ctx), func(ctx context.Context, tx *database.Tx) error {
 		if err := r.finishRun(ctx, tx, st, d); err != nil {
 			return err
 		}
 		return r.recordSpend(ctx, tx, st, d)
 	})
+	unsaved(ctx, "simulation_save_failed", saveErr)
 
 	return err
 }

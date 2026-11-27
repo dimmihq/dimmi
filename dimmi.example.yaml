@@ -83,7 +83,8 @@ log:
 # as http://collector:4318/v1/traces, with OTLPHeaders on every request.
 # Metrics is none or prometheus, served by MetricsHandler. Errors are
 # reported to Sentry only when SentryDSN is set, each tagged with Release,
-# the build that sent it.
+# the build that sent it. Log lines at the sentry log level and above go
+# there too.
 telemetry:
   service_name: app  # DIMMI_TELEMETRY__SERVICE_NAME
   environment: ""  # DIMMI_TELEMETRY__ENVIRONMENT
@@ -92,6 +93,7 @@ telemetry:
   otlp_headers: {}  # DIMMI_TELEMETRY__OTLP_HEADERS__<NAME>
   metrics: none  # DIMMI_TELEMETRY__METRICS
   sentry_dsn: ""  # DIMMI_TELEMETRY__SENTRY_DSN
+  sentry_log_level: info  # DIMMI_TELEMETRY__SENTRY_LOG_LEVEL
   release: ""  # DIMMI_TELEMETRY__RELEASE
 
 # Config configures the pool.
