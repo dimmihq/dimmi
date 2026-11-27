@@ -1,0 +1,60 @@
+name: Bug report
+description: Report a bug in dimmi Cloud or self-hosted dimmi.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Found a security bug? Report it in private using [SECURITY.md](https://github.com/dimmihq/dimmi/blob/main/SECURITY.md) instead of opening a public issue.
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Where are you running dimmi?
+      options:
+        - dimmi Cloud
+        - Self-hosted (install.sh / dimmictl)
+        - Self-hosted (Docker)
+        - Local development
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Release tag, commit SHA, or Docker image tag. Write "dimmi Cloud" if you are on hosted dimmi.
+      placeholder: v0.12.0 or dimmi Cloud
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the steps that trigger the bug.
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: Describe what should have happened.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: Describe what happened instead. Add screenshots or recordings if they help.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Paste relevant server logs, browser console errors, or API responses. Remove secrets, tokens, and customer data before posting.
+      render: shell
+    validations:
+      required: false
