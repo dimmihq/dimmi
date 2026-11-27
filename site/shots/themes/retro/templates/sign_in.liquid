@@ -1,0 +1,22 @@
+{%- comment -%}Reader sign-in as a logon dialog.{%- endcomment -%}
+<section class="window dialog">
+{%- assign wtitle = 'Welcome to ' | append: help_center.name %}
+{% render 'window', title: wtitle %}
+<div class="body">
+<div class="logon">
+<span class="glyph keys" aria-hidden="true">🔑</span>
+<div>
+<h1>{{ 'reader_title' | t }}</h1>
+<p>{{ 'reader_body' | t: name: help_center.name }}</p>
+{%- if sign_in.product_url != "" %}<p><a class="btn default" href="{{ sign_in.product_url }}">{{ 'continue_with_account' | t }}</a></p><p class="muted">{{ 'or_use_email' | t }}</p>{% endif %}
+<form method="post" action="{{ sign_in.action }}" class="stack">
+{{ form_token_field }}
+<input type="hidden" name="next" value="{{ sign_in.next }}">
+<label>{{ 'email' | t }}:<input type="email" name="email" value="{{ sign_in.email }}" placeholder="you@company.com" required autocomplete="email"></label>
+{%- if sign_in.error != "" %}<p class="error" role="alert"><span class="glyph stop" aria-hidden="true"></span>{{ sign_in.error }}</p>{% endif %}
+<div class="row"><button type="submit" class="btn default">{{ 'email_me_a_code' | t }}</button><a class="btn" href="{{ help_center.home_url }}">{{ 'cancel' | t }}</a></div>
+</form>
+</div>
+</div>
+</div>
+</section>

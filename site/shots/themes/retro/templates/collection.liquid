@@ -1,0 +1,18 @@
+{%- comment -%}A collection as an Explorer window of folders and files.{%- endcomment -%}
+<section class="window wide">
+{%- assign wtitle = collection.title | prepend: 'Exploring - ' %}
+{% render 'window', title: wtitle %}
+<div class="body">
+{% render 'crumbs', crumbs: breadcrumb %}
+{%- if collection.description != "" %}<p>{{ collection.description }}</p>{% endif %}
+<ul class="files">
+{%- for sub in in_collection.children %}
+<li><a href="{{ sub.url }}"><span class="glyph folder" aria-hidden="true"></span>{{ sub.title }}</a><span>{{ sub.count }} file(s)</span></li>
+{%- endfor %}
+{%- for a in in_collection.articles %}
+<li><a href="{{ a.url }}"><span class="glyph doc" aria-hidden="true"></span>{{ a.title }}.txt</a><span>{{ a.description | truncate: 50 }}</span></li>
+{%- endfor %}
+</ul>
+</div>
+<div class="statusbar"><span>{{ 'article_count' | t: count: collection.count }}</span><span>{{ collection.byline }}</span></div>
+</section>

@@ -67,6 +67,10 @@ func Render(c Center, name string, m Meta, vars map[string]any) view.Component {
 		for k, v := range vars {
 			globals[k] = liquid.Value(v)
 		}
+		if capture, ok := ctx.Value(captureKey{}).(*Capture); ok {
+			capture.Name, capture.Globals = name, globals
+			return nil
+		}
 		return theme.Render(ctx, w, themes.Page{Name: name, Globals: globals, Env: c.env(ctx)})
 	})
 }

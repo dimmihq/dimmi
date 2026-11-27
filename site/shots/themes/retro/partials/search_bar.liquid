@@ -1,0 +1,6 @@
+{%- comment -%}An address-bar style search form.{%- endcomment -%}
+<form class="addressbar" action="{{ help_center.search_url }}" method="get" role="search">
+<label for="q">{{ 'search' | t }}:</label>
+<input id="q" name="q" type="search" value="{{ query }}" placeholder="{{ help_center.home_title }}">
+<button type="submit" class="btn">Go!</button>
+</form>

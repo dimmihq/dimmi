@@ -1,0 +1,2 @@
+{%- comment -%}The trail as a DOS path.{%- endcomment -%}
+<nav class="path" aria-label="Breadcrumb">C:\<a href="{{ help_center.home_url }}">HELP</a>{% for c in crumbs offset: 1 %}\<a href="{{ c.url }}">{{ c.title | upcase | replace: " ", "_" | truncate: 16, "~1" }}</a>{% endfor %}</nav>

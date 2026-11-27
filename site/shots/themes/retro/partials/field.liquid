@@ -1,0 +1,14 @@
+{%- comment -%}One field of a request form, by its type.{%- endcomment -%}
+{%- assign name = 'field.' | append: field.key -%}
+<label>{{ field.label }}{% unless field.required %} (optional){% endunless %}:
+{%- case field.data_type %}
+{%- when 'long_text' %}<textarea name="{{ name }}" rows="4"{% if field.required %} required{% endif %}>{{ field.value }}</textarea>
+{%- when 'single_choice' %}<select name="{{ name }}"{% if field.required %} required{% endif %}><option value="">Choose…</option>{% for o in field.options %}<option value="{{ o }}"{% if o == field.value %} selected{% endif %}>{{ o }}</option>{% endfor %}</select>
+{%- when 'multiple_choice' %}<span class="checks">{% for o in field.options %}<span><input type="checkbox" name="{{ name }}" value="{{ o }}"> {{ o }}</span>{% endfor %}</span>
+{%- when 'boolean' %}<span class="checks"><span><input type="checkbox" name="{{ name }}" value="true"{% if field.value == "true" %} checked{% endif %}> Yes</span></span>
+{%- when 'number', 'decimal', 'currency' %}<input type="number" step="any" name="{{ name }}" value="{{ field.value }}"{% if field.required %} required{% endif %}>
+{%- when 'date' %}<input type="date" name="{{ name }}" value="{{ field.value }}"{% if field.required %} required{% endif %}>
+{%- else %}<input type="text" name="{{ name }}" value="{{ field.value }}"{% if field.required %} required{% endif %}>
+{%- endcase %}
+{%- if field.description != "" %}<small>{{ field.description }}</small>{% endif %}
+</label>
