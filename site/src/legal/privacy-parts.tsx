@@ -137,7 +137,10 @@ export function PrivacySupportingParts() {
           advertising, and we never sell or share them. Help centers, the web messenger, and your customers' sites never
           load the recorder, so your customers are never recorded or profiled.
         </p>
-        <p>We delete every recording automatically after 30 days.</p>
+        <p>
+          We delete every recording automatically after 30 days. When a workspace is deleted, its recordings are deleted
+          with it.
+        </p>
       </Clause>
 
       <PartHeader
