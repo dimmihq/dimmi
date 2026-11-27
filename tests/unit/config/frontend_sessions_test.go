@@ -45,6 +45,40 @@ func TestFrontendSessionRecorder(t *testing.T) {
 		assert.Equal(t, "https://sessions.example.com", cfg.Frontend.SessionsOrigin())
 	})
 
+	t.Run("erases recordings only with a recorder, a project id and a token", func(t *testing.T) {
+		t.Parallel()
+
+		recorder := settings{
+			"frontend.sessions_host":       "https://sessions.example.com/",
+			"frontend.sessions_key":        "km_pub_0123abcd",
+			"frontend.sessions_project_id": "0193a0b1-0000-7000-8000-000000000001",
+			"frontend.sessions_token":      "km_sec_0123abcd",
+		}
+
+		cfg, err := load(t, recorder)
+		require.NoError(t, err)
+		assert.Equal(t,
+			"https://sessions.example.com/api/v1/projects/0193a0b1-0000-7000-8000-000000000001/visitors/erase",
+			cfg.Frontend.SessionsEraseURL())
+
+		for _, missing := range []string{"frontend.sessions_project_id", "frontend.sessions_token"} {
+			partial := settings{}
+			for k, v := range recorder {
+				if k != missing {
+					partial[k] = v
+				}
+			}
+
+			cfg, err := load(t, partial)
+			require.NoError(t, err, missing)
+			assert.Empty(t, cfg.Frontend.SessionsEraseURL(), missing)
+		}
+
+		cfg, err = load(t, settings{"frontend.sessions_project_id": "p", "frontend.sessions_token": "km_sec_0123abcd"})
+		require.NoError(t, err)
+		assert.Empty(t, cfg.Frontend.SessionsEraseURL())
+	})
+
 	t.Run("refuses a host without a key, a key without a host, and a host that is not an origin", func(t *testing.T) {
 		t.Parallel()
 

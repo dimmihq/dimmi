@@ -323,6 +323,7 @@ func purgeSeeded(ctx context.Context, a *app.App, label string, id ids.UUID) err
 	purger := &jobs.PurgeWorkspace{
 		DB: a.DB, Clock: a.Clock, Disk: disk, Storage: a.Storage, Retention: a.Retention,
 		Log: a.Log, Revoke: a.Actions.Integrations.RevokeWorkspace.Handle,
+		Queue: a.Queue, EraseRecordings: a.Config.Frontend.SessionsEraseURL() != "",
 	}
 	purged, err := purger.Purge(ctx, id)
 	if err != nil {

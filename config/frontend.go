@@ -17,6 +17,8 @@
 | server when SessionsHost and SessionsKey name one. The page hands it
 | both, and the app loads the recorder from that host. Neither is set by
 | default, so a server records nothing until its operator names one.
+| With SessionsProjectID and SessionsToken also set, the server erases a
+| workspace's recordings on the recorder when it purges the workspace.
 |
 */
 
@@ -35,13 +37,18 @@ holding the value. ErrorsDSN is the DSN the browser app reports errors
 to, empty to report nothing. SessionsHost is the origin of the kimmi
 server the browser app records sessions on, such as
 https://sessions.example.com, and SessionsKey the public key of its
-project; both empty to record nothing.
+project; both empty to record nothing. SessionsProjectID is the id of
+that project and SessionsToken a write API token of the recorder, which
+the server uses to erase a purged workspace's recordings; either empty
+to erase nothing there.
 */
 type FrontendConfig struct {
-	HotPath      string `koanf:"hot_path"`
-	ErrorsDSN    string `koanf:"errors_dsn"`
-	SessionsHost string `koanf:"sessions_host"`
-	SessionsKey  string `koanf:"sessions_key"`
+	HotPath           string `koanf:"hot_path"`
+	ErrorsDSN         string `koanf:"errors_dsn"`
+	SessionsHost      string `koanf:"sessions_host"`
+	SessionsKey       string `koanf:"sessions_key"`
+	SessionsProjectID string `koanf:"sessions_project_id"`
+	SessionsToken     string `koanf:"sessions_token"      secret:"true"`
 }
 
 /*
@@ -87,4 +94,18 @@ func (c FrontendConfig) SessionsOrigin() string {
 	}
 
 	return u.Scheme + "://" + u.Host
+}
+
+/*
+SessionsEraseURL returns the recorder's address that erases visitors of
+its project, or empty when the server erases nothing there: no recorder,
+no project id or no token.
+*/
+func (c FrontendConfig) SessionsEraseURL() string {
+	origin := c.SessionsOrigin()
+	if origin == "" || c.SessionsProjectID == "" || c.SessionsToken == "" {
+		return ""
+	}
+
+	return origin + "/api/v1/projects/" + url.PathEscape(c.SessionsProjectID) + "/visitors/erase"
 }

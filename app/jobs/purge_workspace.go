@@ -16,7 +16,8 @@
 | if this run stops halfway. A run that has worked for a while hands
 | over to a fresh run of itself, which carries on where it stopped, so
 | a large workspace never holds a worker or a lock for long, and a run
-| that crashed is simply run again.
+| that crashed is simply run again. The last step queues the erase of the
+| workspace's session recordings on the recorder, when there is one.
 |
 */
 
@@ -103,7 +104,8 @@ PurgeWorkspace deletes a workspace in the trash for good. Disk is the
 default disk, which holds the workspace's folders and article pictures,
 and Storage opens the disks its received email is stored on. Revoke,
 when set, gives the workspace's integration tokens back to their
-providers before any row goes.
+providers before any row goes. With EraseRecordings set, the last
+step queues [EraseSessionRecordings] on Queue in the same transaction.
 */
 type PurgeWorkspace struct {
 	DB        *database.DB
@@ -113,6 +115,9 @@ type PurgeWorkspace struct {
 	Retention contracts.RetentionGuard
 	Log       log.Logger
 	Revoke    func(ctx context.Context, workspaceID ids.UUID) error
+
+	Queue           *queue.Queue
+	EraseRecordings bool
 }
 
 /*
@@ -431,7 +436,8 @@ func (w *PurgeWorkspace) deleteRows(ctx context.Context, id ids.UUID, deadline t
 
 /*
 finish deletes the workspace row, and with it whatever still points at
-it, and retires its organization when no live workspace is left in it.
+it, retires its organization when no live workspace is left in it, and
+queues the erase of its session recordings.
 */
 func (w *PurgeWorkspace) finish(ctx context.Context, id ids.UUID) error {
 	return w.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
@@ -448,6 +454,12 @@ func (w *PurgeWorkspace) finish(ctx context.Context, id ids.UUID) error {
 
 		if err := q.DeleteWorkspace(ctx, id); err != nil {
 			return fmt.Errorf("delete workspace: %w", err)
+		}
+
+		if w.EraseRecordings {
+			if err := w.Queue.PushTx(ctx, tx, EraseSessionRecordingsArgs{WorkspaceID: id}); err != nil {
+				return fmt.Errorf("queue session recordings erase: %w", err)
+			}
 		}
 
 		err = q.RetireOrganization(ctx, models.RetireOrganizationParams{ID: ws.OrganizationID, Now: w.Clock.Now()})
