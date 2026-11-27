@@ -5,7 +5,54 @@
  * field lists, example payloads, code samples and each page's Markdown.
  * Nothing here reaches the browser.
  */
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import raw from "../../../tests/contracts/api_v1.openapi.json?raw";
+
+const CONTRACT_REL = "tests/contracts/api_v1.openapi.json";
+
+function findContractFile(): string | undefined {
+  const candidates = [
+    resolve(process.cwd(), CONTRACT_REL),
+    resolve(process.cwd(), "..", CONTRACT_REL),
+    fileURLToPath(new URL(`../../../${CONTRACT_REL}`, import.meta.url)),
+  ];
+  return candidates.find((candidate) => existsSync(candidate));
+}
+
+function readContractLastUpdated(): Date | undefined {
+  const contractFile = findContractFile();
+  if (!contractFile) {
+    return undefined;
+  }
+  try {
+    const iso = execFileSync("git", ["log", "-1", "--format=%cI", "--", contractFile], {
+      cwd: dirname(contractFile),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    if (!iso) {
+      return undefined;
+    }
+    const parsed = new Date(iso);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  } catch {
+    return undefined;
+  }
+}
+
+const CONTRACT_UPDATED_AT = readContractLastUpdated();
+
+export function contractLastUpdated(): Date | undefined {
+  return CONTRACT_UPDATED_AT;
+}
+
+export function operationLastUpdated(_op: Operation): Date | undefined {
+  return CONTRACT_UPDATED_AT;
+}
 
 export type Schema = {
   $ref?: string;
@@ -240,6 +287,99 @@ function categoryOf(resource: string): string {
   return "More";
 }
 
+type CategoryCopy = { title: string; description: string };
+
+const CATEGORY_COPY: Record<string, CategoryCopy> = {
+  Conversations: {
+    title: "Conversations API",
+    description:
+      "Read, reply to, tag, assign, and manage customer conversations, inboxes, saved replies, office hours, SLA policies, and redaction rules in dimmi.",
+  },
+  "Contacts and companies": {
+    title: "Contacts and companies API",
+    description:
+      "Create, update, import, and erase customer contacts, companies, notes, custom attributes, tracked events, and audiences over the dimmi REST API.",
+  },
+  Tickets: {
+    title: "Tickets API",
+    description:
+      "Create and update customer tickets, internal escalations, trackers, custom fields, ticket types, states, and linked external issues in dimmi.",
+  },
+  "AI agent": {
+    title: "AI agent API",
+    description:
+      "Set up dimmi AI agents, knowledge sources, procedures in plain English, backend actions, action connections, provider keys, and usage via REST.",
+  },
+  "Help center": {
+    title: "Help center API",
+    description:
+      "Create and update dimmi help centers, collections, articles, languages, themes, and custom domains using the versioned JSON REST API endpoints.",
+  },
+  Messenger: {
+    title: "Messenger API",
+    description:
+      "Read and update dimmi messenger appearance, launcher settings, identity verification rules, and signing secrets over the dimmi JSON REST API.",
+  },
+  "Broadcasts and series": {
+    title: "Broadcasts and series API",
+    description:
+      "Create, schedule, preview, and send outbound broadcasts, automated customer series, and subscription topics through the dimmi JSON REST API.",
+  },
+  Email: {
+    title: "Email API",
+    description:
+      "Manage support email addresses, verified sending domains, DKIM key rotations, email signatures, and bounce suppressions via the dimmi REST API.",
+  },
+  "Feedback and changelog": {
+    title: "Feedback and changelog API",
+    description:
+      "Publish product changelog entries, manage changelog labels and subscribers, and run customer feature request boards through the dimmi REST API.",
+  },
+  "Workflows and integrations": {
+    title: "Workflows and integrations API",
+    description:
+      "Build, test, and run visual workflows, inspect connected support channels, and manage external integration installations via the dimmi REST API.",
+  },
+  Webhooks: {
+    title: "Webhooks API",
+    description:
+      "Register webhook endpoints, rotate signing secrets, inspect delivery attempts, retry failed payloads, and list event types in the dimmi API.",
+  },
+  "Reports and data": {
+    title: "Reports and data API",
+    description:
+      "Query support performance reports, read workspace audit logs, and create or download workspace data exports through the dimmi JSON REST API.",
+  },
+  "Workspace and team": {
+    title: "Workspace and team API",
+    description:
+      "Manage dimmi workspace settings, teammates, invitations, teams, custom roles, permissions, SSO domains, and API tokens via the dimmi REST API.",
+  },
+  Notifications: {
+    title: "Notifications API",
+    description:
+      "Read and update teammate notification preferences, unread alerts, and push device subscriptions across your workspace via the dimmi REST API.",
+  },
+  Account: {
+    title: "Account API",
+    description:
+      "Inspect the authenticated API token, current teammate profile, active sessions, and account security settings through the dimmi JSON REST API.",
+  },
+  More: {
+    title: "Migrations and more API",
+    description:
+      "Import historical conversations, contacts, companies, and help center articles from other tools using the dimmi migrations REST API endpoints.",
+  },
+};
+
+export function categorySlug(label: string): string {
+  return kebab(label);
+}
+
+export function categoryHref(label: string): string {
+  return `${API_ROOT}${categorySlug(label)}/`;
+}
+
 /* ------------------------------------------------------------ operations */
 
 export type Operation = {
@@ -290,43 +430,74 @@ function toOperation(path: string, method: string, raw: RawOperation, taken: Set
   };
 }
 
+const META_DESCRIPTION_MIN = 140;
 const META_DESCRIPTION_MAX = 160;
-const META_DESCRIPTION_MIN = 60;
+const TRAILING_STOP_WORDS =
+  /(?:\s+(?:a|an|the|and|or|of|to|in|on|for|with|by|at|as|from|that|which|its|their|what))+$/i;
 
-/* SEO <title> for an API operation page, keeping the on-page H1 concise. */
-export function operationMetaTitle(op: Operation): string {
-  return `${op.title} | dimmi API`;
+function normalizeText(text: string): string {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/[\u2013\u2014]/g, ", ")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201c\u201d]/g, '"')
+    .trim();
 }
 
-/*
- * SEO <meta name="description"> for an API operation page: enriches very short
- * or duplicated descriptions with the HTTP method and path, and trims long
- * ones cleanly on a sentence or word boundary within 160 characters.
- */
-export function operationMetaDescription(op: Operation): string {
-  const needsEndpoint =
-    op.description.length < META_DESCRIPTION_MIN || (descriptionCounts.get(op.description) ?? 0) > 1;
-  const base = needsEndpoint ? `${op.method} /api/v1${op.path}: ${op.description}` : op.description;
-  if (base.length <= META_DESCRIPTION_MAX) {
-    return base;
-  }
-  // Prefer keeping complete sentences that fit within the meta description budget.
-  const sentences = base.match(/[^.!?]+[.!?]+/g) ?? [];
+function endSentence(text: string): string {
+  return /[.!?]$/.test(text) ? text : `${text}.`;
+}
+
+function fitSentences(text: string, min: number, max: number): string {
+  const sentences = text.match(/[^.!?]+[.!?]+/g) ?? [];
   let fitted = "";
   for (const rawSentence of sentences) {
     const sentence = rawSentence.trim();
     const candidate = fitted ? `${fitted} ${sentence}` : sentence;
-    if (candidate.length > META_DESCRIPTION_MAX) {
+    if (candidate.length > max) {
       break;
     }
     fitted = candidate;
   }
-  if (fitted.length >= META_DESCRIPTION_MIN) {
-    return fitted;
+  return fitted.length >= min ? fitted : "";
+}
+
+function trimAtWordBoundary(text: string, max = META_DESCRIPTION_MAX): string {
+  if (text.length <= max) {
+    return text;
   }
-  const cut = base.slice(0, META_DESCRIPTION_MAX - 1);
+  const complete = fitSentences(text, META_DESCRIPTION_MIN, max);
+  if (complete) {
+    return complete;
+  }
+  const cut = text.slice(0, max - 3);
   const lastSpace = cut.lastIndexOf(" ");
-  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[.,;:!?-]+$/, "")}…`;
+  let head = (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[,;:-]+$/, "");
+  const cleaned = head.replace(TRAILING_STOP_WORDS, "").replace(/[,;:-]+$/, "");
+  if (cleaned.length >= META_DESCRIPTION_MIN - 15) {
+    head = cleaned;
+  }
+  return head.endsWith(".") ? head : `${head}...`;
+}
+
+function draftMetaDescription(op: Operation, includeEndpoint: boolean): string {
+  const rawDescription = normalizeText(op.raw.description ?? "");
+  if (!rawDescription) {
+    return trimAtWordBoundary(`${op.method} ${op.path}: ${op.title}. dimmi REST API reference.`);
+  }
+  const clean = endSentence(rawDescription);
+  if (!includeEndpoint && clean.length >= META_DESCRIPTION_MIN) {
+    return trimAtWordBoundary(clean);
+  }
+  const withEndpoint = `${op.method} ${op.path}: ${clean}`;
+  if (withEndpoint.length > META_DESCRIPTION_MAX) {
+    return trimAtWordBoundary(withEndpoint);
+  }
+  if (withEndpoint.length >= META_DESCRIPTION_MIN) {
+    return withEndpoint;
+  }
+  const withReference = `${withEndpoint} dimmi REST API reference.`;
+  return withReference.length <= META_DESCRIPTION_MAX ? withReference : withEndpoint;
 }
 
 function buildOperations(): Operation[] {
@@ -357,13 +528,112 @@ function buildOperations(): Operation[] {
 
 export const operations = buildOperations();
 
-const descriptionCounts = new Map<string, number>();
+const titleCounts = new Map<string, number>();
+const categoryTitleCounts = new Map<string, number>();
 for (const op of operations) {
-  descriptionCounts.set(op.description, (descriptionCounts.get(op.description) ?? 0) + 1);
+  titleCounts.set(op.title, (titleCounts.get(op.title) ?? 0) + 1);
+  const key = `${op.category}::${op.title}`;
+  categoryTitleCounts.set(key, (categoryTitleCounts.get(key) ?? 0) + 1);
+}
+
+/* Unique SEO <title> for an API operation page, keeping the on-page H1 concise. */
+export function operationMetaTitle(op: Operation): string {
+  if ((titleCounts.get(op.title) ?? 0) <= 1) {
+    return `${op.title} | dimmi API`;
+  }
+  if ((categoryTitleCounts.get(`${op.category}::${op.title}`) ?? 0) <= 1) {
+    return `${op.title} (${op.category}) | dimmi API`;
+  }
+  return `${op.title} (${op.method} ${op.path}) | dimmi API`;
+}
+
+const metaDescriptionMap = new Map<string, string>();
+{
+  const firstPass = new Map<string, string>();
+  const counts = new Map<string, number>();
+  for (const op of operations) {
+    const text = draftMetaDescription(op, false);
+    firstPass.set(op.id, text);
+    counts.set(text, (counts.get(text) ?? 0) + 1);
+  }
+  for (const op of operations) {
+    const initial = firstPass.get(op.id) ?? draftMetaDescription(op, true);
+    metaDescriptionMap.set(op.id, (counts.get(initial) ?? 0) > 1 ? draftMetaDescription(op, true) : initial);
+  }
+}
+
+/*
+ * Unique SEO <meta name="description"> for an API operation page: trims long
+ * descriptions cleanly to 140 to 160 characters at a sentence or word boundary,
+ * enriches short or colliding descriptions with the method and path, and falls
+ * back to "<METHOD> <path>: <summary>. dimmi REST API reference." when empty.
+ */
+export function operationMetaDescription(op: Operation): string {
+  return metaDescriptionMap.get(op.id) ?? draftMetaDescription(op, true);
 }
 
 export function resourceLabel(resource: string): string {
   return capitalize(words(resource.replace(/^ai\//, "")));
+}
+
+export type ApiCategoryResource = {
+  resource: string;
+  label: string;
+  slug: string;
+  operations: Operation[];
+};
+
+export type ApiCategory = {
+  label: string;
+  slug: string;
+  href: string;
+  title: string;
+  description: string;
+  operations: Operation[];
+  resources: ApiCategoryResource[];
+};
+
+function buildCategories(): ApiCategory[] {
+  const grouped = new Map<string, Map<string, Operation[]>>();
+  for (const op of operations) {
+    const resources = grouped.get(op.category) ?? new Map<string, Operation[]>();
+    resources.set(op.resource, [...(resources.get(op.resource) ?? []), op]);
+    grouped.set(op.category, resources);
+  }
+  return [...grouped].map(([label, resourcesMap]) => {
+    const copy = CATEGORY_COPY[label] ?? {
+      title: `${label} API`,
+      description: `REST API endpoints for ${label.toLowerCase()} in dimmi, generated from the versioned OpenAPI contract.`,
+    };
+    const resources: ApiCategoryResource[] = [...resourcesMap].map(([resource, ops]) => ({
+      resource,
+      label: resourceLabel(resource),
+      slug: kebab(resourceLabel(resource)),
+      operations: ops,
+    }));
+    const ops = resources.flatMap((entry) => entry.operations);
+    return {
+      label,
+      slug: categorySlug(label),
+      href: categoryHref(label),
+      title: copy.title,
+      description: copy.description,
+      operations: ops,
+      resources,
+    };
+  });
+}
+
+export const apiCategories = buildCategories();
+
+const categoriesByLabel = new Map(apiCategories.map((category) => [category.label, category]));
+
+export function categoryByLabel(label: string): ApiCategory | undefined {
+  return categoriesByLabel.get(label);
+}
+
+export function categoryMetaTitle(category: ApiCategory): string {
+  return `${category.title} | dimmi API`;
 }
 
 /* --------------------------------------------------------------- sidebar */
@@ -371,23 +641,22 @@ export function resourceLabel(resource: string): string {
 export type ApiNavLink = { label: string; href: string; method?: string };
 export type ApiNavGroup = { label: string; items: (ApiNavLink | ApiNavGroup)[] };
 
-// Categories, then a group per resource when a category holds several.
+// Categories, with an overview link and a group per resource when a category holds several.
 export function apiNavigation(): ApiNavGroup[] {
-  const categories = new Map<string, Map<string, Operation[]>>();
-  for (const op of operations) {
-    const resources = categories.get(op.category) ?? new Map<string, Operation[]>();
-    resources.set(op.resource, [...(resources.get(op.resource) ?? []), op]);
-    categories.set(op.category, resources);
-  }
   const link = (op: Operation): ApiNavLink => ({ label: op.title, href: op.href, method: op.method });
   return [
     { label: "Overview", items: [{ label: "Introduction", href: API_ROOT }] },
-    ...[...categories].map(([label, resources]) => ({
-      label,
-      items:
-        resources.size === 1
-          ? [...resources.values()][0].map(link)
-          : [...resources].map(([resource, ops]) => ({ label: resourceLabel(resource), items: ops.map(link) })),
+    ...apiCategories.map((category) => ({
+      label: category.label,
+      items: [
+        { label: "Overview", href: category.href },
+        ...(category.resources.length === 1
+          ? category.resources[0].operations.map(link)
+          : category.resources.map((resource) => ({
+              label: resource.label,
+              items: resource.operations.map(link),
+            }))),
+      ],
     })),
   ];
 }
@@ -751,6 +1020,20 @@ export function operationMarkdown(op: Operation): string {
   const success = responsesOf(op).find((r) => r.success && r.schema);
   if (success) {
     lines.push("## Example response", "", "```json", JSON.stringify(example(success.schema), null, 2), "```", "");
+  }
+  return lines.join("\n");
+}
+
+export function categoryMarkdown(category: ApiCategory): string {
+  const lines = [`# ${category.title}`, "", category.description, ""];
+  for (const resource of category.resources) {
+    if (category.resources.length > 1) {
+      lines.push(`## ${resource.label}`, "");
+    }
+    for (const op of resource.operations) {
+      lines.push(`- \`${op.method} ${op.path}\` - ${op.title}: ${op.description}`);
+    }
+    lines.push("");
   }
   return lines.join("\n");
 }

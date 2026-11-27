@@ -1,4 +1,4 @@
-import { RiArrowDownSLine } from "@remixicon/react";
+import { RiArrowDownSLine, RiArrowRightLine } from "@remixicon/react";
 import type { ReactNode } from "react";
 
 import { Chip } from "@/components/base/badges/chip";
@@ -34,11 +34,23 @@ export function EndpointBar({ method, path, base }: { method: string; path: stri
   );
 }
 
-export function ApiSection({ title, meta, children }: { title: string; meta?: string; children: ReactNode }) {
+export function ApiSection({
+  id,
+  title,
+  meta,
+  children,
+}: {
+  id?: string;
+  title: string;
+  meta?: string;
+  children: ReactNode;
+}) {
   return (
     <section className="flex flex-col">
       <div className="flex items-baseline justify-between gap-3 border-b border-separator-border pb-3">
-        <h2 className="text-headline-semibold text-text-primary">{title}</h2>
+        <h2 id={id} className="scroll-mt-[calc(var(--docs-header)+2rem)] text-headline-semibold text-text-primary">
+          {title}
+        </h2>
         {meta ? <span className="font-mono text-caption-1-regular text-text-tertiary">{meta}</span> : null}
       </div>
       {children}
@@ -108,5 +120,118 @@ function Children({ fields }: { fields: Field[] }) {
         <ApiFields fields={fields} nested />
       </div>
     </details>
+  );
+}
+
+export type RelatedGuideLink = { title: string; href: string; description: string };
+export type RelatedCategoryLink = { label: string; title: string; href: string; count: number };
+export type RelatedEndpointLink = { title: string; href: string; method: string; path: string };
+
+export function ApiRelated({
+  guide,
+  category,
+  siblings,
+}: {
+  guide: RelatedGuideLink;
+  category: RelatedCategoryLink;
+  siblings: RelatedEndpointLink[];
+}) {
+  return (
+    <ApiSection title="Related">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <a
+          href={guide.href}
+          className="group flex min-w-0 flex-col justify-between gap-2 rounded-2xl border border-border-button-default bg-background-full p-4 shadow-xs transition-colors hover:border-border-button-hover"
+        >
+          <span className="flex items-center justify-between gap-2">
+            <span className="text-caption-1-medium text-accent-600 dark:text-accent-400">Guide</span>
+            <RiArrowRightLine
+              className="size-4 shrink-0 text-foreground-icon-tertiary transition-transform group-hover:translate-x-0.5"
+              aria-hidden
+            />
+          </span>
+          <span className="flex min-w-0 flex-col gap-1">
+            <span className="text-body-medium text-text-primary">{guide.title}</span>
+            <span className="text-caption-1-regular text-text-secondary">{guide.description}</span>
+          </span>
+        </a>
+        <a
+          href={category.href}
+          className="group flex min-w-0 flex-col justify-between gap-2 rounded-2xl border border-border-button-default bg-background-full p-4 shadow-xs transition-colors hover:border-border-button-hover"
+        >
+          <span className="flex items-center justify-between gap-2">
+            <span className="text-caption-1-medium text-text-tertiary">API category</span>
+            <RiArrowRightLine
+              className="size-4 shrink-0 text-foreground-icon-tertiary transition-transform group-hover:translate-x-0.5"
+              aria-hidden
+            />
+          </span>
+          <span className="flex min-w-0 flex-col gap-1">
+            <span className="text-body-medium text-text-primary">{category.title}</span>
+            <span className="text-caption-1-regular text-text-secondary">
+              Browse all {category.count} {category.count === 1 ? "endpoint" : "endpoints"} in {category.label}.
+            </span>
+          </span>
+        </a>
+        {siblings.map((endpoint) => (
+          <a
+            key={endpoint.href}
+            href={endpoint.href}
+            className="group flex min-w-0 flex-col justify-between gap-2 rounded-2xl border border-border-button-default bg-background-full p-4 shadow-xs transition-colors hover:border-border-button-hover"
+          >
+            <span className="flex min-w-0 items-center justify-between gap-2">
+              <span className="flex min-w-0 items-center gap-2">
+                <MethodChip method={endpoint.method} />
+                <code className="truncate font-mono text-caption-1-regular text-text-tertiary">{endpoint.path}</code>
+              </span>
+              <RiArrowRightLine
+                className="size-4 shrink-0 text-foreground-icon-tertiary transition-transform group-hover:translate-x-0.5"
+                aria-hidden
+              />
+            </span>
+            <span className="text-body-medium text-text-primary">{endpoint.title}</span>
+          </a>
+        ))}
+      </div>
+    </ApiSection>
+  );
+}
+
+export type CategoryEndpointRow = {
+  title: string;
+  href: string;
+  method: string;
+  path: string;
+  description: string;
+};
+
+export function ApiCategoryList({ endpoints }: { endpoints: CategoryEndpointRow[] }) {
+  return (
+    <div className="flex flex-col divide-y divide-separator-border">
+      {endpoints.map((endpoint) => (
+        <a
+          key={endpoint.href}
+          href={endpoint.href}
+          className="group flex min-w-0 flex-col gap-1.5 py-4 transition-colors sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+        >
+          <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <span className="flex min-w-0 flex-wrap items-center gap-2">
+              <MethodChip method={endpoint.method} />
+              <span className="text-body-medium text-text-primary group-hover:text-accent-700 dark:group-hover:text-accent-400">
+                {endpoint.title}
+              </span>
+              <code className="max-w-full truncate font-mono text-caption-1-regular text-text-tertiary">
+                {endpoint.path}
+              </code>
+            </span>
+            <span className="text-body-regular text-text-secondary">{endpoint.description}</span>
+          </span>
+          <RiArrowRightLine
+            className="hidden size-4 shrink-0 text-foreground-icon-tertiary transition-transform group-hover:translate-x-0.5 sm:mt-1 sm:block"
+            aria-hidden
+          />
+        </a>
+      ))}
+    </div>
   );
 }
