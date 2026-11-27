@@ -234,15 +234,15 @@ function SignedInShell({
   const { current: onScreen } = useCurrentWorkspace(me.workspaces);
   const account = useAccount(me, onScreen?.id);
   const { current: workspace } = useCurrentWorkspace(me.workspaces);
-  const { id, name } = me.user;
+  const { id } = me.user;
   const workspaceId = workspace?.id ?? "";
   const workspaceName = workspace?.name ?? "";
-  // A renamed teammate or another workspace is named to the recorder again.
+  // Another or a renamed workspace is named to the recorder again.
   useEffect(() => {
     if (workspaceId) {
-      recordSession({ id, name, workspace: { id: workspaceId, name: workspaceName } });
+      recordSession({ id, workspace: { id: workspaceId, name: workspaceName } });
     }
-  }, [id, name, workspaceId, workspaceName]);
+  }, [id, workspaceId, workspaceName]);
   const [collapsed, setCollapsed] = useRailCollapse(path);
   const inSettings = path === settingsLink.href || path.startsWith(`${settingsLink.href}/`);
   const { data: counts } = useQuery({ ...countsQuery(workspace?.id ?? ""), enabled: Boolean(workspace) });

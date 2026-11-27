@@ -17,7 +17,7 @@ export const Route = createFileRoute("/d")({
     }
     const { workspace: current, missing, stale } = addressed(me.workspaces);
     if (current) {
-      recordSession({ id: me.user.id, name: me.user.name, workspace: current });
+      recordSession({ id: me.user.id, workspace: current });
     }
     if (missing) {
       return { missing };

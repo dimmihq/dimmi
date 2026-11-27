@@ -472,7 +472,7 @@ export const COOKIES_AND_STORAGE: CookieEntry[] = [
     name: "kimmi.anonymousId & kimmi.identity",
     mechanism: "Local Storage",
     purpose:
-      "Holds the recorder's random browser ID and the signed-in teammate's name, workspace, and dimmi user ID. No email.",
+      "Holds the recorder's random browser ID, the signed-in teammate's dimmi user ID, and their workspace's ID and name. Never their name or email.",
     lifetime: "Persistent until cleared",
     category: "Diagnostics",
   },

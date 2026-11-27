@@ -14,14 +14,14 @@ function page(meta: Record<string, string>): Document {
 
 const named = { host: "https://sessions.example.com/", key: "km_pub_0123abcd" };
 
-// The signed-in user as the app holds them, email included: it must never reach the recorder.
+// The signed-in user as the app holds them, name and email included: neither may reach the recorder.
 const ada = {
   id: "usr_42",
   name: "Ada Lovelace",
   email: "ada@example.com",
   workspace: { id: "ws_1", name: "Acme" },
 };
-const adaTraits = { name: "Ada Lovelace", workspaceId: "ws_1", workspaceName: "Acme" };
+const adaTraits = { workspaceId: "ws_1", workspaceName: "Acme" };
 
 function recorderScripts(doc: Document): HTMLScriptElement[] {
   return [...doc.querySelectorAll<HTMLScriptElement>("script[data-dimmi-sessions]")];
@@ -94,14 +94,17 @@ describe("recordSession", () => {
     expect(identify).toHaveBeenCalledExactlyOnceWith("ws_1:usr_42", adaTraits);
   });
 
-  it("never sends the member's email", () => {
+  it("never sends the member's name or email", () => {
     const identify = vi.fn();
     window.kimmi = { identify, stop: vi.fn() };
 
     recordSession(ada, page(named));
 
-    expect(JSON.stringify(identify.mock.calls)).not.toContain("ada@example.com");
+    const sent = JSON.stringify(identify.mock.calls);
+    expect(sent).not.toContain("ada@example.com");
+    expect(sent).not.toContain("Ada Lovelace");
     expect(identify.mock.calls[0][1]).not.toHaveProperty("email");
+    expect(identify.mock.calls[0][1]).not.toHaveProperty("name");
   });
 
   it("names no one without a workspace", () => {
@@ -113,20 +116,22 @@ describe("recordSession", () => {
     expect(identify).not.toHaveBeenCalled();
   });
 
-  it("names the member again when their name or workspace changes, and only then", () => {
+  it("names the member again when their workspace changes or is renamed, and only then", () => {
     const doc = page(named);
     const identify = vi.fn();
     window.kimmi = { identify, stop: vi.fn() };
 
     recordSession(ada, doc);
     recordSession(ada, doc);
-    recordSession({ ...ada, name: "Ada King" }, doc);
-    recordSession({ ...ada, name: "Ada King", workspace: { id: "ws_2", name: "Globex" } }, doc);
+    const renamed = { ...ada, name: "Ada King" };
+    recordSession(renamed, doc);
+    recordSession({ ...ada, workspace: { id: "ws_1", name: "Acme Inc" } }, doc);
+    recordSession({ ...ada, workspace: { id: "ws_2", name: "Globex" } }, doc);
 
     expect(identify.mock.calls).toEqual([
       ["ws_1:usr_42", adaTraits],
-      ["ws_1:usr_42", { ...adaTraits, name: "Ada King" }],
-      ["ws_2:usr_42", { name: "Ada King", workspaceId: "ws_2", workspaceName: "Globex" }],
+      ["ws_1:usr_42", { workspaceId: "ws_1", workspaceName: "Acme Inc" }],
+      ["ws_2:usr_42", { workspaceId: "ws_2", workspaceName: "Globex" }],
     ]);
   });
 

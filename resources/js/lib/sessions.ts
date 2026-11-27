@@ -5,8 +5,8 @@
  * recorder. The recorder loads from its own host only once the dashboard
  * knows who is signed in and in which workspace. It names the teammate by
  * workspace and user id, as "ws_1:usr_42", so each workspace's recordings
- * stand apart, and learns their name and the workspace's: never their email,
- * never anything about customers. Its project's rules mask every character
+ * stand apart, and learns the workspace's name: never the teammate's name
+ * or email, never anything about customers. Its project's rules mask every character
  * of text and every input in the browser before anything is sent. Signing
  * out stops it.
  */
@@ -16,11 +16,10 @@ export type Recorder = { host: string; key: string };
 /** The signed-in teammate and the workspace they are in. */
 export type Teammate = {
   id: string;
-  name: string;
   workspace: { id: string; name: string };
 };
 
-type Traits = { name?: string; [key: string]: unknown };
+type Traits = { [key: string]: unknown };
 
 type Kimmi = { identify(id: string, traits?: Traits): void; stop(): void };
 
@@ -56,13 +55,13 @@ let member: Teammate | null = null;
 let named = "";
 
 function identify(kimmi: Kimmi, teammate: Teammate): void {
-  const { id, name, workspace } = teammate;
-  const key = JSON.stringify([id, name, workspace.id, workspace.name]);
+  const { id, workspace } = teammate;
+  const key = JSON.stringify([id, workspace.id, workspace.name]);
   if (key === named) {
     return;
   }
   named = key;
-  kimmi.identify(`${workspace.id}:${id}`, { name, workspaceId: workspace.id, workspaceName: workspace.name });
+  kimmi.identify(`${workspace.id}:${id}`, { workspaceId: workspace.id, workspaceName: workspace.name });
 }
 
 /**
