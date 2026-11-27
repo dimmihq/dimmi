@@ -3,6 +3,7 @@ package queue
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -28,6 +29,17 @@ func TestMonitors(t *testing.T) {
 
 		assert.Equal(t, []Monitor{monitor}, started)
 		assert.Equal(t, []error{failed}, ended)
+	})
+
+	t.Run("checks in a postponed run as a success", func(t *testing.T) {
+		t.Parallel()
+		failed := errors.New("database gone")
+
+		assert.NoError(t, checkInError(nil))
+		assert.NoError(t, checkInError(Postpone(time.Second)))
+		assert.Equal(t, failed, checkInError(failed))
+		assert.Error(t, checkInError(Cancel(failed)))
+		assert.Error(t, checkInError(RetryAfter(time.Second)))
 	})
 
 	t.Run("does nothing without a check-in", func(t *testing.T) {

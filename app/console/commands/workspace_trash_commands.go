@@ -131,6 +131,7 @@ func (c WorkspacePurgeCommand) Handle(
 	purge := &workspaces.PurgeTrashedWorkspace{DB: c.App.DB, Clock: c.App.Clock, Purger: &jobs.PurgeWorkspace{
 		DB: c.App.DB, Clock: c.App.Clock, Disk: disk, Storage: c.App.Storage, Retention: c.App.Retention,
 		Log: c.App.Log, Revoke: c.App.Actions.Integrations.RevokeWorkspace.Handle,
+		Queue: c.App.Queue, EraseRecordings: c.App.Config.Frontend.SessionsEraseURL() != "",
 	}}
 
 	w, err := purge.Handle(ctx, in.Argument("slug"))

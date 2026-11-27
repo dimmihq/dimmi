@@ -3,7 +3,9 @@
  * in the error tracker. Both report their crashes and time page loads for
  * web vitals: every one on staging, a fifth in production. Production also
  * counts visits with the tracker's Web Traffic script, which sets no
- * cookies. Anywhere else, such as a local build, nothing is sent.
+ * cookies. Anywhere else, such as a local build, nothing is sent. Reports
+ * name the release the build was given (site/vite.config.ts), the commit's
+ * sha, as the app's do.
  */
 
 const tracker = "https://errors.trydimmi.com";
@@ -35,6 +37,7 @@ export function startMonitoring(): void {
     Sentry.init({
       dsn: `https://${key}@${new URL(tracker).host}/${project}`,
       environment,
+      release: import.meta.env.DIMMI_RELEASE || undefined,
       sendDefaultPii: false,
       integrations: [Sentry.browserTracingIntegration()],
       tracesSampleRate: environment === "production" ? 0.2 : 1,

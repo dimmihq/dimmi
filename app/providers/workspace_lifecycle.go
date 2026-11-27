@@ -75,7 +75,8 @@ func bootWorkspaceLifecycle(a *app.App) {
 
 /*
 registerWorkspaceJobs registers the workers of the workspace jobs,
-among them the release of a thawed workspace's held chat deliveries
+among them the erase of a purged workspace's session recordings, the
+release of a thawed workspace's held chat deliveries
 and the daily prune of kept ones; the console routes schedule the
 daily rounds.
 */
@@ -85,12 +86,18 @@ func registerWorkspaceJobs(a *app.App) error {
 		return fmt.Errorf("workspace disk: %w", err)
 	}
 
+	recorder := a.Config.Frontend
+
 	return errors.Join(
 		queue.Register(a.Queue, &jobs.PurgeWorkspace{
 			DB: a.DB, Clock: a.Clock, Disk: disk, Storage: a.Storage, Retention: a.Retention, Log: a.Log,
 			Revoke: func(ctx context.Context, workspaceID ids.UUID) error {
 				return a.Actions.Integrations.RevokeWorkspace.Handle(ctx, workspaceID)
 			},
+			Queue: a.Queue, EraseRecordings: recorder.SessionsEraseURL() != "",
+		}),
+		queue.Register(a.Queue, &jobs.EraseSessionRecordings{
+			HTTP: a.HTTP, URL: recorder.SessionsEraseURL(), Token: recorder.SessionsToken, Log: a.Log,
 		}),
 		queue.Register(a.Queue, &jobs.ScheduleWorkspacePurges{DB: a.DB, Clock: a.Clock, Queue: a.Queue}),
 		queue.Register(a.Queue, &jobs.SendWorkspaceDeletionReminders{DB: a.DB, Clock: a.Clock, Mail: a.Mail}),

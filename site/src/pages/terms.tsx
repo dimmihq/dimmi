@@ -251,7 +251,7 @@ export function TermsPage() {
               <strong className="font-medium text-text-primary">"Customer Data"</strong> means all electronic data,
               messages, attachments, End Customer contact records, tickets, help center articles, knowledge sources,
               workflows, procedures, AI Input, and AI Output submitted to, stored in, or generated within Customer's
-              Workspace. Customer Data excludes Account Data and Usage Data.
+              Workspace. Customer Data excludes Account Data, Service Activity Data, and Usage Data.
             </>,
             <>
               <strong className="font-medium text-text-primary">"Documentation"</strong> means dimmi's official product
@@ -265,6 +265,11 @@ export function TermsPage() {
             <>
               <strong className="font-medium text-text-primary">"Order Form"</strong> means a written ordering document
               executed by both parties specifying custom pricing, committed volume, support tiers, or modified terms.
+            </>,
+            <>
+              <strong className="font-medium text-text-primary">"Service Activity Data"</strong> means technical data
+              about how Team Members use dimmi Cloud: the pages and features they use, the actions they take,
+              performance and errors, and masked recordings of their dashboard sessions.
             </>,
             <>
               <strong className="font-medium text-text-primary">"Team Member"</strong> means an employee, contractor, or
@@ -428,6 +433,12 @@ export function TermsPage() {
           the benefit of other customers. dimmi may generate and own Usage Data to operate, measure, and improve service
           reliability and capacity, provided Usage Data is permanently aggregated and de-identified and never reveals
           Customer Data or identifies Customer or any individual.
+        </p>
+        <p>
+          dimmi collects Service Activity Data and uses it only to operate, support, analyze, and improve dimmi. Service
+          Activity Data is not Customer Data and never includes End Customers. dimmi never sells it or uses it for
+          advertising. The <LegalLink href="/privacy">Privacy Policy</LegalLink> says what it holds and how long dimmi
+          keeps it.
         </p>
       </Clause>
 

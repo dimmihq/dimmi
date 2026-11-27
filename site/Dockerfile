@@ -33,7 +33,9 @@ COPY sdk/svelte/package.json sdk/svelte/
 COPY sdk/vue/package.json sdk/vue/
 COPY site site
 COPY docs docs
-RUN pnpm site:build
+# The commit, which the site's error reports name as their release.
+ARG REVISION=""
+RUN DIMMI_RELEASE="$REVISION" pnpm site:build
 
 FROM scratch AS source-site
 COPY --from=build /app/site/dist /dist

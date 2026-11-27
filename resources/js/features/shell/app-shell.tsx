@@ -20,7 +20,7 @@ import {
 } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useRouter, useRouterState } from "@tanstack/react-router";
-import { type ReactNode, useCallback, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 import {
   type DashboardAccount,
@@ -47,6 +47,7 @@ import { countsQuery } from "@/lib/api/inbox";
 import { notificationCountsQuery } from "@/lib/api/notifications";
 import { callerQuery } from "@/lib/api/workspace";
 import { RealtimeProvider } from "@/lib/realtime/provider";
+import { recordSession } from "@/lib/sessions";
 
 import { useAvailability } from "./availability";
 import { GetStarted } from "./get-started";
@@ -233,6 +234,15 @@ function SignedInShell({
   const { current: onScreen } = useCurrentWorkspace(me.workspaces);
   const account = useAccount(me, onScreen?.id);
   const { current: workspace } = useCurrentWorkspace(me.workspaces);
+  const { id } = me.user;
+  const workspaceId = workspace?.id ?? "";
+  const workspaceName = workspace?.name ?? "";
+  // Another or a renamed workspace is named to the recorder again.
+  useEffect(() => {
+    if (workspaceId) {
+      recordSession({ id, workspace: { id: workspaceId, name: workspaceName } });
+    }
+  }, [id, workspaceId, workspaceName]);
   const [collapsed, setCollapsed] = useRailCollapse(path);
   const inSettings = path === settingsLink.href || path.startsWith(`${settingsLink.href}/`);
   const { data: counts } = useQuery({ ...countsQuery(workspace?.id ?? ""), enabled: Boolean(workspace) });

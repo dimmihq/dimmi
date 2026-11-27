@@ -489,12 +489,17 @@ tokens:
 # to, empty to report nothing. SessionsHost is the origin of the kimmi
 # server the browser app records sessions on, such as
 # https://sessions.example.com, and SessionsKey the public key of its
-# project; both empty to record nothing.
+# project; both empty to record nothing. SessionsProjectID is the id of
+# that project and SessionsToken a write API token of the recorder, which
+# the server uses to erase a purged workspace's recordings; either empty
+# to erase nothing there.
 frontend:
   hot_path: public/hot  # DIMMI_FRONTEND__HOT_PATH
   errors_dsn: ""  # DIMMI_FRONTEND__ERRORS_DSN
   sessions_host: ""  # DIMMI_FRONTEND__SESSIONS_HOST
   sessions_key: ""  # DIMMI_FRONTEND__SESSIONS_KEY
+  sessions_project_id: ""  # DIMMI_FRONTEND__SESSIONS_PROJECT_ID
+  sessions_token: ""  # DIMMI_FRONTEND__SESSIONS_TOKEN (secret; or DIMMI_FRONTEND__SESSIONS_TOKEN_FILE naming a file)
 
 # WidgetConfig configures the messenger widget. AssetsBaseURL is the
 # origin serving the widget's hashed files, such as a CDN in front of

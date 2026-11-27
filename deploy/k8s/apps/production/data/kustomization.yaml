@@ -60,6 +60,13 @@ patches:
       - op: add
         path: /data/DIMMI_FRONTEND__SESSIONS_KEY
         value: km_pub_58f104442330e6b9
+      # A purged workspace's recordings are erased there too, once this names
+      # production's project id on the recorder and dimmi-secrets holds
+      # DIMMI_FRONTEND__SESSIONS_TOKEN, a write token of the recorder. Empty
+      # erases nothing.
+      - op: add
+        path: /data/DIMMI_FRONTEND__SESSIONS_PROJECT_ID
+        value: 01a21c12-58c8-7abc-9e53-a1907a9a31be
       - op: add
         path: /data/DIMMI_FILESYSTEMS__DISKS__S3__PUBLIC_ENDPOINT
         value: https://files.trydimmi.com

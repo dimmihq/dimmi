@@ -92,6 +92,7 @@ func TestSecretsAreMaskedWhenPrinted(t *testing.T) {
 	assert.Contains(t, found, "ai.managed.anthropic.api_key")
 	assert.Contains(t, found, "ai.managed.embeddings.api_key")
 	assert.Contains(t, found, "ai.knowledge.cloudflare_api_token")
+	assert.Contains(t, found, "frontend.sessions_token")
 
 	values := settings{}
 	for _, path := range found {

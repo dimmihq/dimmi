@@ -1,6 +1,7 @@
 import { RiCheckLine, RiServerLine } from "@remixicon/react";
 
 import { Intro, MonoLink, Section, Tag } from "../components/container";
+import { GitHubStars } from "../components/github-stars";
 import { Questions } from "../components/product-page";
 import { GITHUB_URL } from "../links";
 import { PriceSteps } from "../pricing/book";
@@ -125,6 +126,7 @@ function LessMoney() {
       body: "Same full code under MIT on your own server. We get a GitHub star if you feel generous.",
       note: "Paid to dimmi: $0",
       link: { href: "#self-host", label: "See what a server costs" },
+      githubStars: true,
     },
   ];
   return (
@@ -136,11 +138,12 @@ function LessMoney() {
             <span className={`text-text-tertiary ${mono}`}>{String(i + 1).padStart(2, "0")}</span>
             <h3 className="text-[20px] leading-7 font-medium tracking-[-0.02em] text-text-primary">{way.title}</h3>
             <p className="text-[15px] leading-6 text-pretty text-text-secondary">{way.body}</p>
-            <span className="mt-auto flex flex-col gap-1 pt-3">
+            <span className="mt-auto flex flex-col gap-2 pt-3">
               <span className="text-[14px] leading-5 font-medium text-accent-700 tabular-nums dark:text-accent-300">
                 {way.note}
               </span>
               {way.link ? <MonoLink href={way.link.href}>{way.link.label}</MonoLink> : null}
+              {way.githubStars ? <GitHubStars location="pricing" size="small" className="mt-1 self-start" /> : null}
             </span>
           </li>
         ))}
