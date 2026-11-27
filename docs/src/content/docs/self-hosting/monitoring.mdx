@@ -53,6 +53,7 @@ Configure these with [`dimmictl set`](/self-hosting/configuration/):
 | `DIMMI_TELEMETRY__OTLP_ENDPOINT` | Collector URL, such as `http://collector:4318/v1/traces`. |
 | `DIMMI_TELEMETRY__OTLP_HEADERS__<NAME>` | Extra header on trace exports, such as `DIMMI_TELEMETRY__OTLP_HEADERS__AUTHORIZATION`. |
 | `DIMMI_TELEMETRY__SENTRY_DSN` | Sentry DSN for server errors. Reports carry the trace ID and the release. |
+| `DIMMI_TELEMETRY__SENTRY_LOG_LEVEL` | Lowest level of server log line sent to the tracker (default `info`): `debug`, `info`, `warn` or `error`. |
 | `DIMMI_FRONTEND__ERRORS_DSN` | Sentry DSN for dashboard errors. Must be reachable from your team's browsers. |
 
 Any Sentry-compatible tracker works, such as Sentry, GlitchTip or Rustrak. The server reports failed requests, panics, and background jobs that fail on their last attempt. The dashboard reports its own crashes; failed API calls are left to the server's report. Neither sends email addresses, cookies or request bodies.
@@ -61,6 +62,7 @@ With a DSN set, the tracker also gets:
 
 - **Cron monitors.** Every scheduled job checks in when it starts and ends, so a missed, failed or stuck run is flagged.
 - **AI runs.** Each agent turn and Operator run is an agent run named after the agent, with its model and tool calls beneath it. A transfer to another agent shows as a handoff in the same trace, and a conversation's runs group together. Model calls made outside any agent, such as ticket summaries, show as runs named `background: <task>`.
+- **Logs.** Server log lines at `DIMMI_TELEMETRY__SENTRY_LOG_LEVEL` and above. Your usual log output doesn't change. Secrets, email addresses and email content are stripped before a line leaves the server.
 - **Web vitals.** The dashboard times page loads and route changes: all of them outside production, a fifth in production.
 
 ## Session recordings

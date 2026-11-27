@@ -31,12 +31,23 @@ import (
 )
 
 /*
-bootObservability starts the logger, telemetry and clock, and sets the
-runtime's memory limit.
+bootObservability starts telemetry, then the logger, which also sends
+its lines to the error tracker when one is configured, and the clock,
+and sets the runtime's memory limit.
 */
 func (a *Application) bootObservability(ctx context.Context) error {
+	var err error
+
+	a.Telemetry, err = telemetry.New(ctx, a.Config.Telemetry, a.opts.Telemetry...)
+	if err != nil {
+		return fmt.Errorf("start telemetry: %w", err)
+	}
+
+	a.onClose("telemetry", a.Telemetry.Shutdown)
+
 	logOptions := a.Config.Log
 	logOptions.Writer = a.opts.LogWriter
+	logOptions.Forward = a.Telemetry.LogHandler(ctx)
 
 	logger, err := log.New(logOptions)
 	if err != nil {
@@ -46,12 +57,6 @@ func (a *Application) bootObservability(ctx context.Context) error {
 	a.Log = logger
 	a.Clock = cmp.Or[clock.Clock](a.opts.Clock, clock.System())
 
-	a.Telemetry, err = telemetry.New(ctx, a.Config.Telemetry, a.opts.Telemetry...)
-	if err != nil {
-		return fmt.Errorf("start telemetry: %w", err)
-	}
-
-	a.onClose("telemetry", a.Telemetry.Shutdown)
 	applyMemoryLimit(ctx, a.Config.Runtime, a.Log)
 
 	return nil

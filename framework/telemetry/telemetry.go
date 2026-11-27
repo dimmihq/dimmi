@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	"github.com/getsentry/sentry-go"
@@ -40,6 +41,12 @@ package provides.
 */
 var ErrUnknownDriver = errors.New("telemetry: unknown driver")
 
+/*
+ErrInvalidLogLevel means SentryLogLevel is not debug, info, warn or
+error.
+*/
+var ErrInvalidLogLevel = errors.New("telemetry: invalid sentry log level")
+
 const (
 	driverNone       = "none"
 	driverPrometheus = "prometheus"
@@ -55,7 +62,8 @@ spans over HTTP to OTLPEndpoint, the full URL that receives traces such
 as http://collector:4318/v1/traces, with OTLPHeaders on every request.
 Metrics is none or prometheus, served by MetricsHandler. Errors are
 reported to Sentry only when SentryDSN is set, each tagged with Release,
-the build that sent it.
+the build that sent it; log lines at SentryLogLevel and above are sent
+there too.
 */
 type Config struct {
 	ServiceName  string            `default:"app"  koanf:"service_name"`
@@ -65,7 +73,10 @@ type Config struct {
 	OTLPHeaders  map[string]string `koanf:"otlp_headers"`
 	Metrics      string            `default:"none" koanf:"metrics"`
 	SentryDSN    string            `koanf:"sentry_dsn"`
-	Release      string            `koanf:"release"`
+	// SentryLogLevel is the lowest level of log line sent with a DSN:
+	// debug, info, warn or error.
+	SentryLogLevel string `default:"info" koanf:"sentry_log_level"`
+	Release        string `koanf:"release"`
 }
 
 /*
@@ -109,6 +120,7 @@ type Telemetry struct {
 	registry  *prometheus.Registry
 	reporter  *sentry.Client
 	hub       *sentry.Hub
+	logLevel  slog.Level
 	shutdowns []func(context.Context) error
 }
 

@@ -14,6 +14,7 @@
 package telemetry
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 
@@ -49,6 +50,10 @@ func (t *Telemetry) setupReporting(cfg Config) error {
 		return nil
 	}
 
+	if err := t.logLevel.UnmarshalText([]byte(cmp.Or(cfg.SentryLogLevel, "info"))); err != nil {
+		return fmt.Errorf("sentry log level %q: %w", cfg.SentryLogLevel, ErrInvalidLogLevel)
+	}
+
 	client, err := sentry.NewClient(sentry.ClientOptions{
 		Dsn:              cfg.SentryDSN,
 		Environment:      cfg.Environment,
@@ -62,6 +67,7 @@ func (t *Telemetry) setupReporting(cfg Config) error {
 		return fmt.Errorf("create sentry client: %w", err)
 	}
 
+	client.SetExternalContextTraceResolver(traceOf)
 	t.reporter = client
 	t.hub = sentry.NewHub(client, sentry.NewScope())
 	t.shutdowns = append(t.shutdowns, func(ctx context.Context) error {
