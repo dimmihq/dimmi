@@ -160,7 +160,7 @@ func (r *Runner) answerTurn(ctx context.Context, args Args, settings *TurnSettin
 	if st.gate != nil {
 		res, err = r.settle(ctx, st, st.gate)
 	} else {
-		res, err = r.tracedRun(ctx, st, args.ConversationID, func(ctx context.Context) (*Result, error) {
+		res, err = r.tracedRun(ctx, st, runConversation, func(ctx context.Context) (*Result, error) {
 			d := skipped(skipResolutionConfirmed)
 			if !r.confirmsResolution(ctx, st) {
 				d = r.turn(ctx, st)

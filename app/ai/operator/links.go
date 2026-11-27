@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -59,6 +60,7 @@ help center cannot be found.
 func (e *Engine) publicRoot(ctx context.Context, s *session, helpCenter ids.UUID) string {
 	centers, err := e.helpCenters(ctx, s)
 	if err != nil {
+		telemetry.Recovered(ctx, "help_center_links_unloaded", "no_links")
 		return ""
 	}
 	for _, c := range centers {

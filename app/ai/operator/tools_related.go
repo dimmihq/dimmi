@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/contracts"
@@ -139,6 +140,9 @@ func (e *Engine) alikeTo(ctx context.Context, s *session, id ids.UUID, limit int
 			Membership: s.m, Ref: conversations.Ref{ID: one.ID},
 		})
 		if err != nil {
+			if ctx.Err() == nil {
+				telemetry.Recovered(ctx, "related_conversation_unloaded", "left_out")
+			}
 			continue
 		}
 		hits = append(hits, related{loaded: loaded, text: one.Text})

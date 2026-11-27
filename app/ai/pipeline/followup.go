@@ -45,7 +45,7 @@ func (r *Runner) RunActionFollowUp(ctx context.Context, workspaceID, callID ids.
 		return early, nil
 	}
 
-	return r.tracedRun(ctx, st, st.env.Conversation.ID, func(ctx context.Context) (*Result, error) {
+	return r.tracedRun(ctx, st, runFollowUp, func(ctx context.Context) (*Result, error) {
 		res, err := r.close(ctx, st, r.followUpTurn(ctx, st))
 		if err != nil {
 			return nil, fmt.Errorf("follow-up commit: %w", err)

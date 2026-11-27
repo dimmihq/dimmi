@@ -91,12 +91,13 @@ func (r *Runner) JudgeRubric(ctx context.Context, in Rubric) (procedure.Judgment
 		err = ErrNoJudgment
 		d = failed("provider_error", err)
 	}
-	_ = r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	saveErr := r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		if err := r.finishRun(ctx, tx, st, d); err != nil {
 			return err
 		}
 		return r.recordSpend(ctx, tx, st, d)
 	})
+	unsaved(ctx, "simulation_save_failed", saveErr)
 	if err != nil {
 		return procedure.Judgment{}, err
 	}

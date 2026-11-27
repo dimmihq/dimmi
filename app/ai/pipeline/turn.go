@@ -197,13 +197,13 @@ func (r *Runner) runTool(ctx context.Context, st *run, call contracts.ToolCall) 
 	switch {
 	case st.layer != nil && (call.Name == toolset.LoadTool || call.Name == toolset.CallTool):
 		ran, result, err = r.layerCall(ctx, st, call)
-		failure = telemetry.ErrorType(err)
+		failure = toolErrorType(err)
 	case refused:
 		result, err = blocked, nil
 		telemetry.ToolOutcome(ctx, "refused")
 	case allowed:
 		result, err = t.handle(ctx, st, call.Arguments)
-		failure = telemetry.ErrorType(err)
+		failure = toolErrorType(err)
 	}
 	if err != nil {
 		telemetry.FailTool(ctx, failure)
@@ -495,4 +495,15 @@ func (r *Runner) answerEffort() contracts.Effort {
 		return contracts.EffortLow
 	}
 	return r.AnswerEffort
+}
+
+/*
+toolErrorType names how a tool call failed: arguments that do not fit,
+or the error's own type.
+*/
+func toolErrorType(err error) string {
+	if errors.Is(err, errToolArguments) || errors.Is(err, toolset.ErrArguments) {
+		return "invalid_arguments"
+	}
+	return telemetry.ErrorType(err)
 }

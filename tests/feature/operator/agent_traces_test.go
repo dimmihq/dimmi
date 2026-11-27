@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dimmihq/dimmi/framework/testkit"
+
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/tests"
@@ -91,6 +93,10 @@ func TestOperatorToolFailureTraces(t *testing.T) {
 			"a conversation that does not exist", call("get_conversation_by_number", map[string]any{"number": 999999}),
 			"not_found", "not_found",
 		},
+		{
+			"arguments of the wrong type", call("get_conversation_by_number", map[string]any{"number": "first"}),
+			"invalid_argument", "invalid_arguments",
+		},
 		{"a tool that works", call("get_conversation_by_number", map[string]any{}), "", ""},
 	}
 
@@ -119,4 +125,47 @@ func TestOperatorToolFailureTraces(t *testing.T) {
 			assert.Empty(t, run.Status, "Operator answered, so its run did not fail")
 		})
 	}
+}
+
+func TestOperatorRunKindTraces(t *testing.T) {
+	t.Parallel()
+
+	t.Run("a routine is an Operator run, and each subagent a run beneath it", func(t *testing.T) {
+		t.Parallel()
+		tracker := tests.NewTracker(t)
+		k := newDesk(t, tracker.Option())
+		routine := k.routine(testkit.JSON{"name": "Audit", "prompt": "Audit articles."})
+		k.llm.Script(
+			tools(split("Articles 1 to 25")),
+			reply("I read 25 articles. Nothing is wrong."),
+			reply("Nothing to change."),
+		)
+
+		k.runRoutine(routine, true)
+		spans := k.d.TC.TrackedSpans(tracker)
+
+		byID := map[string]tests.TrackedSpan{}
+		var main, sub tests.TrackedSpan
+		for _, s := range spans {
+			byID[s.SpanID] = s
+			switch {
+			case s.Kind() == "agent" && s.Attr("gen_ai.agent.name") == "Operator":
+				main = s
+			case s.Kind() == "agent" && s.Attr("gen_ai.agent.name") == "Operator subagent":
+				sub = s
+			}
+		}
+		require.NotEmpty(t, main.SpanID, "the routine's run")
+		require.NotEmpty(t, sub.SpanID, "the subagent's run")
+		assert.Equal(t, "routine", main.Attr("dimmi.run.kind"))
+		assert.Equal(t, "subagent", sub.Attr("dimmi.run.kind"))
+		assert.Equal(t, "operator.subagent", sub.Attr("gen_ai.agent.id"))
+		inside := false
+		for at, ok := byID[sub.ParentID]; ok; at, ok = byID[at.ParentID] {
+			inside = inside || at.SpanID == main.SpanID
+		}
+		assert.True(t, inside, "the subagent runs inside the routine's run")
+		assert.Empty(t, main.Status)
+		assert.Empty(t, sub.Status)
+	})
 }

@@ -30,6 +30,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/dimmihq/dimmi/framework/telemetry"
+
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/support/prompts"
@@ -110,8 +112,13 @@ func (r *Runner) judge(ctx context.Context, st *run, req contracts.DecisionReque
 			}
 			return out
 		}
+		telemetry.Recovered(ctx, "decision_model_failed", "answer_model")
 	}
-	return r.judgeWithModel(ctx, st, req)
+	answers := r.judgeWithModel(ctx, st, req)
+	if answers == nil && st.env.AnswerKey != nil {
+		telemetry.Recovered(ctx, "judgment_failed", "no_answer")
+	}
+	return answers
 }
 
 /*
@@ -156,6 +163,7 @@ func (r *Runner) judgeWithModel(ctx context.Context, st *run, req contracts.Deci
 	}
 	llm, err := r.LLM.ForKey(ctx, *e.AnswerKey)
 	if err != nil {
+		telemetry.Recovered(ctx, "answer_model_unavailable", "no_answer")
 		return nil
 	}
 	names := slices.Sorted(maps.Keys(req.Questions))

@@ -78,7 +78,8 @@ func (e *Engine) publish(ctx context.Context, s *session, m fbroadcasting.Messag
 	if s.routine != nil {
 		channel = appbroadcasting.OperatorRoutineChannel(s.routine.row.ID)
 	}
-	_ = e.Publisher.Publish(ctx, []string{channel}, m)
+	saveErr := e.Publisher.Publish(ctx, []string{channel}, m)
+	unsaved(ctx, "stream_publish_failed", saveErr)
 }
 
 /*

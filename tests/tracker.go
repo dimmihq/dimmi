@@ -25,6 +25,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/dimmihq/dimmi/framework/telemetry"
 	"github.com/dimmihq/dimmi/framework/testkit"
 )
 
@@ -103,46 +104,35 @@ of every transaction the tracker received, roots first.
 */
 func (tc *TestCase) TrackedSpans(tr *Tracker) []TrackedSpan {
 	tc.T.Helper()
-	require.True(tc.T, tc.App.Telemetry.Flush(tc.T.Context()), "flush the error tracker")
 
-	tr.mu.Lock()
-	defer tr.mu.Unlock()
-
-	var spans []TrackedSpan
-	for _, envelope := range tr.envelopes {
-		spans = append(spans, transactionSpans(tc.T, envelope)...)
-	}
-
-	return spans
+	return tr.Spans(tc.T, tc.App.Telemetry)
 }
 
 /*
-transactionSpans reads the transactions of one envelope: a header line,
-then an item header line and its payload line per item.
+TrackedIssues flushes the application's telemetry and returns every
+error report the tracker received.
 */
-func transactionSpans(tb testing.TB, envelope []byte) []TrackedSpan {
-	tb.Helper()
-	lines := bufio.NewScanner(bytes.NewReader(envelope))
-	lines.Buffer(make([]byte, 0, 1<<20), 16<<20)
-	lines.Scan()
+func (tc *TestCase) TrackedIssues(tr *Tracker) []TrackedIssue {
+	tc.T.Helper()
 
+	return tr.Issues(tc.T, tc.App.Telemetry)
+}
+
+/*
+Spans flushes the telemetry and returns every span of every
+transaction the tracker received, roots first.
+*/
+func (tr *Tracker) Spans(tb testing.TB, tel *telemetry.Telemetry) []TrackedSpan {
+	tb.Helper()
 	var spans []TrackedSpan
-	for lines.Scan() {
-		var item struct {
-			Type string `json:"type"`
-		}
-		require.NoError(tb, json.Unmarshal(lines.Bytes(), &item))
-		lines.Scan()
-		if item.Type != "transaction" {
-			continue
-		}
+	for _, item := range tr.items(tb, tel, "transaction") {
 		var tx struct {
 			Transaction string                      `json:"transaction"`
 			Start       string                      `json:"start_timestamp"`
 			Spans       []TrackedSpan               `json:"spans"`
 			Contexts    struct{ Trace TrackedSpan } `json:"contexts"`
 		}
-		require.NoError(tb, json.Unmarshal(lines.Bytes(), &tx))
+		require.NoError(tb, json.Unmarshal(item, &tx))
 		root := tx.Contexts.Trace
 		root.Start = tx.Start
 		for _, s := range append([]TrackedSpan{root}, tx.Spans...) {
@@ -152,6 +142,80 @@ func transactionSpans(tb testing.TB, envelope []byte) []TrackedSpan {
 	}
 
 	return spans
+}
+
+/*
+TrackedIssue is one error report as the tracker groups it: by its
+fingerprint, with its level, message, tags and the trace it is tied to.
+*/
+type TrackedIssue struct {
+	Message     string            `json:"message"`
+	Level       string            `json:"level"`
+	Fingerprint []string          `json:"fingerprint"`
+	Tags        map[string]string `json:"tags"`
+	Contexts    struct {
+		Trace struct {
+			TraceID string `json:"trace_id"`
+			SpanID  string `json:"span_id"`
+		} `json:"trace"`
+	} `json:"contexts"`
+	Raw string `json:"-"`
+}
+
+/*
+Issues flushes the telemetry and returns every error report the
+tracker received.
+*/
+func (tr *Tracker) Issues(tb testing.TB, tel *telemetry.Telemetry) []TrackedIssue {
+	tb.Helper()
+	var issues []TrackedIssue
+	for _, item := range tr.items(tb, tel, "event") {
+		var issue TrackedIssue
+		require.NoError(tb, json.Unmarshal(item, &issue))
+		issue.Raw = string(item)
+		issues = append(issues, issue)
+	}
+
+	return issues
+}
+
+/*
+items flushes the telemetry and returns the payloads of every item of
+the type the tracker received. An envelope is a header line, then an
+item header line and its payload line per item.
+*/
+func (tr *Tracker) items(tb testing.TB, tel *telemetry.Telemetry, kind string) [][]byte {
+	tb.Helper()
+	require.True(tb, tel.Flush(tb.Context()), "flush the error tracker")
+
+	tr.mu.Lock()
+	defer tr.mu.Unlock()
+
+	var out [][]byte
+	for _, envelope := range tr.envelopes {
+		lines := bufio.NewScanner(bytes.NewReader(envelope))
+		lines.Buffer(make([]byte, 0, 1<<20), 16<<20)
+		lines.Scan()
+		for lines.Scan() {
+			var item struct {
+				Type string `json:"type"`
+			}
+			require.NoError(tb, json.Unmarshal(lines.Bytes(), &item))
+			lines.Scan()
+			if item.Type == kind {
+				out = append(out, bytes.Clone(lines.Bytes()))
+			}
+		}
+	}
+
+	return out
+}
+
+/*
+DSN is the tracker's address, for telemetry a test builds itself.
+*/
+func (tr *Tracker) DSN() string {
+	return tr.dsn
 }
 
 /*

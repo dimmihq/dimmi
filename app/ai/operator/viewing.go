@@ -91,7 +91,7 @@ func (e *Engine) madeBy(ctx context.Context, s *session, c models.OperatorChange
 		return "in a chat with Operator"
 	}
 	made := "by a routine"
-	_ = e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	saveErr := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		routine, err := models.New(tx).FindAnyOperatorRoutine(ctx, models.FindAnyOperatorRoutineParams{
 			WorkspaceID: s.m.Workspace.ID, ID: *c.RoutineID,
 		})
@@ -100,6 +100,7 @@ func (e *Engine) madeBy(ctx context.Context, s *session, c models.OperatorChange
 		}
 		return nil
 	})
+	unsaved(ctx, "viewing_save_failed", saveErr)
 	return made
 }
 

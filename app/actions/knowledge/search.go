@@ -24,6 +24,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/models"
@@ -117,6 +118,9 @@ own query, as it would have.
 func (v *Vectors) Warm(ctx context.Context, ws ids.UUID, queries []string, timeout time.Duration) Warmed {
 	vectors, err := v.queryVectors(ctx, ws, queries, v.queryTimeout(timeout))
 	if err != nil {
+		if ctx.Err() == nil && degradedFor(err) != "no_embeddings_key" {
+			telemetry.Recovered(ctx, "knowledge_warm_"+degradedFor(err), "embed_each_query")
+		}
 		return Warmed{}
 	}
 	for _, qv := range vectors {
@@ -143,6 +147,9 @@ func (v *Vectors) SearchChunks(ctx context.Context, ws ids.UUID, query string,
 			return out, ctx.Err()
 		}
 		out.Degraded = degradedFor(err)
+		if out.Degraded != "no_embeddings_key" {
+			telemetry.Recovered(ctx, "knowledge_"+out.Degraded, "keywords_only")
+		}
 		return out, nil
 	}
 	out.Model, out.KeyID, out.Usage = qv.model, qv.keyID, qv.usage
@@ -154,6 +161,7 @@ func (v *Vectors) SearchChunks(ctx context.Context, ws ids.UUID, query string,
 			return out, ctx.Err()
 		}
 		out.Degraded = "vector_timeout"
+		telemetry.Recovered(ctx, "knowledge_vector_timeout", "keywords_only")
 		return out, nil
 	}
 	for _, r := range rows {

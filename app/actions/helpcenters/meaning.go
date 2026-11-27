@@ -28,11 +28,13 @@ package helpcenters
 import (
 	"cmp"
 	"context"
+	"errors"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/audiences"
@@ -200,10 +202,7 @@ func (k *Knowledge) rerank(ctx context.Context, query string, chunks []contracts
 	defer cancel()
 	res, err := k.Reranker.Rerank(ctx, contracts.RerankRequest{Query: query, Documents: documents})
 	if err != nil {
-		if ctx.Err() != nil {
-			return chunks, "timeout"
-		}
-		return chunks, "failed: " + err.Error()
+		return chunks, rerankFailed(ctx, err)
 	}
 	out := make([]contracts.KnowledgeChunk, 0, len(chunks))
 	placed := make([]bool, len(head))
@@ -283,4 +282,19 @@ func documentChunks(rows []knowledge.VectorDocumentChunk) []contracts.KnowledgeC
 		out = append(out, chunk)
 	}
 	return out
+}
+
+/*
+rerankFailed says why the reranker was not used and records the failure
+the search recovered from: the passages go unranked.
+*/
+func rerankFailed(ctx context.Context, err error) string {
+	if ctx.Err() != nil {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			telemetry.Recovered(ctx, "knowledge_rerank_timeout", "unranked")
+		}
+		return "timeout"
+	}
+	telemetry.Recovered(ctx, "knowledge_rerank_failed", "unranked")
+	return "failed: " + err.Error()
 }

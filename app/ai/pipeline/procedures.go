@@ -33,6 +33,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -78,6 +79,7 @@ func (r *Runner) loadProcedures(ctx context.Context, q *models.Queries, e *env) 
 	for _, row := range rows {
 		def, err := procedure.Parse(row.Live)
 		if err != nil {
+			telemetry.Recovered(ctx, "procedure_unreadable", "procedure_left_out")
 			continue
 		}
 
@@ -252,7 +254,7 @@ func (r *Runner) followedBefore(ctx context.Context, st *run, p liveProcedure) b
 	}
 
 	var before bool
-	_ = r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	saveErr := r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		var err error
 		before, err = models.New(tx).ConversationFollowedProcedure(ctx, models.ConversationFollowedProcedureParams{
 			WorkspaceID: st.env.Workspace.ID, ConversationID: &st.env.Conversation.ID, Before: st.rec.Run.ID,
@@ -261,6 +263,7 @@ func (r *Runner) followedBefore(ctx context.Context, st *run, p liveProcedure) b
 
 		return err
 	})
+	unsaved(ctx, "procedure_state_save_failed", saveErr)
 
 	return before
 }

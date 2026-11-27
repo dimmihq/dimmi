@@ -364,12 +364,13 @@ func (r *Runner) closeCustomer(ctx context.Context, st *run, err error) error {
 	if err != nil {
 		d = failed("provider_error", err)
 	}
-	_ = r.DB.Transaction(context.WithoutCancel(ctx), func(ctx context.Context, tx *database.Tx) error {
+	saveErr := r.DB.Transaction(context.WithoutCancel(ctx), func(ctx context.Context, tx *database.Tx) error {
 		if err := r.finishRun(ctx, tx, st, d); err != nil {
 			return err
 		}
 		return r.recordSpend(ctx, tx, st, d)
 	})
+	unsaved(ctx, "simulation_save_failed", saveErr)
 
 	return err
 }

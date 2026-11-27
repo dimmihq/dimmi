@@ -160,12 +160,13 @@ func (r *Runner) judgeWithWriter(ctx context.Context, in Rubrics, model string) 
 	if out == nil {
 		d = failed("provider_error", ErrNoJudgment)
 	}
-	_ = r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	saveErr := r.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		if err := r.finishRun(ctx, tx, st, d); err != nil {
 			return err
 		}
 		return r.recordSpend(ctx, tx, st, d)
 	})
+	unsaved(ctx, "run_step_save_failed", saveErr)
 	return out, out != nil
 }
 

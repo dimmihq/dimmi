@@ -2,12 +2,21 @@ package pipeline
 
 import (
 	"context"
+	"errors"
 
-	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	"github.com/dimmihq/dimmi/app/contracts"
+)
+
+/*
+The kinds of agent run the error tracker tells apart, beside a
+simulation.
+*/
+const (
+	runConversation = "conversation"
+	runFollowUp     = "action_follow_up"
 )
 
 /*
@@ -18,17 +27,22 @@ conversation. A run that fails is marked failed; a run that hands the
 conversation to another agent ends with a handoff span naming both.
 */
 func (r *Runner) tracedRun(
-	ctx context.Context, st *run, conversationID ids.UUID, work func(context.Context) (*Result, error),
+	ctx context.Context, st *run, kind string, work func(context.Context) (*Result, error),
 ) (*Result, error) {
 	ctx, span := r.Telemetry.StartAI(ctx, telemetry.OpAgent, "invoke_agent "+st.env.Agent.Name)
 	defer span.End()
 
 	span.Set("gen_ai.agent.name", st.env.Agent.Name)
 	span.Set("gen_ai.agent.id", st.env.Agent.ID.String())
-	if conversationID != (ids.UUID{}) {
-		span.Set("gen_ai.conversation.id", conversationID.String())
+	if kind != simulationKind {
+		span.Set("gen_ai.conversation.id", st.env.Conversation.ID.String())
 	}
 	span.Set("dimmi.workspace_id", st.env.Agent.WorkspaceID.String())
+	span.Set("dimmi.run.kind", kind)
+	span.Set("dimmi.simulation", kind == simulationKind)
+	if st.rec != nil {
+		span.Set("dimmi.run_id", st.rec.Run.ID.String())
+	}
 
 	res, err := work(ctx)
 	switch {
@@ -92,5 +106,15 @@ func traceAction(ctx context.Context, reply actionkit.CallReply) {
 		telemetry.ToolOutcome(ctx, "awaiting_confirmation")
 	case !reply.Succeeded:
 		telemetry.ToolOutcome(ctx, "refused")
+	}
+}
+
+/*
+unsaved records a write the run could not make and went on without, so
+the error tracker shows it as a failure the run recovered from.
+*/
+func unsaved(ctx context.Context, kind string, err error) {
+	if err != nil && !errors.Is(err, context.Canceled) {
+		telemetry.Recovered(ctx, kind, "skipped")
 	}
 }

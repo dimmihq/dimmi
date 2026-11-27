@@ -5,6 +5,8 @@ import (
 	"errors"
 
 	"github.com/dimmihq/dimmi/framework/telemetry"
+
+	"github.com/dimmihq/dimmi/app/ai/toolset"
 )
 
 /*
@@ -36,6 +38,8 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 	span.Set("gen_ai.agent.id", id)
 	span.Set("gen_ai.conversation.id", s.thread.ID.String())
 	span.Set("dimmi.workspace_id", s.thread.WorkspaceID.String())
+	span.Set("dimmi.run.kind", tracedKind(s))
+	span.Set("dimmi.run_id", s.run.ID.String())
 
 	text, status := e.converseLoop(ctx, s)
 	if status == "failed" {
@@ -78,9 +82,35 @@ func callFailure(p *pending) string {
 	switch {
 	case !p.known && !p.layer:
 		return "unknown_tool"
-	case errors.Is(p.err, errBadArguments):
+	case errors.Is(p.err, errBadArguments), errors.Is(p.err, toolset.ErrArguments):
 		return "invalid_arguments"
 	}
 
 	return telemetry.ErrorType(p.err)
+}
+
+/*
+unsaved records a write the run could not make and went on without, so
+the error tracker shows it as a failure the run recovered from.
+*/
+func unsaved(ctx context.Context, kind string, err error) {
+	if err != nil && !errors.Is(err, context.Canceled) {
+		telemetry.Recovered(ctx, kind, "skipped")
+	}
+}
+
+/*
+tracedKind tells Operator's runs apart on the error tracker: a subagent,
+a routine's run, a triage, or a teammate's question as its run row
+names it.
+*/
+func tracedKind(s *session) string {
+	switch {
+	case s.sub != nil:
+		return "subagent"
+	case s.routine != nil:
+		return "routine"
+	}
+
+	return s.run.Kind
 }

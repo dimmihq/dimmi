@@ -70,6 +70,11 @@ func TestToolFailureTraces(t *testing.T) {
 			status: "invalid_argument", errType: "invalid_arguments",
 		},
 		{
+			name: "a built-in tool given arguments it cannot read",
+			stub: func(*actionDesk) {}, action: orderLookup, call: tools(call("handoff", `"now"`)),
+			status: "invalid_argument", errType: "invalid_arguments",
+		},
+		{
 			name: "a tool the agent does not have",
 			stub: func(*actionDesk) {}, action: orderLookup, call: tools(call("delete_everything", `{}`)),
 			status: "not_found", errType: "unknown_tool",

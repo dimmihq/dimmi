@@ -24,6 +24,7 @@ import (
 	"errors"
 
 	"github.com/dimmihq/dimmi/framework/log"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/support/llmretry"
@@ -126,6 +127,7 @@ func run[T any](ctx context.Context, d *Driver, model string, call func(contract
 			return zero, err
 		}
 		warn(ctx, model, hosts[i:i+2], err)
+		telemetry.Recovered(ctx, "model_host_"+failureKind(err), "next_host")
 	}
 
 	return zero, last
@@ -209,4 +211,16 @@ func warn(ctx context.Context, model string, pair []contracts.LLM, err error) {
 	}
 
 	log.From(ctx).WarnContext(ctx, "llm host unavailable, trying the next", attrs...)
+}
+
+/*
+failureKind names a failed call by its kind for the error tracker,
+never by its message.
+*/
+func failureKind(err error) string {
+	if llmErr, ok := errors.AsType[*contracts.LLMError](err); ok && llmErr.Kind != "" {
+		return string(llmErr.Kind)
+	}
+
+	return telemetry.ErrorType(err)
 }

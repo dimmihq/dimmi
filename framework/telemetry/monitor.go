@@ -17,6 +17,7 @@ package telemetry
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 
@@ -66,7 +67,7 @@ func (t *Telemetry) StartAI(ctx context.Context, op, name string) (context.Conte
 		span.Set("gen_ai.operation.name", operationName(op))
 	}
 	if op == OpAgent {
-		ctx = context.WithValue(ctx, agentKey{}, true)
+		ctx = context.WithValue(ctx, agentKey{}, &agentRun{span: span.span})
 	}
 
 	return ctx, span
@@ -99,9 +100,7 @@ func (t *Telemetry) open(ctx context.Context, op, name string) (context.Context,
 InAgent reports whether the context is inside an agent run.
 */
 func InAgent(ctx context.Context) bool {
-	in, _ := ctx.Value(agentKey{}).(bool)
-
-	return in
+	return ctx.Value(agentKey{}) != nil
 }
 
 /*
@@ -184,6 +183,12 @@ func ErrorType(err error) string {
 		return "canceled"
 	}
 
+	var syntax *json.SyntaxError
+	var mistyped *json.UnmarshalTypeError
+	if errors.As(err, &syntax) || errors.As(err, &mistyped) {
+		return "invalid_arguments"
+	}
+
 	return cmp.Or(fault.CodeOf(err), "error")
 }
 
@@ -215,6 +220,14 @@ func statusOf(errorType string) sentry.SpanStatus {
 		return sentry.SpanStatusUnavailable
 	case "auth_failed":
 		return sentry.SpanStatusUnauthenticated
+	}
+
+	// A named cause, such as "embedding_timeout", maps by its last word.
+	if i := strings.LastIndex(errorType, "_"); i > 0 {
+		switch tail := errorType[i+1:]; tail {
+		case "timeout", "unavailable", "canceled":
+			return statusOf(tail)
+		}
 	}
 
 	return sentry.SpanStatusInternalError

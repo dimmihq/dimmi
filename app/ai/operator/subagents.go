@@ -193,12 +193,13 @@ func (e *Engine) workSubagent(ctx context.Context, sub *session) string {
 	runCtx, cancel := context.WithTimeout(ctx, subagentTimeout)
 	text, status := e.converse(runCtx, sub)
 	cancel()
-	_ = e.DB.Transaction(context.WithoutCancel(ctx), func(ctx context.Context, tx *database.Tx) error {
+	saveErr := e.DB.Transaction(context.WithoutCancel(ctx), func(ctx context.Context, tx *database.Tx) error {
 		if err := e.finishRun(ctx, models.New(tx), sub, status); err != nil {
 			return err
 		}
 		return addSpend(ctx, tx, e, sub)
 	})
+	unsaved(ctx, "run_save_failed", saveErr)
 	done := status == "done" && strings.TrimSpace(text) != ""
 	if !done {
 		text = "This subagent did not finish its part and wrote no report. Treat its part as not done."

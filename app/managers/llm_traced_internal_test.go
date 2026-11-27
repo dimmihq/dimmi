@@ -78,42 +78,6 @@ func TestTracedLLM(t *testing.T) {
 func TestTracedLLMOutsideAgents(t *testing.T) {
 	t.Parallel()
 
-	// Tracked starts a stand-in tracker and returns the connection that
-	// reports to it and a function returning each transaction sent.
-	tracked := func(t *testing.T) (contracts.LLM, *telemetry.Telemetry, func() []transaction) {
-		t.Helper()
-		var mu sync.Mutex
-		var sent []transaction
-		tracker := testkit.Serve(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			body, err := io.ReadAll(r.Body)
-			assert.NoError(t, err)
-			lines := strings.Split(string(body), "\n")
-			for i := 1; i+1 < len(lines); i += 2 {
-				if !strings.Contains(lines[i], `"type":"transaction"`) {
-					continue
-				}
-				var tx transaction
-				assert.NoError(t, json.Unmarshal([]byte(lines[i+1]), &tx))
-				mu.Lock()
-				sent = append(sent, tx)
-				mu.Unlock()
-			}
-			w.WriteHeader(http.StatusOK)
-		}))
-		tel, err := telemetry.New(t.Context(), telemetry.Config{
-			ServiceName: "dimmi", Tracing: "none", Metrics: "none",
-			SentryDSN: strings.Replace(tracker, "http://", "http://public@", 1) + "/1",
-		})
-		require.NoError(t, err)
-		llm := traced(tel, fake.New(contracts.LLMProviderAnthropic).Script(fake.Step{Text: `{"ok":true}`}))
-		return llm, tel, func() []transaction {
-			require.NoError(t, tel.Shutdown(t.Context()))
-			mu.Lock()
-			defer mu.Unlock()
-			return sent
-		}
-	}
-
 	t.Run("runs a background call inside a run named after its task", func(t *testing.T) {
 		t.Parallel()
 		llm, _, sent := tracked(t)
@@ -200,4 +164,43 @@ type span struct {
 	Op           string         `json:"op"`
 	Status       string         `json:"status"`
 	Data         map[string]any `json:"data"`
+}
+
+/*
+tracked starts a stand-in tracker and returns a connection that
+reports to it, its telemetry and a function returning each transaction
+sent.
+*/
+func tracked(t *testing.T) (contracts.LLM, *telemetry.Telemetry, func() []transaction) {
+	t.Helper()
+	var mu sync.Mutex
+	var sent []transaction
+	tracker := testkit.Serve(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+		lines := strings.Split(string(body), "\n")
+		for i := 1; i+1 < len(lines); i += 2 {
+			if !strings.Contains(lines[i], `"type":"transaction"`) {
+				continue
+			}
+			var tx transaction
+			assert.NoError(t, json.Unmarshal([]byte(lines[i+1]), &tx))
+			mu.Lock()
+			sent = append(sent, tx)
+			mu.Unlock()
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	tel, err := telemetry.New(t.Context(), telemetry.Config{
+		ServiceName: "dimmi", Tracing: "none", Metrics: "none",
+		SentryDSN: strings.Replace(tracker, "http://", "http://public@", 1) + "/1",
+	})
+	require.NoError(t, err)
+	llm := traced(tel, fake.New(contracts.LLMProviderAnthropic).Script(fake.Step{Text: `{"ok":true}`}))
+	return llm, tel, func() []transaction {
+		require.NoError(t, tel.Shutdown(t.Context()))
+		mu.Lock()
+		defer mu.Unlock()
+		return sent
+	}
 }

@@ -154,7 +154,7 @@ func (r *Runner) Simulate(ctx context.Context, in SimulationInput) (*SimulationR
 
 	d := failed("provider_unavailable", errors.New("no answer model"))
 	if pauseGate(st.env) != "provider_unavailable" {
-		_, _ = r.tracedRun(ctx, st, ids.UUID{}, func(ctx context.Context) (*Result, error) {
+		_, _ = r.tracedRun(ctx, st, simulationKind, func(ctx context.Context) (*Result, error) {
 			d = r.turn(ctx, st)
 			return &Result{Outcome: d.outcome}, nil
 		})

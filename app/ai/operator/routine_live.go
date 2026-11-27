@@ -46,7 +46,7 @@ func (e *Engine) keepSteps(ctx context.Context, s *session) {
 		return
 	}
 	run := s.routine.run
-	_ = e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	saveErr := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		err := models.New(tx).SaveOperatorRoutineRunSteps(ctx, models.SaveOperatorRoutineRunStepsParams{
 			WorkspaceID: run.WorkspaceID, ID: run.ID, Steps: encoded, Now: e.Clock.Now(),
 		})
@@ -55,6 +55,7 @@ func (e *Engine) keepSteps(ctx context.Context, s *session) {
 		}
 		return nil
 	})
+	unsaved(ctx, "routine_save_failed", saveErr)
 }
 
 /*
@@ -72,6 +73,7 @@ func (e *Engine) publishRun(ctx context.Context, run models.OperatorRoutineRun) 
 	if run.ThreadID != nil {
 		data["thread_id"] = models.PublicID(models.PrefixOperatorThread, *run.ThreadID)
 	}
-	_ = e.Publisher.Publish(ctx, []string{appbroadcasting.OperatorRoutineChannel(run.RoutineID)},
+	saveErr := e.Publisher.Publish(ctx, []string{appbroadcasting.OperatorRoutineChannel(run.RoutineID)},
 		fbroadcasting.Message{ID: ids.Encode("evt", ids.New()), Event: EventRunChanged, Data: data})
+	unsaved(ctx, "routine_publish_failed", saveErr)
 }

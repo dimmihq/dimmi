@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/messages"
@@ -320,6 +321,7 @@ func (e *Engine) apiLinks(ctx context.Context, s *session, src apiSource, id ids
 	args, _ := json.Marshal(map[string]string{src.argument: models.PublicID(src.prefix, id)})
 	raw, err := e.Catalog.Call(ctx, s.m, CatalogCall{Name: src.tool, Args: args, Raw: true})
 	if err != nil {
+		telemetry.Recovered(ctx, "page_links_unloaded", "no_links")
 		return ""
 	}
 	var body struct {

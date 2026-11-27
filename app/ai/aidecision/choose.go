@@ -20,6 +20,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/dimmihq/dimmi/framework/telemetry"
+
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/support/prompts"
 )
@@ -132,6 +134,9 @@ func (d *Decider) chooseByDecision(ctx context.Context, c Choice) (Chosen, bool)
 			}),
 		}},
 	})
+	if err != nil {
+		telemetry.Recovered(ctx, "decision_model_failed", "answer_model")
+	}
 	if err != nil || res == nil {
 		return Chosen{}, false
 	}

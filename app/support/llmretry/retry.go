@@ -23,6 +23,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/resilience"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 )
@@ -194,11 +195,13 @@ func attempt[T any](ctx context.Context, w *Wrapper, req contracts.ChatRequest,
 		if !w.wait(ctx, err, n) {
 			break
 		}
+		telemetry.Retried(ctx, n)
 	}
 
 	if w.opts.Fallback == nil || !fallbackable(last) {
 		return zero, last
 	}
+	telemetry.Recovered(ctx, "model_"+failureKind(last), "spare_model")
 	return call(ctx, w.opts.Fallback)
 }
 
@@ -323,4 +326,16 @@ func fallbackable(err error) bool {
 		return false
 	}
 	return false
+}
+
+/*
+failureKind names a failed call by its kind, such as "overloaded", for
+the error tracker; never by its message.
+*/
+func failureKind(err error) string {
+	if llmErr, ok := errors.AsType[*contracts.LLMError](err); ok && llmErr.Kind != "" {
+		return string(llmErr.Kind)
+	}
+
+	return telemetry.ErrorType(err)
 }

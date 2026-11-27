@@ -158,10 +158,11 @@ func (e *Engine) record(ctx context.Context, s *session, in step) {
 		failure(&params, in.err)
 		s.failure = in.err
 	}
-	_ = e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	saveErr := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		_, err := models.New(tx).CreateRunStep(ctx, params)
 		return err
 	})
+	unsaved(ctx, "run_step_save_failed", saveErr)
 }
 
 /*
