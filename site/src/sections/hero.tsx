@@ -1,8 +1,9 @@
-import { RiArrowRightLine, RiCheckLine, RiGithubFill } from "@remixicon/react";
+import { RiArrowRightLine, RiCheckLine } from "@remixicon/react";
 
 import { ButtonLink } from "@/components/base/buttons/button";
 
-import { APP_URL, GITHUB_URL } from "../links";
+import { GitHubStars } from "../components/github-stars";
+import { APP_URL } from "../links";
 import { HeroProduct } from "../scenes/hero-product";
 
 const highlights = [
@@ -44,9 +45,7 @@ export function Hero() {
             <ButtonLink href={`${APP_URL}/signup`} trailingIcon={RiArrowRightLine}>
               Start free, no card
             </ButtonLink>
-            <ButtonLink href={GITHUB_URL} variant="secondary" leadingIcon={RiGithubFill}>
-              Star on GitHub
-            </ButtonLink>
+            <GitHubStars location="hero" />
           </div>
           <ul className="grid w-full max-w-[30rem] grid-cols-1 gap-x-6 gap-y-2.5 border-t border-separator-border pt-6 sm:grid-cols-2">
             {highlights.map((item) => (

@@ -110,6 +110,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm site:build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Check the edge sends every site path to the site
         run: scripts/check-site-paths.sh site/dist
       - uses: docker/setup-buildx-action@v3

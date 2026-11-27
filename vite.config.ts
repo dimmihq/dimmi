@@ -126,6 +126,16 @@ export default defineConfig(({ command }) => ({
         },
         test: { name: "sdk", environment: "node", globals: true, include: ["sdk/*/src/**/*.test.ts"] },
       },
+      {
+        extends: true,
+        resolve: {
+          alias: [
+            { find: "@", replacement: fileURLToPath(new URL("./resources/js", import.meta.url)) },
+            { find: "~site", replacement: fileURLToPath(new URL("./site/src", import.meta.url)) },
+          ],
+        },
+        test: { name: "site", environment: "jsdom", globals: true, include: ["site/**/*.test.{ts,tsx}"] },
+      },
     ],
   },
 }));

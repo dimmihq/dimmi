@@ -14,16 +14,34 @@ import { fileURLToPath } from "node:url";
 
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import { vitePrerenderPlugin } from "vite-prerender-plugin";
 
 import { generateSitemap } from "../scripts/generate-sitemap";
+import { fetchGitHubStars } from "./github-stars";
+
+function githubStarsPlugin(): Plugin {
+  let pending: Promise<number | null> | undefined;
+  return {
+    name: "dimmi-github-stars",
+    async config() {
+      pending ??= fetchGitHubStars();
+      const count = await pending;
+      return {
+        define: {
+          __GITHUB_STARS__: JSON.stringify(count),
+        },
+      };
+    },
+  };
+}
 
 export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
   // Its own dependency cache, so it never shares one with the app's dev server.
   cacheDir: fileURLToPath(new URL("../node_modules/.vite-site", import.meta.url)),
   plugins: [
+    githubStarsPlugin(),
     react(),
     tailwindcss(),
     vitePrerenderPlugin({ renderTarget: "#root" }),
