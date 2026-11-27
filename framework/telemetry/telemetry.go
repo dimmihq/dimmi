@@ -62,7 +62,7 @@ spans over HTTP to OTLPEndpoint, the full URL that receives traces such
 as http://collector:4318/v1/traces, with OTLPHeaders on every request.
 Metrics is none or prometheus, served by MetricsHandler. Errors are
 reported to Sentry only when SentryDSN is set, each tagged with Release,
-the build that sent it; log lines at SentryLogLevel and above are sent
+the build that sent it. Log lines at the sentry log level and above go
 there too.
 */
 type Config struct {

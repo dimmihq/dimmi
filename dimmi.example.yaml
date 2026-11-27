@@ -83,7 +83,7 @@ log:
 # as http://collector:4318/v1/traces, with OTLPHeaders on every request.
 # Metrics is none or prometheus, served by MetricsHandler. Errors are
 # reported to Sentry only when SentryDSN is set, each tagged with Release,
-# the build that sent it; log lines at SentryLogLevel and above are sent
+# the build that sent it. Log lines at the sentry log level and above go
 # there too.
 telemetry:
   service_name: app  # DIMMI_TELEMETRY__SERVICE_NAME
