@@ -188,10 +188,7 @@ func (r *Runner) runTool(ctx context.Context, st *run, call contracts.ToolCall) 
 
 	var result string
 	ran := call.Name
-	err := errors.New("there is no tool named " + call.Name + " in this conversation. Nothing was done.")
-	if st.layer != nil && st.layer.set.Has(call.Name) {
-		err = errors.New(st.layer.set.Misdirected(call.Name))
-	}
+	err := unknownTool(st, call.Name)
 	failure := "unknown_tool"
 	blocked, refused := "", false
 	if allowed {
@@ -223,6 +220,18 @@ func (r *Runner) runTool(ctx context.Context, st *run, call contracts.ToolCall) 
 		return "error: " + err.Error(), true
 	}
 	return result, refused
+}
+
+/*
+unknownTool is the error for a tool the conversation does not have. It
+says where the tool lives when the model reached past its layer for it.
+*/
+func unknownTool(st *run, name string) error {
+	if st.layer != nil && st.layer.set.Has(name) {
+		return errors.New(st.layer.set.Misdirected(name))
+	}
+
+	return errors.New("there is no tool named " + name + " in this conversation. Nothing was done.")
 }
 
 /*
