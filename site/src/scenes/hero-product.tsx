@@ -67,7 +67,7 @@ const SCENES = [
   {
     name: "Procedures",
     sparkle: false,
-    // 0 list, 1 pointer arrives, 2 click, 3 editor, 4–7 one step each, 8 live.
+    // 0 list, 1 pointer arrives, 2 click, 3 editor, 4-7 one step each, 8 live.
     waits: [1300, 700, 500, 900, 800, 800, 800, 900, 2600],
   },
   { name: "dimmi", sparkle: true, waits: [1100, 1100, 1300, 1200, 2800] },

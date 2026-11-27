@@ -127,7 +127,7 @@ export function WorkflowScene() {
         <Node
           label="Trigger"
           name="First message"
-          detail={`“${messages[taken]}”`}
+          detail={`"${messages[taken]}"`}
           icon={RiMessage2Line}
           lit={step >= 0}
           style={{ left: 0, top: 122, width: 214 }}

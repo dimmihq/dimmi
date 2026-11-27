@@ -15,6 +15,7 @@ import {
   SlackBrandLogo,
   WhatsAppBrandLogo,
 } from "./components/channel-logos";
+import { SDK_COUNT } from "./sdks";
 
 export type ChannelItem = {
   name: string;
@@ -63,7 +64,7 @@ export const CHANNELS: ChannelItem[] = [
   {
     name: "Headless & API",
     href: "/channels/api",
-    blurb: "Custom chat screens, backend APIs, webhooks, and 11 SDKs.",
+    blurb: `Custom chat screens, backend APIs, webhooks, and ${SDK_COUNT} SDKs.`,
     logo: ApiBrandLogo,
   },
 ];

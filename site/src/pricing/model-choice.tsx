@@ -43,8 +43,16 @@ function Stack() {
     <span className="flex items-center -space-x-2.5">
       {providers.map((p) => (
         <Disc key={p.name} label={p.name}>
-          <img src={`/logos/${p.light}.svg`} alt={p.name} className={cx("size-5", p.dark && "dark:hidden")} />
-          {p.dark ? <img src={`/logos/${p.dark}.svg`} alt="" className="hidden size-5 dark:block" /> : null}
+          <img
+            src={`/logos/${p.light}.svg`}
+            alt={p.name}
+            width={20}
+            height={20}
+            className={cx("size-5", p.dark && "dark:hidden")}
+          />
+          {p.dark ? (
+            <img src={`/logos/${p.dark}.svg`} alt="" width={20} height={20} className="hidden size-5 dark:block" />
+          ) : null}
         </Disc>
       ))}
     </span>

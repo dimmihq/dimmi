@@ -160,6 +160,8 @@ export function ShotFlow({
                 <img
                   src={`/shots/flow-${name}-${i}-light.webp`}
                   alt={i === 0 ? alt : ""}
+                  width={flow.width}
+                  height={flow.height}
                   loading={i === 0 ? "eager" : undefined}
                   decoding="async"
                   className="block size-full dark:hidden"
@@ -167,6 +169,8 @@ export function ShotFlow({
                 <img
                   src={`/shots/flow-${name}-${i}-dark.webp`}
                   alt={i === 0 ? alt : ""}
+                  width={flow.width}
+                  height={flow.height}
                   loading={i === 0 ? "eager" : undefined}
                   decoding="async"
                   className="hidden size-full dark:block"

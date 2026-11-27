@@ -15,6 +15,7 @@ import reactPkgRaw from "../../sdk/react/package.json?raw";
 import serverPkgRaw from "../../sdk/server/package.json?raw";
 import sveltePkgRaw from "../../sdk/svelte/package.json?raw";
 import vuePkgRaw from "../../sdk/vue/package.json?raw";
+import { SDK_PACKAGES } from "../../site/src/sdks";
 import { API_VERSION } from "./api/spec";
 import { withBase } from "./base";
 import { GITHUB_URL } from "./nav";
@@ -237,6 +238,13 @@ export const SDK_CATALOG: SdkEntry[] = [
     sourceUrl: `${GITHUB_URL}/tree/main/sdk/python`,
   },
 ];
+
+const catalogIds = SDK_CATALOG.map((sdk) => sdk.id);
+if (catalogIds.length !== SDK_PACKAGES.length || catalogIds.some((id, i) => id !== SDK_PACKAGES[i])) {
+  throw new Error(
+    `docs/src/sdks.ts SDK_CATALOG (${catalogIds.join(", ")}) does not match site/src/sdks.ts SDK_PACKAGES (${SDK_PACKAGES.join(", ")})`,
+  );
+}
 
 export function sdksJson(origin: string) {
   return {

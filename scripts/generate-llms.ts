@@ -12,6 +12,8 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { SDK_COUNT } from "../site/src/sdks.ts";
+
 const SITE_URL = "https://trydimmi.com";
 const GITHUB_URL = "https://github.com/dimmihq/dimmi";
 const LEGAL_PATHS = new Set(["/terms", "/privacy"]);
@@ -164,6 +166,9 @@ export function generateLlms(distDir = fileURLToPath(new URL("../site/dist", imp
   const docsLlmsTxt = readFileSync(docsLlmsPath, "utf8");
   const docsFullTxt = readFileSync(docsFullPath, "utf8");
   const sdks = JSON.parse(readFileSync(sdksJsonPath, "utf8")) as SdksManifest;
+  if (sdks.sdks.length !== SDK_COUNT) {
+    throw new Error(`SDK count mismatch: docs/sdks.json has ${sdks.sdks.length}, site/src/sdks.ts has ${SDK_COUNT}`);
+  }
   const marketingPages = readMarketingPages(distDir);
 
   const productPages = marketingPages.filter((p) => !LEGAL_PATHS.has(p.path) && !p.path.startsWith("/channels"));
@@ -233,7 +238,7 @@ export function generateLlms(distDir = fileURLToPath(new URL("../site/dist", imp
     "## OpenAPI, SDKs & coding agent skill",
     "",
     `- OpenAPI 3.1 contract (${sdks.api_version}): ${sdks.openapi}`,
-    `- SDK catalog (${sdks.sdks.length} browser & backend packages, JSON): ${SITE_URL}/docs/sdks.json`,
+    `- SDK catalog (${SDK_COUNT} browser & backend packages, JSON): ${SITE_URL}/docs/sdks.json`,
     `- Install skill (${sdks.install_skill.name}) for Claude Code, Cursor & Codex: ${sdks.install_skill.docs} (raw SKILL.md: ${sdks.install_skill.skill_md})`,
     "",
     "## Content overview",
@@ -272,7 +277,7 @@ export function generateLlms(distDir = fileURLToPath(new URL("../site/dist", imp
   const fullHeader = [
     "# dimmi (Complete Documentation)",
     "",
-    "> Open-source (MIT) customer support platform: shared inbox, AI support agents, procedures, Operator, tickets, workflows, broadcasts, help center, REST API, Messenger API, MCP server, and 12 SDKs.",
+    `> Open-source (MIT) customer support platform: shared inbox, AI support agents, procedures, Operator, tickets, workflows, broadcasts, help center, REST API, Messenger API, MCP server, and ${SDK_COUNT} SDKs.`,
     "",
     `- Root URL: ${SITE_URL}`,
     `- Index: ${SITE_URL}/llms.txt`,

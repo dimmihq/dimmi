@@ -7,6 +7,7 @@ import { Intro, MonoLink, Panel, Section } from "../components/container";
 import { GITHUB_URL } from "../links";
 import { TerminalScene } from "../scenes/terminal-scene";
 import { useStartInView } from "../scenes/use-scene";
+import { SDK_COUNT } from "../sdks";
 
 const TAB_DURATION = 4200;
 
@@ -153,7 +154,7 @@ export function SelfHost() {
     <Section frameClassName="flex flex-col gap-16">
       <Intro
         title="Open source with nothing held back."
-        body="Self-hosting runs the exact same MIT code as dimmi Cloud: SAML SSO, AI playbooks, workflows, and all 11 SDKs. Keep every byte in your own Postgres."
+        body={`Self-hosting runs the exact same MIT code as dimmi Cloud: SAML SSO, AI playbooks, workflows, and all ${SDK_COUNT} SDKs. Keep every byte in your own Postgres.`}
       />
       <div className="grid grid-cols-1 gap-x-6 gap-y-14 lg:grid-cols-2 [&>*]:min-w-0">
         <Card
@@ -167,7 +168,7 @@ export function SelfHost() {
         <Card
           anchor="developers"
           title="SDKs and API"
-          body="Build with typed SDKs for 11 stacks, a REST API, signed webhooks, an MCP server, and llms.txt for coding agents."
+          body={`Build with ${SDK_COUNT} typed SDKs, a REST API, signed webhooks, an MCP server, and llms.txt for coding agents.`}
           link={{ href: "/docs", label: "Read the docs" }}
         >
           <CodeCard />

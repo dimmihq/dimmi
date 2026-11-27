@@ -29,6 +29,7 @@ import { RoutinesPage } from "./pages/routines";
 import { TermsPage } from "./pages/terms";
 import { TicketsPage } from "./pages/tickets";
 import { WorkflowsPage } from "./pages/workflows";
+import { SDK_COUNT } from "./sdks";
 
 export type Route = {
   path: string;
@@ -196,9 +197,8 @@ export const routes: Route[] = [
   },
   {
     path: "/channels/api",
-    title: "Headless chat API, webhooks & 11 SDKs | dimmi",
-    description:
-      "Build custom web or mobile chat on /widget/v1, sync backend threads over /api/v1, subscribe to signed webhooks, and use 11 typed SDKs and MCP.",
+    title: `Headless chat API, webhooks & ${SDK_COUNT} SDKs | dimmi`,
+    description: `Build custom web or mobile chat on /widget/v1, sync backend threads over /api/v1, subscribe to signed webhooks, and use ${SDK_COUNT} typed SDKs and MCP.`,
     page: ApiChannelPage,
   },
   {

@@ -1,12 +1,13 @@
 import { cx } from "@/utils/cx";
 
 import { Section } from "../components/container";
+import { SDK_COUNT } from "../sdks";
 
 const facts = [
   { value: "MIT licensed", label: "All the code is open source, with no enterprise paywalls." },
   { value: "Unlimited seats", label: "Add engineers and founders to your inbox for $0." },
   { value: "BYO model keys", label: "Use your own AI keys and save up to 83%." },
-  { value: "11 typed SDKs", label: "React, Next.js, Vue, Svelte, Go, PHP, Laravel, and Python." },
+  { value: `${SDK_COUNT} typed SDKs`, label: "React, Next.js, Vue, Svelte, Go, PHP, Laravel, and Python." },
 ];
 
 export function Proof() {

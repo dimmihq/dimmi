@@ -153,7 +153,7 @@ export function ReportsHeroFragment() {
         <div className="flex flex-nowrap items-center gap-2 overflow-hidden">
           <span className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-border-button-default px-2.5 text-body-2-medium text-text-primary">
             <RiCalendarLine className="size-4 text-foreground-icon-secondary" aria-hidden />
-            Oct 19 – Nov 17
+            Oct 19 to Nov 17
           </span>
           <span className="inline-flex shrink-0 items-center gap-1.5 text-body-2-medium text-text-primary">
             <span className="flex h-[18px] w-8 items-center justify-end rounded-full bg-accent-600 p-0.5">
@@ -287,7 +287,7 @@ export function SatisfactionFragment() {
         </ul>
       </div>
       <p className="mt-3 rounded-xl bg-background-secondary-default px-3.5 py-3 text-body-2-regular text-text-secondary">
-        <span className="text-text-primary">Omar Haddad</span> rated 5 · “Fixed in one reply, thank you.”
+        <span className="text-text-primary">Omar Haddad</span> rated 5 · "Fixed in one reply, thank you."
       </p>
     </Card>
   );
@@ -306,7 +306,7 @@ export function TeamFragment() {
     <Card className="max-w-[460px] rounded-b-none border-b-0 text-start">
       <div className="flex flex-col gap-1 border-b border-separator-border px-4 py-3.5">
         <span className="text-headline-semibold text-text-primary">Team and teammates</span>
-        <span className="text-body-2-regular text-text-secondary">Support team · Oct 19 – Nov 17</span>
+        <span className="text-body-2-regular text-text-secondary">Support team · Oct 19 to Nov 17</span>
       </div>
       <div className="grid grid-cols-2 gap-2 px-4 pt-4">
         <MetricTile tile={{ label: "Conversations replied to", value: "650" }} />
