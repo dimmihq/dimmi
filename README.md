@@ -120,7 +120,9 @@ Messenger packages for browser, React, Next.js, Vue, Angular, and Svelte are in 
 
 ## Contributing
 
-Pull requests and bug reports are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) for local setup and seed data, and read [AGENTS.md](AGENTS.md) before changing routes, events, or SDKs. [Open an issue](https://github.com/dimmihq/dimmi/issues/new) if you hit a bug.
+Pull requests and bug reports are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) for local setup and seed data, and read [AGENTS.md](AGENTS.md) before changing routes, events, or SDKs.
+
+[Open an issue](https://github.com/dimmihq/dimmi/issues/new/choose) to report a bug or request a feature. Please follow our [Code of Conduct](CODE_OF_CONDUCT.md), and report security bugs in private using [SECURITY.md](SECURITY.md).
 
 <br>
 
@@ -140,7 +142,8 @@ Pull requests and bug reports are welcome. Start with [CONTRIBUTING.md](CONTRIBU
   <a href="https://trydimmi.com/?utm_source=github&utm_medium=readme&utm_content=footer"><b>Start free</b></a> ·
   <a href="https://trydimmi.com/docs/self-hosting/?utm_source=github&utm_medium=readme&utm_content=footer"><b>Self-host it</b></a> ·
   <a href="https://trydimmi.com/docs/?utm_source=github&utm_medium=readme&utm_content=footer">Docs</a> ·
-  <a href="CONTRIBUTING.md">Contributing</a>
+  <a href="CONTRIBUTING.md">Contributing</a> ·
+  <a href="SECURITY.md">Security</a>
 </p>
 
 [tests-image]: https://img.shields.io/github/actions/workflow/status/dimmihq/dimmi/main.yml?branch=main&label=tests&style=for-the-badge&labelColor=002C22&color=00BC7D

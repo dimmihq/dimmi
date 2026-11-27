@@ -1,0 +1,31 @@
+name: Feature request
+description: Suggest a change or new capability in dimmi.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about setting up or using dimmi? Ask in [GitHub Discussions](https://github.com/dimmihq/dimmi/discussions) or read the [docs](https://trydimmi.com/docs/).
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is the problem?
+      description: Describe the task you are trying to do and where dimmi gets in your way.
+      placeholder: When a customer replies from Slack, our team cannot...
+    validations:
+      required: true
+  - type: textarea
+    id: audience
+    attributes:
+      label: Who has this problem?
+      description: Tell us who runs into this (such as support teammates, workspace admins, self-hosters, or SDK users) and how often it happens.
+      placeholder: Support leads handling 50+ email threads a day...
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: What change do you want?
+      description: Describe the behavior, setting, or API change you want, plus any workarounds you tried.
+    validations:
+      required: true
