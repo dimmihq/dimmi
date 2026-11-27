@@ -137,10 +137,10 @@ export function PrivacyPage() {
           Your database, files, and backups live on Hetzner servers and object storage in Germany (EU), and
           outbound/inbound email runs through AWS in Frankfurt, Germany. When a workspace enables built-in AI features,
           prompt text goes to US AI providers (Anthropic, OpenAI, Voyage AI, and Cloudflare for the Clef decision
-          model). We never sell personal data, we run zero analytics or advertising trackers on our website and docs,
-          and no subprocessor trains AI models on Customer Data. The dashboard records masked sessions of signed-in
-          teammates on our own servers in the EU, only to operate, support, analyze, and improve dimmi. Your customers
-          are never recorded.
+          model). We never sell personal data, we run zero advertising trackers and zero third-party analytics on our
+          website and docs, and no subprocessor trains AI models on Customer Data. Our website, docs, and dashboard
+          record masked sessions on our own servers in the EU, only to operate, support, analyze, and improve dimmi.
+          Your customers are never recorded.
         </p>
       </Clause>
 
@@ -176,7 +176,7 @@ export function PrivacyPage() {
           rows={[
             [
               "Website & docs visitors",
-              "Minimal server access logs and local theme preference (zero analytics or ad trackers).",
+              "Minimal server access logs, masked session recordings kept on our own servers, and local theme preference (zero ad trackers, zero third-party analytics).",
               "Data Controller",
               "Part I (Privacy Policy)",
             ],
@@ -266,6 +266,11 @@ export function PrivacyPage() {
               "Collected automatically by our servers and Turnstile to stop abuse.",
             ],
             [
+              "Website & docs visitors",
+              "Masked session recordings: page layout with every character of text and every input replaced by asterisks, clicks, page and request addresses with their timings, referring site, browser, device, and time zone, linked to a random browser ID. No images, media, request bodies, or IP addresses.",
+              "Recorded in your browser while you browse trydimmi.com and its docs.",
+            ],
+            [
               "Changelog subscribers",
               "Email address and double opt-in confirmation timestamp.",
               "Provided directly through the subscription form.",
@@ -296,7 +301,7 @@ export function PrivacyPage() {
             ],
             [
               "Operating, supporting, analyzing, and improving dimmi",
-              "Masked dashboard session recordings and error reports",
+              "Masked website, docs, and dashboard session recordings and error reports",
               "Legitimate interests (NDPA s.25(1)(b)(v); GDPR Art. 6(1)(f))",
             ],
             [
@@ -408,8 +413,8 @@ export function PrivacyPage() {
           We protect data using TLS in transit, Argon2id password hashing, passkeys and 2FA, SAML/OIDC SSO,
           per-workspace credential encryption, PostgreSQL row-level security, ClamAV scanning, and 365-day audit logs
           (full details and honest boundaries in <LegalLink href="#security-overview">Part VI</LegalLink>). We use only
-          first-party cookies and browser storage with zero ads, and the dashboard's masked session recorder runs on our
-          own servers (full inventory in <LegalLink href="#cookie-notice">Part III</LegalLink>).
+          first-party cookies and browser storage with zero ads, and our masked session recorder runs on our own servers
+          (full inventory in <LegalLink href="#cookie-notice">Part III</LegalLink>).
         </p>
       </Clause>
 
