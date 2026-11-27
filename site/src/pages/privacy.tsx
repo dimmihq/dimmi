@@ -139,8 +139,8 @@ export function PrivacyPage() {
           prompt text goes to US AI providers (Anthropic, OpenAI, Voyage AI, and Cloudflare for the Clef decision
           model). We never sell personal data, we run zero analytics or advertising trackers on our website and docs,
           and no subprocessor trains AI models on Customer Data. The dashboard records masked sessions of signed-in
-          teammates on our own servers in the EU, only to monitor the platform and fix what breaks. Your customers are
-          never recorded.
+          teammates on our own servers in the EU, only to operate, support, analyze, and improve dimmi. Your customers
+          are never recorded.
         </p>
       </Clause>
 
@@ -295,7 +295,7 @@ export function PrivacyPage() {
               "Legitimate interests (NDPA s.25(1)(b)(v); GDPR Art. 6(1)(f))",
             ],
             [
-              "Monitoring the platform and fixing dashboard problems",
+              "Operating, supporting, analyzing, and improving dimmi",
               "Masked dashboard session recordings and error reports",
               "Legitimate interests (NDPA s.25(1)(b)(v); GDPR Art. 6(1)(f))",
             ],
