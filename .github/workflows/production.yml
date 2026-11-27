@@ -8,7 +8,8 @@
 # A release that fails its smoke test is rolled back to the one before it.
 #
 # Production environment secret: KUBECONFIG, a kubeconfig for the
-# namespace's deployer account.
+# namespace's deployer account. The repository secret RUSTRAK_CI_TOKEN,
+# when set, registers the release with the error tracker.
 
 name: production
 
@@ -103,6 +104,14 @@ jobs:
         run: deploy/release/smoke.sh https://trydimmi.com
         env:
           EXPECT_RELEASE: ${{ env.SHA }}
+      # Only a release that passed its smoke test, never a rollback. The
+      # tracker never holds a deploy up or fails it.
+      - name: Register the release with the error tracker
+        continue-on-error: true
+        timeout-minutes: 2
+        run: deploy/release/tracker.sh production "$SHA" "$VERSION"
+        env:
+          TRACKER_TOKEN: ${{ secrets.RUSTRAK_CI_TOKEN }}
       - name: Roll back to the previous release
         if: failure() && env.PREVIOUS != ''
         run: deploy/k8s/scripts/rollback.sh production "$PREVIOUS"

@@ -45,7 +45,9 @@ function sourceMaps(): Plugin[] {
     project: "dashboard",
     authToken: errorsToken,
     telemetry: false,
-    release: { name: process.env.GITHUB_SHA, inject: false },
+    // The release is the commit, as the server names it. It is marked
+    // released when a deploy goes live (deploy/release/tracker.sh), not here.
+    release: { name: process.env.GITHUB_SHA, inject: false, finalize: false },
     sourcemaps: { filesToDeleteAfterUpload: ["public/build/**/*.map"] },
     errorHandler: (err) => {
       process.stderr.write(`warning: source maps were not uploaded: ${err.message}\n`);
