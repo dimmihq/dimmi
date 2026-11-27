@@ -264,6 +264,13 @@ export const RETENTION_SCHEDULE: RetentionRow[] = [
     notes: "Collected via double opt-in; deleted or suppressed immediately upon unsubscribe.",
   },
   {
+    category: "Dashboard session recordings (signed-in teammates)",
+    scope: "Controller",
+    period: "30 days",
+    notes:
+      "Masked in the browser and kept on dimmi's own servers in the EU. Recordings we star to fix a bug stay until unstarred.",
+  },
+  {
     category: "Server access logs and application traces",
     scope: "Controller",
     period: "14 to 30 days",
@@ -413,10 +420,10 @@ export const SECURITY_MEASURES: SecurityMeasureGroup[] = [
 export type CookieEntry = {
   surface: string;
   name: string;
-  mechanism: "HTTP Cookie" | "Local Storage";
+  mechanism: "HTTP Cookie" | "Local Storage" | "Session Storage";
   purpose: string;
   lifetime: string;
-  category: "Strictly necessary" | "Preference";
+  category: "Strictly necessary" | "Preference" | "Diagnostics";
 };
 
 export const COOKIES_AND_STORAGE: CookieEntry[] = [
@@ -452,6 +459,22 @@ export const COOKIES_AND_STORAGE: CookieEntry[] = [
       "Remembers light/dark theme preference; browser local storage holds unsent message drafts and layout state.",
     lifetime: "Persistent until cleared",
     category: "Preference",
+  },
+  {
+    surface: "dimmi Cloud dashboard",
+    name: "kimmi.session & kimmi.halted",
+    mechanism: "Session Storage",
+    purpose: "Joins a signed-in teammate's masked session recording across page loads.",
+    lifetime: "Until the tab closes",
+    category: "Diagnostics",
+  },
+  {
+    surface: "dimmi Cloud dashboard",
+    name: "kimmi.anonymousId & kimmi.identity",
+    mechanism: "Local Storage",
+    purpose: "Holds the recorder's random browser ID and the signed-in teammate's dimmi user ID. No name or email.",
+    lifetime: "Persistent until cleared",
+    category: "Diagnostics",
   },
   {
     surface: "Customer help center",
