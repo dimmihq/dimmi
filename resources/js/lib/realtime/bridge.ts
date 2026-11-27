@@ -3,13 +3,18 @@
  * cache, so every screen showing the data updates without a refetch
  * where it can, and refetches only what a broadcast cannot settle.
  *
- * A broadcast is applied once: replay after a reconnect and the live
- * copy share an id. The screen that made a change already shows it, so
- * a broadcast carrying one of its own client mutation ids is dropped.
- * A broadcast too large to send carries only a reference, and the
- * screens that show it refetch. Who views a conversation patches the
- * rows that show it and nothing else. Operator's own stream belongs to
- * the chat that asked and changes nothing cached here.
+ * A broadcast is applied once per channel: replay after a reconnect and
+ * the live copy share an id. One event reaches several channels under
+ * that same id, such as a new message on its conversation's timeline
+ * and in the lists, and the server delivers channels in no set order,
+ * so each channel keeps its own copy. The screen that made a change
+ * already shows it, so a broadcast carrying one of its own client
+ * mutation ids is dropped. A broadcast too large to send carries only a
+ * reference, and the screens that show it refetch. What a broadcast
+ * patches while its fetch is in flight is fetched again, since that
+ * fetch may have read before the change. Who views a conversation
+ * patches the rows that show it and nothing else. Operator's own stream
+ * belongs to the chat that asked and changes nothing cached here.
  */
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
@@ -109,6 +114,7 @@ export class Bridge {
   readonly mutations = new MutationIds();
 
   private readonly pending = new Map<string, QueryKey>();
+  private readonly overtaken = new Set<string>();
   private timer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private readonly client: QueryClient) {}
@@ -120,7 +126,7 @@ export class Bridge {
   apply(workspace: string, channel: string, envelope: Envelope): boolean {
     if (
       envelope.event.startsWith("operator.") ||
-      this.duplicate(envelope.id) ||
+      this.duplicate(channel, envelope.id) ||
       this.mutations.isOwn(envelope.meta?.client_mutation_id)
     ) {
       return false;
@@ -226,18 +232,19 @@ export class Bridge {
     const key = realtimeKeys.messages(workspace, conversation);
     const cached = this.client.getQueryData(key);
     if (cached === undefined) {
+      this.refetchIfFetching(key);
       return;
     }
 
     const patched = upsertRecord(cached, record);
     if (patched.found) {
-      this.client.setQueryData(key, patched.data);
+      this.write(key, patched.data);
       return;
     }
 
     const appended = event === "message.created" ? appendRecord(cached, record) : patched;
     if (appended.found) {
-      this.client.setQueryData(key, appended.data);
+      this.write(key, appended.data);
       return;
     }
 
@@ -253,7 +260,7 @@ export class Bridge {
     for (const [key, cached] of this.client.getQueriesData({ queryKey: realtimeKeys.conversations(workspace) })) {
       const patched = upsertRecord(cached, record);
       if (patched.found) {
-        this.client.setQueryData(key, patched.data);
+        this.write(key, patched.data);
       } else if (refetchMissing) {
         this.refetch(key);
       }
@@ -263,12 +270,34 @@ export class Bridge {
   private patch(key: QueryKey, record: ObjectRecord) {
     const cached = this.client.getQueryData(key);
     if (cached === undefined) {
+      this.refetchIfFetching(key);
       return;
     }
 
     const patched = upsertRecord(cached, record);
     if (patched.found) {
-      this.client.setQueryData(key, patched.data);
+      this.write(key, patched.data);
+    }
+  }
+
+  /*
+   * write puts what a broadcast carried into a cached query. A fetch
+   * still in flight may have read before the change, and its answer
+   * replaces what is written here, so the query is fetched again.
+   */
+  private write(key: QueryKey, data: unknown) {
+    this.client.setQueryData(key, data);
+    this.refetchIfFetching(key);
+  }
+
+  /*
+   * refetchIfFetching refetches the query once the burst settles when a
+   * fetch of it is in flight, even if that fetch has landed by then.
+   */
+  private refetchIfFetching(key: QueryKey) {
+    if (this.client.getQueryState(key)?.fetchStatus === "fetching") {
+      this.overtaken.add(JSON.stringify(key));
+      this.refetch(key);
     }
   }
 
@@ -290,21 +319,27 @@ export class Bridge {
 
   private flush() {
     this.timer = undefined;
-    const keys = [...this.pending.values()];
+    const keys = [...this.pending.entries()];
+    const overtaken = new Set(this.overtaken);
     this.pending.clear();
-    for (const queryKey of keys) {
-      void this.client.refetchQueries({ queryKey, type: "active", stale: true });
+    this.overtaken.clear();
+    for (const [id, queryKey] of keys) {
+      void this.client.refetchQueries({ queryKey, type: "active", stale: overtaken.has(id) ? undefined : true });
     }
   }
 
-  private duplicate(id: string | undefined): boolean {
+  /*
+   * duplicate reports whether the channel already brought the broadcast.
+   */
+  private duplicate(channel: string, id: string | undefined): boolean {
     if (id === undefined) {
       return false;
     }
-    if (this.seen.has(id)) {
+    const key = `${channel} ${id}`;
+    if (this.seen.has(key)) {
       return true;
     }
-    this.seen.add(id);
+    this.seen.add(key);
     if (this.seen.size > seenLimit) {
       const oldest = this.seen.values().next().value;
       if (oldest !== undefined) {
