@@ -65,7 +65,7 @@ patches:
       # erases nothing.
       - op: add
         path: /data/DIMMI_FRONTEND__SESSIONS_PROJECT_ID
-        value: ""
+        value: 01a21c12-58c9-748c-9354-d534387ed2ee
       - op: add
         path: /data/DIMMI_FILESYSTEMS__DISKS__S3__PUBLIC_ENDPOINT
         value: https://files.staging.trydimmi.com
