@@ -14,6 +14,8 @@ const pages = new Map<string, string>([
   ["All comparisons", "/vs"],
   ["dimmi vs Intercom", "/vs/intercom"],
   ["dimmi vs Chatwoot", "/vs/chatwoot"],
+  ["dimmi vs Front", "/vs/front"],
+  ["dimmi vs Freshdesk", "/vs/freshdesk"],
   ["Pricing comparison", "/pricing#compare"],
   ["Cost calculator", "/pricing#calculator"],
   ["Self-host", "/#self-host"],
@@ -43,7 +45,10 @@ const columns = [
     title: "Channels",
     links: CHANNELS.map((c) => c.name),
   },
-  { title: "Compare", links: ["All comparisons", "dimmi vs Intercom", "dimmi vs Chatwoot", "Pricing comparison"] },
+  {
+    title: "Compare",
+    links: ["All comparisons", "dimmi vs Intercom", "dimmi vs Chatwoot", "dimmi vs Front", "dimmi vs Freshdesk"],
+  },
   { title: "Run it", links: ["Self-host", "dimmi Cloud", "Security", "Self-Hosting Notice", "AI Transparency"] },
   { title: "Developers", links: ["Docs", "API reference", "SDKs", "Webhooks", "GitHub"] },
   {

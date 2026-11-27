@@ -160,7 +160,7 @@ const INTERCOM_QUESTIONS = [
   {
     question: "How much does Fin cost next to dimmi's agent?",
     answer:
-      "Intercom bills Fin at $0.99 per outcome on every plan, on top of seat fees ($29 to $132 per seat). dimmi includes AI inside conversation pricing starting at $0.10 per AI conversation after 100 free conversations each month, or drops to the human rate (50% to 83% less) when you plug in your own OpenAI or Anthropic key.",
+      "Intercom bills Fin at $0.99 per outcome on every plan, on top of seat fees ($29 to $132 per seat). dimmi includes AI inside conversation pricing starting at $0.10 per AI conversation after 100 free conversations each month, or drops to the human rate (50% to 83% less) when you connect OpenAI, Anthropic, or OpenRouter keys directly.",
   },
   {
     question: "Can I self-host dimmi?",
@@ -170,7 +170,7 @@ const INTERCOM_QUESTIONS = [
   {
     question: "Can I use my own OpenAI or Anthropic key?",
     answer:
-      "Yes. Add your OpenAI, Anthropic, DeepSeek, Mistral, or OpenRouter key under Settings, AI providers. Your model provider bills you directly at raw API token prices and dimmi bills only the human conversation rate on Cloud, or $0 on self-hosted.",
+      "Yes. Enter an API key from OpenAI, Anthropic, DeepSeek, Mistral, or OpenRouter inside Workspace Settings. Your model provider bills you directly at raw API token prices and dimmi bills only the human conversation rate on Cloud, or $0 on self-hosted.",
   },
   {
     question: "Do seats cost money on dimmi?",
@@ -447,20 +447,23 @@ export function VsIntercomPage() {
         verdict={
           <p>
             Pick Intercom if you need a mature platform with SOC 2, a large app marketplace, and you are fine paying per
-            seat plus $0.99 per AI outcome. Pick dimmi if you want free seats, your own AI key, MIT code you can
-            self-host, and a bill starting at $0 for {FREE_CONVERSATIONS} conversations every month.
+            seat plus $0.99 per AI outcome. Move to dimmi when zero-cost teammate logins, direct LLM API keys, MIT
+            self-hosting, and {FREE_CONVERSATIONS} free monthly threads beat seat-plus-outcome billing.
           </p>
         }
         authorId="frantz-kati"
         reviewedById="frantz-kati"
         published={CHECKED_ON_ISO}
         updated={CHECKED_ON_ISO}
+        primaryCta={{ label: "Migrate free from Intercom", href: `${APP_URL}/signup` }}
+        secondaryCta={{ label: "Star MIT repo on GitHub", href: GITHUB_URL, github: true }}
         visual={<FinOutcomeMeterVisual />}
       />
 
       <WinCards
+        tag="Intercom trade-offs"
         title="Where Intercom beats dimmi, and where dimmi takes the lead."
-        body="We checked every Intercom plan on November 27, 2026 and named our own gaps plainly."
+        body="Audited from intercom.com/pricing late November 2026 with our own gaps named plainly."
         rivalName="Intercom"
         rivalWins={intercom.rivalWins}
         dimmiWins={intercom.dimmiWins}
@@ -470,19 +473,20 @@ export function VsIntercomPage() {
 
       <BillDuel
         rival={intercom}
+        tag="Intercom bill duel"
         title="Run your own team numbers side by side."
         body="Intercom Essential lists at $29/seat/mo on annual billing ($19/seat/mo new-customer promo), Advanced is $85/seat for workflows and round robin, and Expert is $132/seat for SLAs and SSO. dimmi unlocks all of those with $0 seats."
         defaultSeats={5}
         defaultConversations={2000}
         defaultAiShare={0.8}
-        note="See the full price book on /pricing."
+        note="See /pricing for full bands."
       />
 
       <ProofBand
-        tag="Real product screens"
-        title="Plug in your own OpenAI or Anthropic key and track real response speed."
-        body="Both captures come straight from a live dimmi workspace. No mockups, and no enterprise upgrade required to unlock your own model providers or reporting."
-        caption="Left: Settings, AI providers with BYO keys billed at your model provider's API rates. Right: Workspace overview reports showing response times and first-contact resolution."
+        tag="Live Intercom-killer screens"
+        title="Connect OpenAI or Anthropic directly and track real response speed."
+        body="Captured straight from a live dimmi workspace. No mockups, and zero Expert-tier paywall for custom model keys or overview metrics."
+        caption="Left: Settings, AI providers with direct API keys billed at provider rates. Right: Overview reports tracking first response, resolution time, and FCR."
       >
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <ProductShot
@@ -495,33 +499,35 @@ export function VsIntercomPage() {
           />
         </div>
         <div className="flex flex-wrap gap-6 pt-3">
-          <MonoLink href="/vs">Compare all platforms</MonoLink>
-          <MonoLink href="/vs/chatwoot">Compare dimmi vs Chatwoot</MonoLink>
-          <MonoLink href="/pricing">Explore dimmi pricing</MonoLink>
-          <MonoLink href="/agents">See dimmi AI support agents</MonoLink>
-          <MonoLink href="/procedures">See policy procedures</MonoLink>
-          <MonoLink href="/inbox">See the shared inbox</MonoLink>
+          <MonoLink href="/vs">All helpdesk match-ups</MonoLink>
+          <MonoLink href="/vs/chatwoot">dimmi vs Chatwoot</MonoLink>
+          <MonoLink href="/vs/front">dimmi vs Front</MonoLink>
+          <MonoLink href="/vs/freshdesk">dimmi vs Freshdesk</MonoLink>
+          <MonoLink href="/pricing">Full pricing table</MonoLink>
+          <MonoLink href="/agents">AI agents & procedures</MonoLink>
         </div>
       </ProofBand>
 
       <SwitchTriggers
+        tag="Intercom switch triggers"
         title="Four billing traps that push software teams off Intercom."
-        body="Public pricing tiers verified on intercom.com/pricing on November 27, 2026."
+        body="Pulled directly from Intercom's public Essential, Advanced, and Expert pricing."
         rivalName="Intercom"
         triggers={intercom.switchTriggers}
       />
 
       <VsMatrix
-        title="Feature by feature, with every real gap marked."
-        body="Items marked Request open our feedback board so you can track what ships next."
+        title="Intercom vs dimmi, line by line, with honest gaps."
+        body="Click Request on any unshipped capability to vote directly on our public board."
         rivalName="Intercom"
         groups={INTERCOM_MATRIX}
       />
 
       <TeamPicker
         rival={intercom}
-        title="Four real team profiles, and who should pick what."
-        body="We include a team that should pick Intercom today so you do not waste an afternoon testing the wrong tool."
+        tag="Intercom team fit"
+        title="Four software teams weighed against Intercom."
+        body="One profile genuinely belongs on Intercom today, so you can skip a wasted trial."
         teams={intercom.teams}
       />
 
@@ -530,10 +536,10 @@ export function VsIntercomPage() {
       <Questions items={INTERCOM_QUESTIONS} />
 
       <CtaBand
-        title="Keep your history. Drop the seat tax and the $0.99 outcome meter."
+        title="Keep your Intercom history. Drop the seat tax and the $0.99 Fin meter."
         links={[
-          { label: "Start free, 100 chats/mo", href: `${APP_URL}/signup`, variant: "primary", icon: "arrow" },
-          { label: "Self-host on GitHub", href: GITHUB_URL, variant: "secondary", icon: "github" },
+          { label: "Try dimmi free (100 chats)", href: `${APP_URL}/signup`, variant: "primary", icon: "arrow" },
+          { label: "Inspect MIT repo on GitHub", href: GITHUB_URL, variant: "secondary", icon: "github" },
         ]}
       />
     </div>

@@ -44,6 +44,26 @@ const COMPARISON_CARDS: ComparisonCard[] = [
     keyDiff: "100% MIT · single Go binary",
     tone: "#1f93ff",
   },
+  {
+    slug: "front",
+    href: "/vs/front",
+    rival: "Front",
+    headline: "dimmi vs Front",
+    summary:
+      "Compare Front's 1-channel Starter limit and $65 omnichannel seats against every support channel unlocked from conversation one.",
+    keyDiff: "All channels unlocked · 0% WhatsApp fee",
+    tone: "#635bff",
+  },
+  {
+    slug: "freshdesk",
+    href: "/vs/freshdesk",
+    rival: "Freshdesk",
+    headline: "dimmi vs Freshdesk",
+    summary:
+      "Compare expiring $49 per 100-session Freddy AI packs and Pro/Enterprise SLA locks against transparent conversation billing.",
+    keyDiff: "No expiring session packs · MIT code",
+    tone: "#25c16f",
+  },
 ];
 
 export function VsHubPage() {
