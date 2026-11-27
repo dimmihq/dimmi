@@ -73,9 +73,10 @@ func TestPreviewRendersLivePagesInTheFolderTheme(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write("theme.json", `{"api_version": 1, "name": "Preview"}`)
-	write("partials/logo.liquid",
-		`<b class="my-logo">{{ help_center.product }}</b>{{ 'x.css' | asset_url | stylesheet_tag }}`)
+	write("theme.json", `{"api_version": 1, "name": "Preview", "settings": [`+
+		`{"id": "hero", "type": "text", "label": "Hero", "default": "Howdy"}]}`)
+	write("partials/logo.liquid", `<b class="my-logo">{{ help_center.product }}</b><i>{{ settings.hero }}</i>`+
+		`{{ 'x.css' | asset_url | stylesheet_tag }}`)
 	write("assets/x.css", "b{color:red}")
 	folder := &themepreview.Folder{Dir: dir, Fallback: def}
 	if _, err := folder.Load(); err != nil {
@@ -89,7 +90,7 @@ func TestPreviewRendersLivePagesInTheFolderTheme(t *testing.T) {
 	res := httptest.NewRecorder()
 	srv.ServeHTTP(res, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/hc/acme", http.NoBody))
 	page := res.Body.String()
-	logo := strings.Contains(page, `<b class="my-logo">Acme</b>`)
+	logo := strings.Contains(page, `<b class="my-logo">Acme</b><i>Howdy</i>`)
 	if res.Code != http.StatusOK || !logo || !strings.Contains(page, "__dimmi/reload") {
 		t.Fatalf("status %d, page:\n%s", res.Code, page)
 	}

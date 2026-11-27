@@ -154,6 +154,13 @@ func (s *Server) page(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) render(w http.ResponseWriter, r *http.Request, theme *themes.Theme, p dimmi.Preview) {
 	globals, _ := liquid.Decode(p.Variables).(map[string]any)
+	if globals == nil {
+		globals = map[string]any{}
+	}
+	// The page comes with the live theme's settings; the folder's theme reads its
+	// own, from its theme.json defaults and any value the team set.
+	values, _ := globals["settings"].(map[string]any)
+	globals["settings"] = liquid.Value(theme.Manifest.SettingValues(values))
 	locale := "en"
 	if l, ok := globals["locale"].(map[string]any); ok {
 		if code, ok := l["code"].(string); ok {
