@@ -10,7 +10,7 @@ import { createRoot, hydrateRoot } from "react-dom/client";
 
 import { App } from "./app";
 import { startMonitoring } from "./monitoring";
-import { findRoute, routes } from "./routes";
+import { DEFAULT_TITLE, findRoute, routes } from "./routes";
 import { headElements } from "./seo";
 
 if (typeof window !== "undefined") {
@@ -50,7 +50,7 @@ export async function prerender(data: { url: string }) {
     links,
     head: {
       lang: "en",
-      title: route?.title ?? "dimmi",
+      title: route?.title ?? DEFAULT_TITLE,
       elements: headElements(route),
     },
   };

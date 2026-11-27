@@ -3,7 +3,7 @@
  * emitted for every prerendered page and kept in sync on client navigation.
  */
 import { GITHUB_URL } from "./links";
-import type { Route } from "./routes";
+import { DEFAULT_TITLE, type Route } from "./routes";
 
 export const SITE_URL = "https://trydimmi.com";
 export const OG_IMAGE_URL = `${SITE_URL}/og.png`;
@@ -14,7 +14,7 @@ export function canonicalUrl(path: string): string {
 }
 
 export function headElements(route: Route | undefined) {
-  const title = route?.title ?? "dimmi: the open customer support platform";
+  const title = route?.title ?? DEFAULT_TITLE;
   const description = route?.description ?? "";
   const url = canonicalUrl(route?.path ?? "/");
 
@@ -51,7 +51,7 @@ function upsertHeadTag(tag: "meta" | "link", matchAttr: string, matchVal: string
 
 /* Keeps document.head in sync during client-side swaps and Vite dev mode. */
 export function syncHead(route: Route | undefined) {
-  const title = route?.title ?? "dimmi: the open customer support platform";
+  const title = route?.title ?? DEFAULT_TITLE;
   const description = route?.description ?? "";
   const url = canonicalUrl(route?.path ?? "/");
 

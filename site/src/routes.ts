@@ -37,12 +37,14 @@ export type Route = {
   page: ComponentType;
 };
 
+export const DEFAULT_TITLE = "dimmi: Open-source Intercom alternative for customer support";
+
 export const routes: Route[] = [
   {
     path: "/",
-    title: "dimmi: the open customer support platform",
+    title: DEFAULT_TITLE,
     description:
-      "Open-source customer support platform under MIT: shared inbox, AI support agents, procedures, tickets, workflows, and help center. Cloud or self-host.",
+      "Open-source (MIT) Intercom alternative: shared inbox, AI agents on your own model key, help center, and workflows. Free seats. Cloud or self-hosted.",
     page: HomePage,
   },
   {
