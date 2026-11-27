@@ -74,6 +74,7 @@ type SimulationInput struct {
 	State       *SimState
 	Confirmed   []string
 	StreamID    string
+	ChatID      ids.UUID
 	Now         *time.Time
 }
 
