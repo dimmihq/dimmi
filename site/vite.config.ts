@@ -14,6 +14,8 @@
  * or GITHUB_SHA in CI), so the site's error reports carry the same release
  * as the app's.
  */
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import tailwindcss from "@tailwindcss/vite";
@@ -54,7 +56,12 @@ export default defineConfig({
     {
       name: "dimmi-sitemap",
       closeBundle() {
-        generateSitemap(fileURLToPath(new URL("./dist", import.meta.url)));
+        const distDir = fileURLToPath(new URL("./dist", import.meta.url));
+        const pages = (globalThis as { __DIMMI_PAGES__?: unknown }).__DIMMI_PAGES__;
+        if (Array.isArray(pages)) {
+          writeFileSync(join(distDir, "pages.json"), `${JSON.stringify(pages, null, 2)}\n`, "utf8");
+        }
+        generateSitemap(distDir);
       },
     },
   ],

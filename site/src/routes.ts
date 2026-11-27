@@ -31,11 +31,35 @@ import { TicketsPage } from "./pages/tickets";
 import { WorkflowsPage } from "./pages/workflows";
 import { SDK_COUNT } from "./sdks";
 
+export type PageType = "marketing" | "vs" | "alternatives" | "blog" | "self-host" | "tool" | "docs" | "api-reference";
+
+export type PageRival = {
+  name: string;
+  checkedOn: string;
+  source: string;
+};
+
+export type PageMeta = {
+  type: PageType;
+  keyword: string;
+  answer: string;
+  author: string;
+  published: string;
+  updated: string;
+  status: "draft" | "published";
+  reviewedBy: string;
+  reviewedOn: string;
+  batch?: string;
+  rivals?: PageRival[];
+  proof?: string[];
+};
+
 export type Route = {
   path: string;
   title: string;
   description: string;
   page: ComponentType;
+  meta?: PageMeta;
 };
 
 export const DEFAULT_TITLE = "dimmi: Open-source Intercom alternative for customer support";
