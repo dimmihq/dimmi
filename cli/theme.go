@@ -243,7 +243,7 @@ reportProblems prints what is wrong with the theme, or that it loads.
 */
 func (a *app) reportProblems(problems []themes.Problem) {
 	if len(problems) == 0 {
-		a.say("The theme loads with no problems.", nil)
+		a.say("The theme loads with no problems.")
 		return
 	}
 	for _, p := range problems {

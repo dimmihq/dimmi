@@ -274,8 +274,8 @@ func (a *app) fail(err error) error {
 	return err
 }
 
-func (a *app) say(msg string, data any) {
-	a.report.Report(engine.Event{Event: "info", Message: msg, Data: data})
+func (a *app) say(msg string) {
+	a.report.Report(engine.Event{Event: "info", Message: msg})
 }
 
 /*
@@ -414,7 +414,7 @@ func (a *app) logout() error {
 		return err
 	}
 
-	a.say("Signed out of dimmi.", nil)
+	a.say("Signed out of dimmi.")
 
 	return nil
 }

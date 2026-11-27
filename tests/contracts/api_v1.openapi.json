@@ -42021,6 +42021,7 @@
         "additionalProperties": false,
         "properties": {
           "location": {
+            "description": "Where the page sends the reader instead, for a redirect. Left out otherwise.",
             "type": "string"
           },
           "object": {
@@ -42028,14 +42029,17 @@
             "type": "string"
           },
           "status": {
+            "description": "The HTTP status the page answers with, such as 200, 302 or 404.",
             "format": "int64",
             "type": "integer"
           },
           "template": {
+            "description": "The theme template the page renders, such as article. Left out for a redirect.",
             "type": "string"
           },
           "variables": {
             "additionalProperties": {},
+            "description": "The variables the template reads, by name. HTML and times are one-key objects, {\"$html\": ...} and {\"$time\": ...}.",
             "type": "object"
           }
         },
@@ -66846,6 +66850,7 @@
     },
     "/help-centers/{help_center}/theme-preview": {
       "get": {
+        "description": "Builds one page of the help center with its live content, as a theme would render it, without rendering it. The dimmi CLI renders the page in the theme on the developer's computer. Returns the page's status, its redirect when it has one, and the template and variables it renders.",
         "operationId": "help-centers.theme-preview.show",
         "parameters": [
           {
@@ -66891,6 +66896,7 @@
             "description": "Error"
           }
         },
+        "summary": "Build a help center page for a theme preview",
         "x-abilities": [
           "settings:write"
         ]

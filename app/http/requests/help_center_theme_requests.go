@@ -64,12 +64,3 @@ type UpdateHelpCenterThemeRequest struct {
 		Settings map[string]any `json:"settings" validate:"required" doc:"Values to change, by setting id."`
 	}
 }
-
-/*
-ThemePreviewRequest is the input of GET
-/help-centers/{help_center}/theme-preview: the page to build.
-*/
-type ThemePreviewRequest struct {
-	HelpCenter string `path:"help_center"`
-	Path       string `query:"path" maxLength:"2048" doc:"The page's path, such as /articles/install or /fr."`
-}
