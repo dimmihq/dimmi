@@ -1,0 +1,89 @@
+---
+/*
+ * One index page per API category: its unique title and description,
+ * the matching product guide, and every endpoint grouped by resource.
+ */
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+
+import { guideForCategory } from "~docs/api/related";
+import {
+  type ApiCategory,
+  apiCategories,
+  categoryMetaTitle,
+  contractLastUpdated,
+  operationMetaDescription,
+} from "~docs/api/spec";
+import { withBase } from "~docs/base";
+import { ApiCategoryList, ApiSection } from "~docs/components/react/api";
+import { LinkCard } from "~docs/components/react/content";
+
+export function getStaticPaths() {
+  return apiCategories.map((category) => ({
+    params: { category: category.slug },
+    props: { category },
+  }));
+}
+
+const { category } = Astro.props as { category: ApiCategory };
+const metaTitle = categoryMetaTitle(category);
+const updatedAt = contractLastUpdated();
+const guide = guideForCategory(category);
+const showGroups = category.resources.length > 1;
+const headings = showGroups
+  ? category.resources.map((resource) => ({ depth: 2, slug: resource.slug, text: resource.label }))
+  : [];
+---
+<StarlightPage
+  frontmatter={{
+    title: category.title,
+    description: category.description,
+    head: [
+      { tag: "title", content: metaTitle },
+      { tag: "meta", attrs: { name: "description", content: category.description } },
+      { tag: "meta", attrs: { property: "og:title", content: metaTitle } },
+      { tag: "meta", attrs: { property: "og:description", content: category.description } },
+    ],
+    tableOfContents: showGroups,
+    editUrl: false,
+    lastUpdated: updatedAt ?? false,
+  }}
+  headings={headings}
+>
+  <div class="not-prose flex flex-col gap-10">
+    <LinkCard title={guide.title} description={guide.description} href={withBase(guide.href)} />
+    {showGroups ? (
+      category.resources.map((resource) => (
+        <ApiSection
+          id={resource.slug}
+          title={resource.label}
+          meta={`${resource.operations.length} ${resource.operations.length === 1 ? "endpoint" : "endpoints"}`}
+        >
+          <ApiCategoryList
+            endpoints={resource.operations.map((op) => ({
+              title: op.title,
+              href: withBase(op.href),
+              method: op.method,
+              path: op.path,
+              description: operationMetaDescription(op),
+            }))}
+          />
+        </ApiSection>
+      ))
+    ) : (
+      <ApiSection
+        title="Endpoints"
+        meta={`${category.operations.length} ${category.operations.length === 1 ? "endpoint" : "endpoints"}`}
+      >
+        <ApiCategoryList
+          endpoints={category.operations.map((op) => ({
+            title: op.title,
+            href: withBase(op.href),
+            method: op.method,
+            path: op.path,
+            description: operationMetaDescription(op),
+          }))}
+        />
+      </ApiSection>
+    )}
+  </div>
+</StarlightPage>
