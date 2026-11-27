@@ -102,9 +102,9 @@ export function PrivacySupportingParts() {
             zero analytics cookies, zero advertising pixels, and zero cross-site tracking cookies
           </strong>{" "}
           across trydimmi.com, our docs, the dimmi Cloud dashboard, and the web messenger. Every entry below is
-          first-party and strictly necessary, a preference, or the dashboard's own diagnostics. If we ever introduce
-          non-essential cookies in the future, an explicit Accept / Reject consent banner visible without scrolling will
-          be deployed first.
+          first-party and strictly necessary, a preference, or our own diagnostics. If we ever introduce non-essential
+          cookies in the future, an explicit Accept / Reject consent banner visible without scrolling will be deployed
+          first.
         </p>
         <LegalTable
           caption="Complete cookie and browser storage inventory"
