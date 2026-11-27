@@ -3,10 +3,14 @@
  * emitted for every prerendered page and kept in sync on client navigation.
  */
 import { GITHUB_URL } from "./links";
+import { BANDS, cents, FREE_CONVERSATIONS } from "./pricing/prices";
 import { DEFAULT_TITLE, type Route } from "./routes";
 
 export const SITE_URL = "https://trydimmi.com";
 export const OG_IMAGE_URL = `${SITE_URL}/og.png`;
+export const LOGO_URL = `${SITE_URL}/logo.png`;
+
+const [FIRST_BAND] = BANDS;
 
 export function canonicalUrl(path: string): string {
   const clean = path.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
@@ -73,6 +77,30 @@ export function syncHead(route: Route | undefined) {
   upsertHeadTag("meta", "name", "twitter:image", { content: OG_IMAGE_URL });
 }
 
+const PAID_CLOUD_OFFER = {
+  "@type": "Offer",
+  name: "dimmi Cloud",
+  price: (FIRST_BAND.human / 100).toFixed(2),
+  priceCurrency: "USD",
+  description: `First ${FREE_CONVERSATIONS} conversations free each month, then from ${cents(FIRST_BAND.ai)} per AI conversation and ${cents(FIRST_BAND.human)} per human conversation with unlimited free seats.`,
+  priceSpecification: [
+    {
+      "@type": "UnitPriceSpecification",
+      name: "AI conversation",
+      price: (FIRST_BAND.ai / 100).toFixed(2),
+      priceCurrency: "USD",
+      unitText: "conversation",
+    },
+    {
+      "@type": "UnitPriceSpecification",
+      name: "Human conversation",
+      price: (FIRST_BAND.human / 100).toFixed(2),
+      priceCurrency: "USD",
+      unitText: "conversation",
+    },
+  ],
+};
+
 const SOFTWARE_SCHEMA = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
@@ -96,8 +124,9 @@ const SOFTWARE_SCHEMA = {
       name: "dimmi Cloud Free Tier",
       price: "0",
       priceCurrency: "USD",
-      description: "100 free conversations every month with unlimited free seats and every feature unlocked.",
+      description: `${FREE_CONVERSATIONS} free conversations every month with unlimited free seats and every feature unlocked.`,
     },
+    PAID_CLOUD_OFFER,
   ],
 };
 
@@ -107,7 +136,13 @@ const ORGANIZATION_SCHEMA = {
   name: "dimmi",
   legalName: "Hivy Technologies Limited",
   url: `${SITE_URL}/`,
-  logo: `${SITE_URL}/favicon.svg`,
+  logo: {
+    "@type": "ImageObject",
+    url: LOGO_URL,
+    width: 512,
+    height: 512,
+  },
+  // Add confirmed X and LinkedIn profile URLs once provided.
   sameAs: [GITHUB_URL],
 };
 
