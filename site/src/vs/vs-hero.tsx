@@ -25,7 +25,7 @@ export function VsHero({
   primaryCta = { label: "Start free on dimmi Cloud", href: `${APP_URL}/signup` },
   secondaryCta = { label: "Self-host on GitHub", href: GITHUB_URL, github: true },
   visual,
-  hubHref = "/pricing#compare",
+  hubHref = "/vs",
 }: {
   rival: Pick<Rival, "name" | "pricingUrl" | "checkedOn">;
   eyebrow?: string;

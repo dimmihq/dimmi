@@ -28,6 +28,8 @@ import { ReportsPage } from "./pages/reports";
 import { RoutinesPage } from "./pages/routines";
 import { TermsPage } from "./pages/terms";
 import { TicketsPage } from "./pages/tickets";
+import { VsChatwootPage } from "./pages/vs/chatwoot";
+import { VsHubPage } from "./pages/vs/index";
 import { VsIntercomPage } from "./pages/vs/intercom";
 import { WorkflowsPage } from "./pages/workflows";
 import { SDK_COUNT } from "./sdks";
@@ -227,6 +229,25 @@ export const routes: Route[] = [
     page: ApiChannelPage,
   },
   {
+    path: "/vs",
+    title: "Compare dimmi against Intercom and Chatwoot | dimmi",
+    description:
+      "Honest side-by-side comparisons of dimmi vs Intercom and Chatwoot: verified pricing, real product screenshots, MIT self-hosting, and trade-offs.",
+    page: VsHubPage,
+    meta: {
+      type: "alternatives",
+      status: "published",
+      published: "2026-11-27",
+      updated: "2026-11-27",
+      author: "frantz-kati",
+      reviewedBy: "frantz-kati",
+      reviewedOn: "2026-11-27",
+      keyword: "compare customer support platforms",
+      answer: "Every comparison below checks each vendor's live pricing page",
+      proof: ["/shots/vs-byo-key-light.webp", "/shots/vs-sso-light.webp"],
+    },
+  },
+  {
     path: "/vs/intercom",
     title: "dimmi vs Intercom: open-source Intercom alternative",
     description:
@@ -244,6 +265,26 @@ export const routes: Route[] = [
       answer: "Pick Intercom if you need a mature platform with SOC 2",
       proof: ["/shots/vs-byo-key-light.webp", "/shots/vs-reports-light.webp"],
       rivals: [{ name: "Intercom", checkedOn: "2026-11-27", source: "https://www.intercom.com/pricing" }],
+    },
+  },
+  {
+    path: "/vs/chatwoot",
+    title: "dimmi vs Chatwoot: MIT self-hosted Chatwoot alternative",
+    description:
+      "dimmi vs Chatwoot: pure MIT license with zero enterprise paywall, single Go binary vs Rails and Sidekiq, and BYO AI keys vs Captain AI credit caps.",
+    page: VsChatwootPage,
+    meta: {
+      type: "vs",
+      status: "published",
+      published: "2026-11-27",
+      updated: "2026-11-27",
+      author: "frantz-kati",
+      reviewedBy: "frantz-kati",
+      reviewedOn: "2026-11-27",
+      keyword: "chatwoot alternative",
+      answer: "Pick Chatwoot if you need Telegram or LINE channels today",
+      proof: ["/shots/vs-sso-light.webp"],
+      rivals: [{ name: "Chatwoot", checkedOn: "2026-11-27", source: "https://www.chatwoot.com/pricing" }],
     },
   },
   {

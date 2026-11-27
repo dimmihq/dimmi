@@ -524,6 +524,159 @@ export const RIVALS: Record<string, Rival> = {
     switchTriggers: [],
     teams: [],
   },
+  chatwoot: {
+    slug: "chatwoot",
+    name: "Chatwoot",
+    tone: "#1f93ff",
+    pricingUrl: "https://www.chatwoot.com/pricing",
+    checkedOn: CHECKED_ON_ISO,
+    checkedOnLabel: CHECKED_ON,
+    aiUnit: "credit",
+    aiPrice: 0.02,
+    aiNote:
+      "Captain AI credits are bundled on Startups (300/mo), Business (500/mo), and Enterprise (800/mo); extra Captain credits cost $20 per 1,000.",
+    plans: [
+      {
+        name: "Startups",
+        seatPrice: 19,
+        includedAi: 300,
+        billingNote: "$19/agent/mo on Chatwoot Cloud",
+        highlights: ["Unlimited chats under fair use", "Help center", "300 Captain AI credits/mo", "1-year retention"],
+        missing: ["Teams and round robin", "Automation rules", "SAML SSO and audit logs"],
+      },
+      {
+        name: "Business",
+        seatPrice: 39,
+        includedAi: 500,
+        billingNote: "$39/agent/mo on Chatwoot Cloud",
+        highlights: ["Teams and automation rules", "Voice channel", "500 Captain AI credits/mo", "2-year retention"],
+        missing: ["SAML SSO", "Audit logs", "Custom roles"],
+      },
+      {
+        name: "Enterprise",
+        seatPrice: 99,
+        includedAi: 800,
+        billingNote: "$99/agent/mo (Cloud or self-hosted Enterprise)",
+        highlights: ["SAML SSO", "Audit logs", "Custom roles", "800 Captain AI credits/mo"],
+      },
+    ],
+    addOns: [
+      {
+        name: "Captain AI extra credits",
+        price: 20,
+        unit: "per 1,000 credits",
+        note: "$20 per 1,000 additional Captain AI credits on Cloud plans.",
+      },
+    ],
+    facts: [
+      {
+        label: "License model",
+        rival: "MIT outside enterprise/; paid Enterprise License required for enterprise/ in production",
+        dimmi: "100% MIT across the entire repository, including SAML SSO, audit logs, and AI procedures",
+        source: "https://github.com/chatwoot/chatwoot/blob/develop/LICENSE",
+        checkedOn: CHECKED_ON_ISO,
+      },
+      {
+        label: "Self-hosted runtime stack",
+        rival: "Ruby on Rails app + Sidekiq worker + PostgreSQL (pgvector) + Redis",
+        dimmi: "Single Go binary + PostgreSQL (pgvector) + Valkey + Caddy",
+        source: "https://github.com/chatwoot/chatwoot/blob/develop/docker-compose.production.yaml",
+        checkedOn: CHECKED_ON_ISO,
+      },
+      {
+        label: "Cloud seat pricing",
+        rival: "$0 Hacker (2 agents, 500 chats) or $19 to $99/agent/mo",
+        dimmi: "$0 per seat (unlimited teammates), 100 free conversations/mo",
+        source: "https://www.chatwoot.com/pricing",
+        checkedOn: CHECKED_ON_ISO,
+      },
+    ],
+    rivalWins: [
+      "Years in production with a large contributor community and roughly 40.7k GitHub stars.",
+      "Wider set of social and messaging channels today, including Telegram, LINE, and SMS connectors.",
+      "Dedicated open-source mobile apps for iOS and Android teammates.",
+      "Established community Helm charts, guides, and third-party deployment templates.",
+    ],
+    dimmiWins: [
+      "Pure MIT codebase from top to bottom with zero enterprise/ paywall folder for SAML SSO, audit logs, or custom roles.",
+      "Single compiled Go binary instead of Ruby on Rails plus Sidekiq workers, keeping server memory lean.",
+      "Built-in multi-agent studio, policy procedures with simulations, Operator routines, and an MCP server.",
+      "Bring your own OpenAI, Anthropic, DeepSeek, Mistral, or OpenRouter keys on both Cloud and self-hosted without Captain credit caps.",
+    ],
+    switchTriggers: [
+      {
+        trigger: "enterprise/ license wall on self-hosted",
+        rivalReality:
+          "SAML SSO, audit logs, custom roles, and Captain Enterprise features live under enterprise/LICENSE and require a paid Enterprise seat license in production.",
+        dimmiReality: "SAML SSO, audit logs, roles, SLAs, workflows, and AI procedures ship under MIT for $0.",
+        sourceLabel: "Chatwoot enterprise/LICENSE",
+        sourceUrl: "https://github.com/chatwoot/chatwoot/blob/develop/enterprise/LICENSE",
+      },
+      {
+        trigger: "Rails + Sidekiq operational footprint",
+        rivalReality:
+          "Self-hosting runs separate Rails web and Sidekiq worker containers alongside Postgres and Redis.",
+        dimmiReality:
+          "One Go binary runs web, worker, and scheduler with Postgres, Valkey, and Caddy in one compose file.",
+        sourceLabel: "Chatwoot compose file",
+        sourceUrl: "https://github.com/chatwoot/chatwoot/blob/develop/docker-compose.production.yaml",
+      },
+      {
+        trigger: "Captain AI credit caps",
+        rivalReality: "Cloud tiers bundle 300 to 800 Captain credits/mo and charge $20 per extra 1,000 credits.",
+        dimmiReality: "Plug in your own OpenAI or Anthropic API key directly on self-hosted ($0 to dimmi) or Cloud.",
+        sourceLabel: "Chatwoot pricing",
+        sourceUrl: "https://www.chatwoot.com/pricing",
+      },
+      {
+        trigger: "Per-agent Cloud pricing for occasional teammates",
+        rivalReality: "Chatwoot Cloud charges $19 to $99 per agent/month once you grow past 2 agents on Hacker.",
+        dimmiReality: "Every teammate seat is free on dimmi Cloud and self-hosted installs.",
+        sourceLabel: "Chatwoot pricing",
+        sourceUrl: "https://www.chatwoot.com/pricing",
+      },
+    ],
+    teams: [
+      {
+        profile: "Solo self-hoster (1 seat, 400 chats/mo)",
+        seats: 1,
+        conversations: 400,
+        aiShare: 0.7,
+        pick: "dimmi",
+        reason: "One Go binary fits comfortably on a $24 VPS with zero Rails tuning and your own AI model key.",
+        rivalPlanLabel: "Self-hosted Community + VPS",
+      },
+      {
+        profile: "5-person SaaS team (2,000 chats/mo)",
+        seats: 5,
+        conversations: 2000,
+        aiShare: 0.75,
+        pick: "dimmi",
+        reason:
+          "Unlimited free seats, built-in AI procedures, and BYO keys avoid $195/mo Business seats plus Captain add-ons.",
+        rivalPlanLabel: "Chatwoot Business ($39 x 5)",
+      },
+      {
+        profile: "Brand running Telegram, LINE, and broad social DMs today",
+        seats: 6,
+        conversations: 3000,
+        aiShare: 0.4,
+        pick: "rival",
+        reason: "Chatwoot already ships Telegram and LINE channels alongside mature community connectors.",
+        rivalPlanLabel: "Chatwoot Business ($39 x 6)",
+      },
+      {
+        profile: "Regulated engineering team needing self-hosted SAML SSO and audit logs",
+        seats: 12,
+        conversations: 4000,
+        aiShare: 0.65,
+        pick: "dimmi",
+        reason:
+          "SAML SSO and audit logs are MIT in dimmi, whereas Chatwoot puts them under enterprise/LICENSE ($99/agent/mo).",
+        rivalPlanLabel: "Chatwoot Enterprise ($99 x 12)",
+      },
+    ],
+  },
 };
 
 const COMPETITOR_SLUGS = ["intercom", "zendesk", "help-scout", "front", "freshdesk"] as const;
