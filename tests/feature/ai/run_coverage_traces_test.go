@@ -60,11 +60,7 @@ func TestRunCoverageTraces(t *testing.T) {
 		assert.Equal(t, true, run.Data["dimmi.simulation"])
 		assert.NotEmpty(t, run.Attr("dimmi.run_id"), "the simulated turn's run is named")
 		assert.Empty(t, run.Status)
-		chat := run.Attr("gen_ai.conversation.id")
-		assert.NotEmpty(t, chat, "a simulated chat is grouped like a conversation")
-		for _, other := range runs {
-			assert.Equal(t, chat, other.Attr("gen_ai.conversation.id"), "its turns share one chat")
-		}
+		assertOneChat(t, runs)
 		var used, calls int
 		for _, s := range spans {
 			if agentOf(spans, s) != "Ada" || s.SpanID == run.SpanID {
@@ -135,4 +131,17 @@ func TestRunCoverageTraces(t *testing.T) {
 		assert.Equal(t, conv.String(), followUp[0].Attr("gen_ai.conversation.id"))
 		assert.Empty(t, followUp[0].Status)
 	})
+}
+
+/*
+assertOneChat checks that the runs of one simulated chat are grouped
+like a conversation: each carries the same conversation id.
+*/
+func assertOneChat(t *testing.T, runs []tests.TrackedSpan) {
+	t.Helper()
+	chat := runs[0].Attr("gen_ai.conversation.id")
+	assert.NotEmpty(t, chat, "a simulated chat is grouped like a conversation")
+	for _, run := range runs {
+		assert.Equal(t, chat, run.Attr("gen_ai.conversation.id"), "its turns share one chat")
+	}
 }
