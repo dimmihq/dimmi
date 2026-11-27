@@ -17,6 +17,7 @@ import { APP_URL, GITHUB_URL } from "../links";
 import { type FlowName, ShotFlow } from "../scenes/shot-flow";
 import { useScene } from "../scenes/use-scene";
 import type { SHOTS } from "../shots";
+import { track } from "../track";
 import { Features, Intro, Panel, Section, Tag } from "./container";
 import { ProductShot } from "./product-shot";
 
@@ -71,10 +72,18 @@ export function ProductHero({
           </h1>
           <p className="max-w-xl text-[18px] leading-7 text-pretty text-text-secondary">{body}</p>
           <div className="mt-2 flex flex-wrap justify-center gap-3">
-            <ButtonLink href={`${APP_URL}/signup`} trailingIcon={RiArrowRightLine}>
+            <ButtonLink
+              href={`${APP_URL}/signup`}
+              trailingIcon={RiArrowRightLine}
+              onClick={() => track("cta_start_free", { location: "product_hero" })}
+            >
               Start free, no card
             </ButtonLink>
-            <ButtonLink href={GITHUB_URL} variant="secondary">
+            <ButtonLink
+              href={GITHUB_URL}
+              variant="secondary"
+              onClick={() => track("github_click", { location: "product_hero" })}
+            >
               Self-host on GitHub
             </ButtonLink>
           </div>

@@ -28,3 +28,27 @@ func TestErrorsSources(t *testing.T) {
 		assert.Empty(t, sources(""))
 	})
 }
+
+func TestTrafficScriptSources(t *testing.T) {
+	t.Parallel()
+
+	sources := func(edition appconfig.Edition, dsn string) []string {
+		return trafficScriptSources(&app.App{Config: &appconfig.Config{
+			App:      appconfig.AppConfig{Edition: edition},
+			Frontend: appconfig.FrontendConfig{ErrorsDSN: dsn},
+		}})
+	}
+
+	t.Run("allows the tracker origin on cloud builds", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Equal(t, []string{"https://errors.example.com"},
+			sources(appconfig.EditionCloud, "https://0123abcd@errors.example.com/2"))
+	})
+
+	t.Run("allows nothing on self-hosted builds", func(t *testing.T) {
+		t.Parallel()
+
+		assert.Empty(t, sources(appconfig.EditionSelfHost, "https://0123abcd@errors.example.com/2"))
+	})
+}

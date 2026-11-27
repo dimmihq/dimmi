@@ -12,6 +12,7 @@ import { CHECKED_ON, COMPETITORS, RESOLUTION_RATE, SCENARIOS } from "../pricing/
 import { bill, dollars } from "../pricing/prices";
 import { SDK_COUNT } from "../sdks";
 import { FinalCta } from "../sections/final-cta";
+import { track } from "../track";
 
 const mono = "font-mono text-[12px] leading-5 font-medium tracking-[0.04em] uppercase";
 
@@ -564,10 +565,18 @@ function Hero() {
             stack up against Helply, Chatbase, and Intercom Fin.
           </p>
           <div className="mt-2 flex flex-wrap justify-center gap-3">
-            <ButtonLink href={`${APP_URL}/signup`} trailingIcon={RiArrowRightLine}>
+            <ButtonLink
+              href={`${APP_URL}/signup`}
+              trailingIcon={RiArrowRightLine}
+              onClick={() => track("cta_start_free", { location: "compare_hero" })}
+            >
               Start free, no card
             </ButtonLink>
-            <ButtonLink href={GITHUB_URL} variant="secondary">
+            <ButtonLink
+              href={GITHUB_URL}
+              variant="secondary"
+              onClick={() => track("github_click", { location: "compare_hero" })}
+            >
               Self-host on GitHub
             </ButtonLink>
           </div>

@@ -7,6 +7,7 @@ import { Intro, MonoLink, Section, Tag } from "../../components/container";
 import { Questions } from "../../components/product-page";
 import { APP_URL, GITHUB_URL } from "../../links";
 import { FinalCta } from "../../sections/final-cta";
+import { track } from "../../track";
 
 const questions = [
   {
@@ -50,10 +51,18 @@ export function ChannelsIndexPage() {
               support inbox.
             </p>
             <div className="mt-2 flex flex-wrap justify-center gap-3">
-              <ButtonLink href={`${APP_URL}/signup`} trailingIcon={RiArrowRightLine}>
+              <ButtonLink
+                href={`${APP_URL}/signup`}
+                trailingIcon={RiArrowRightLine}
+                onClick={() => track("cta_start_free", { location: "channels_hero" })}
+              >
                 Start free, no card
               </ButtonLink>
-              <ButtonLink href={GITHUB_URL} variant="secondary">
+              <ButtonLink
+                href={GITHUB_URL}
+                variant="secondary"
+                onClick={() => track("github_click", { location: "channels_hero" })}
+              >
                 Self-host on GitHub
               </ButtonLink>
             </div>

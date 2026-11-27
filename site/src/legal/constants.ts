@@ -525,4 +525,13 @@ export const COOKIES_AND_STORAGE: CookieEntry[] = [
     lifetime: "Persistent until cleared",
     category: "Diagnostics",
   },
+  {
+    surface: "trydimmi.com website, docs & sign-up",
+    name: "dimmi_utm",
+    mechanism: "Session Storage",
+    purpose:
+      "Keeps first-touch utm_* campaign parameters from a landing URL for the current tab so sign-up counts can include utm_source. Written only when UTM parameters are in the URL.",
+    lifetime: "Until browser tab closes",
+    category: "Preference",
+  },
 ];

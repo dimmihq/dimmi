@@ -51,7 +51,13 @@ export function SocialLinks() {
       >
         trydimmi.com
       </a>
-      <IconLinkButton icon={RiGithubFill} size="small" href={GITHUB_URL} aria-label="dimmi on GitHub" />
+      <IconLinkButton
+        icon={RiGithubFill}
+        size="small"
+        href={GITHUB_URL}
+        aria-label="dimmi on GitHub"
+        data-traffic-event="github_click"
+      />
     </>
   );
 }
