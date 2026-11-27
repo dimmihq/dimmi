@@ -33,11 +33,13 @@ Entry is the source path of the browser app's entry module.
 const Entry = "resources/js/app.tsx"
 
 /*
-AppController serves the page the browser app mounts into.
+AppController serves the page the browser app mounts into. Reporting
+tells the app where to report its errors.
 */
 type AppController struct {
-	Vite   *vite.Bundle
-	Errors fhttp.Errors
+	Vite      *vite.Bundle
+	Errors    fhttp.Errors
+	Reporting spa.Reporting
 }
 
 /*
@@ -60,7 +62,7 @@ func (c *AppController) ShowAuth(w fhttp.ResponseWriter, r *fhttp.Request) {
 }
 
 func (c *AppController) render(w fhttp.ResponseWriter, r *fhttp.Request) {
-	page := spa.Shell(cmp.Or(i18n.Locale(r.Context()), "en"), theme.Of(r), c.Vite.Tags(Entry))
+	page := spa.Shell(cmp.Or(i18n.Locale(r.Context()), "en"), theme.Of(r), c.Reporting, c.Vite.Tags(Entry))
 	if err := view.Respond(w, r, fhttp.StatusOK, page); err != nil {
 		c.Errors.Render(w, r, err)
 	}

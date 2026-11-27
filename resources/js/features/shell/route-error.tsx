@@ -1,18 +1,22 @@
 /*
  * What a page shows when it could not load: what went wrong in plain
  * words and a way to try again, instead of a raw error. Going too fast
- * says so, since waiting a moment is all it takes.
+ * says so, since waiting a moment is all it takes. The error is reported,
+ * unless it is the server's own answer, which the server reports.
  */
 import { RiErrorWarningLine, RiTimerLine } from "@remixicon/react";
 import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { ApiError } from "@/lib/api/client";
+import { reportError } from "@/lib/errors";
 
 import { EmptyState } from "./page";
 
 export function RouteError({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
+  useEffect(() => reportError(error), [error]);
   const tooFast = error instanceof ApiError && error.status === 429;
   const retry = () => {
     reset();

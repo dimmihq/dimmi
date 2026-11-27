@@ -1,0 +1,7 @@
+# The error tracker (infrastructure/rustrak.yaml) answers on its own host:
+# its dashboard, and the ingest that browsers in every environment send
+# reports to. One instance serves staging and production; staging's edge
+# serves its host, so it goes live with main's deploys.
+errors.trydimmi.com {
+	reverse_proxy rustrak.rustrak.svc.cluster.local:8080
+}
