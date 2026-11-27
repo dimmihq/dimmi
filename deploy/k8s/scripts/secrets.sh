@@ -7,7 +7,8 @@
 # Passwords for the database, Valkey and SeaweedFS and the app key are
 # random and made once; running again keeps them. Lines on stdin, in
 # KEY=value form, are merged into dimmi-secrets over what it holds, so
-# provider keys and AWS settings can be added or rotated at any time.
+# provider keys and AWS settings can be added or rotated at any time, as
+# can DIMMI_FRONTEND__SESSIONS_TOKEN, the session recorder's write token.
 # Nothing is printed and nothing touches the disk.
 
 set -euo pipefail
