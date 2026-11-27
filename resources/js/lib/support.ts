@@ -4,11 +4,13 @@
  * runs the server supports the people who use it, with dimmi itself; a
  * page that names none shows no messenger, as in development, tests and
  * any server whose operator named none. It loads through @dimmi/react,
- * the package customers install, once a teammate is signed in. Signing
- * out forgets the visitor, so the next person at the browser starts a
- * conversation of their own.
+ * the package customers install, once a teammate is signed in. It has no
+ * launcher of its own, which would sit over the corner of the pages: the
+ * teammate opens it from their account menu. Signing out forgets the
+ * visitor, so the next person at the browser starts a conversation of
+ * their own.
  */
-import { dimmi } from "@dimmi/browser";
+import { getDimmi, type MessengerSettings } from "@dimmi/browser";
 
 /** The messenger the page names, and the server it lives on. */
 export type SupportMessenger = { appId: string; host: string };
@@ -23,9 +25,17 @@ export function readSupportMessenger(doc: Document = document, win: Window = win
   return { appId, host: win.location.origin };
 }
 
+/** The messenger's settings in the dashboard: no launcher. One object, so it is sent once. */
+export const supportSettings: MessengerSettings = { appearance: { launcher: { style: "hidden" } } };
+
+/** Opens the messenger, as from the account menu. */
+export function openSupport(): void {
+  getDimmi().show();
+}
+
 /** Forgets the visitor in the messenger, as when the teammate signs out. */
 export function forgetSupportVisitor(doc: Document = document, win: Window = window): void {
   if (readSupportMessenger(doc, win)) {
-    dimmi("shutdown");
+    getDimmi().shutdown();
   }
 }

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { forgetSupportVisitor, readSupportMessenger } from "./support";
+import { forgetSupportVisitor, openSupport, readSupportMessenger, supportSettings } from "./support";
 
 type Queue = { q?: unknown[][] };
 
@@ -36,12 +36,21 @@ describe("forgetSupportVisitor", () => {
   it("shuts the messenger down when the page names one", () => {
     forgetSupportVisitor(page("wgt_01abc"));
 
-    expect((window as unknown as { Dimmi?: Queue }).Dimmi?.q).toEqual([["shutdown"]]);
+    expect((window as unknown as { Dimmi?: Queue }).Dimmi?.q).toEqual([["logout"]]);
   });
 
   it("does nothing when the page names none", () => {
     forgetSupportVisitor(page());
 
     expect((window as unknown as { Dimmi?: Queue }).Dimmi).toBeUndefined();
+  });
+});
+
+describe("openSupport", () => {
+  it("shows the messenger, which has no launcher of its own", () => {
+    openSupport();
+
+    expect((window as unknown as { Dimmi?: Queue }).Dimmi?.q).toEqual([["open"]]);
+    expect(supportSettings.appearance?.launcher?.style).toBe("hidden");
   });
 });

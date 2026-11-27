@@ -14,6 +14,7 @@
 import { Dimmi } from "@dimmi/react";
 import {
   RiAddLine,
+  RiCustomerService2Line,
   RiLogoutBoxRLine,
   RiMenuLine,
   RiSettings4Line,
@@ -50,7 +51,7 @@ import { notificationCountsQuery } from "@/lib/api/notifications";
 import { callerQuery } from "@/lib/api/workspace";
 import { RealtimeProvider } from "@/lib/realtime/provider";
 import { recordSession } from "@/lib/sessions";
-import { readSupportMessenger } from "@/lib/support";
+import { openSupport, readSupportMessenger, type SupportMessenger, supportSettings } from "@/lib/support";
 
 import { useAvailability } from "./availability";
 import { GetStarted } from "./get-started";
@@ -160,7 +161,7 @@ function useSwitcher(me: Me): DashboardSwitcher {
   };
 }
 
-function useAccount(me: Me, workspace: string | undefined): DashboardAccount {
+function useAccount(me: Me, workspace: string | undefined, support: SupportMessenger | null): DashboardAccount {
   const availability = useAvailability(workspace);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -194,6 +195,9 @@ function useAccount(me: Me, workspace: string | undefined): DashboardAccount {
         ],
       },
       { id: "personal", items: [] },
+      ...(support
+        ? [{ id: "help", items: [{ icon: RiCustomerService2Line, label: "Chat with support", onSelect: openSupport }] }]
+        : []),
       {
         id: "session",
         items: [{ icon: RiLogoutBoxRLine, label: "Sign out", onSelect: () => leave.mutate() }],
@@ -235,7 +239,9 @@ function SignedInShell({
 }) {
   const switcher = useSwitcher(me);
   const { current: onScreen } = useCurrentWorkspace(me.workspaces);
-  const account = useAccount(me, onScreen?.id);
+  // The server's own messenger, when its page names one, for the signed-in teammate.
+  const [support] = useState(() => readSupportMessenger());
+  const account = useAccount(me, onScreen?.id, support);
   const { current: workspace } = useCurrentWorkspace(me.workspaces);
   const { id } = me.user;
   const workspaceId = workspace?.id ?? "";
@@ -246,8 +252,6 @@ function SignedInShell({
       recordSession({ id, workspace: { id: workspaceId, name: workspaceName } });
     }
   }, [id, workspaceId, workspaceName]);
-  // The server's own messenger, when its page names one, for the signed-in teammate.
-  const [support] = useState(() => readSupportMessenger());
   const [collapsed, setCollapsed] = useRailCollapse(path);
   const inSettings = path === settingsLink.href || path.startsWith(`${settingsLink.href}/`);
   const { data: counts } = useQuery({ ...countsQuery(workspace?.id ?? ""), enabled: Boolean(workspace) });
@@ -293,7 +297,7 @@ function SignedInShell({
 
   return (
     <RealtimeProvider workspace={workspace?.id ?? null}>
-      {support ? <Dimmi appId={support.appId} host={support.host} /> : null}
+      {support ? <Dimmi appId={support.appId} host={support.host} settings={supportSettings} /> : null}
       <div className="flex h-dvh flex-col gap-3 bg-background-full p-3 lg:flex-row lg:gap-4">
         <div className="hidden h-full lg:flex">{sidebar(false)}</div>
 
