@@ -22,12 +22,5 @@ func devCommands(a *app.App) []foundation.Command {
 	return []foundation.Command{
 		EmailLoadCommand{App: a},
 		DisposableDomainsCommand{App: a},
-		BroadcastDemoCommand{App: a},
-		SeriesDemoCommand{App: a},
-		InboxDemoCommand{App: a},
-		MarketingDemoCommand{App: a},
-		TicketsDemoCommand{App: a},
-		ReportsDemoCommand{App: a},
-		HelpCenterDemoCommand{App: a},
 	}
 }

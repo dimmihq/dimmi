@@ -44,7 +44,7 @@ const marketingGuidance = `You answer customers of Lumen, an analytics product f
 /*
 agentSetup seeds what the agent, procedures and workflow shots need.
 */
-func (c MarketingDemoCommand) agentSetup(ctx context.Context, owner authz.Membership) error {
+func (c lumenSeeder) agentSetup(ctx context.Context, owner authz.Membership) error {
 	a := c.App
 
 	teamIDs := map[string]ids.UUID{}
@@ -89,7 +89,7 @@ func (c MarketingDemoCommand) agentSetup(ctx context.Context, owner authz.Member
 configureAgent names the workspace's agent, gives it its guidance and
 the team it hands over to, and publishes it when it is ready to answer.
 */
-func (c MarketingDemoCommand) configureAgent(ctx context.Context, owner authz.Membership, handsTo ids.UUID) error {
+func (c lumenSeeder) configureAgent(ctx context.Context, owner authz.Membership, handsTo ids.UUID) error {
 	a := c.App
 
 	view, err := a.Actions.AI.Agents.Default(ctx, owner)
@@ -125,7 +125,7 @@ workflow saves and publishes the workflow that sorts a first message by
 topic: billing goes to the Billing team, bugs to Engineering at high
 priority, and anything else carries on to the inbox.
 */
-func (c MarketingDemoCommand) workflow(
+func (c lumenSeeder) workflow(
 	ctx context.Context, owner authz.Membership, teamIDs, tagIDs map[string]ids.UUID,
 ) error {
 	a := c.App

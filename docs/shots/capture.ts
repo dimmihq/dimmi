@@ -1,16 +1,16 @@
 /*
  * Captures the docs' product screenshots from a running dimmi, the same
  * way the marketing site's capture does (site/shots/capture.ts): it signs
- * in to the Lumen demo workspace that `marketing:demo` seeds, opens each
+ * in to the Lumen demo workspace that `db:seed` creates, opens each
  * screen listed in shots.ts and saves it at twice the pixel density in
  * light and dark mode as WebP into docs/public/shots. Pages show them with
  * <Screenshot name="…" alt="…" />.
  *
- *   ./tmp/dimmi-shots marketing:demo --owner-email maya@lumen.test
+ *   ./tmp/dimmi-shots db:seed --only lumen --reset
  *   SHOTS_URL=http://localhost:8085 node docs/shots/capture.ts [--only messenger]
  *
  * SHOTS_URL points at the app (default http://localhost:8080). The demo
- * owner signs in with the password the demo command prints.
+ * owner signs in with the password db:seed prints.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -21,7 +21,7 @@ import { type Annotation, type Clip, type Shot, shots, VIEWPORT } from "./shots.
 
 const base = process.env.SHOTS_URL ?? "http://localhost:8080";
 const email = process.env.SHOTS_EMAIL ?? "maya@lumen.test";
-const password = process.env.SHOTS_PASSWORD ?? "dimmi-demo-team-2026";
+const password = process.env.SHOTS_PASSWORD ?? "stowline-demo-2026";
 const out = fileURLToPath(new URL("../public/shots/", import.meta.url));
 const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1] : undefined;
 

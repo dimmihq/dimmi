@@ -37,75 +37,25 @@ type demoBroadcast struct {
 }
 
 /*
-demoBroadcasts are the broadcasts the demo seeds, newest last.
+demoSeed holds the workspace, sender member and seeded broadcast ids for one
+broadcast seeding run.
 */
-func demoBroadcasts() []demoBroadcast {
-	return []demoBroadcast{
-		{
-			name: "November product update", channel: "email", status: "sent", daysAgo: 9,
-			subject:  "What's new in November, {{ contact.first_name | default: \"there\" }}",
-			preview:  "Cited AI answers, saved audiences and a faster inbox.",
-			body:     "Hi {{ contact.first_name | default: \"there\" }},\n\nThis month the agent started citing its sources.\n\n[Read the changelog](https://acme.test/changelog)\n\n[See the docs](https://acme.test/docs)",
-			audience: "paying", bounce: 0.011, open: 0.46, click: 0.13, reply: 0.028,
-			unsub: 0.004, sentShare: 1, links: []string{"https://acme.test/changelog", "https://acme.test/docs"},
-		},
-		{
-			name: "Webinar: set up your AI agent", channel: "email", status: "paused", pause: "bounce_rate", daysAgo: 1,
-			subject: "Live on Thursday: your AI agent in 30 minutes", preview: "Bring your questions.",
-			body:     "Join us on Thursday at 17:00 CET.\n\n[Save your seat](https://acme.test/webinar)",
-			audience: "free", bounce: 0.072, open: 0.21, click: 0.05, reply: 0.006, unsub: 0.01, sentShare: 0.4,
-			links: []string{"https://acme.test/webinar"},
-		},
-		{
-			name: "Book an onboarding call", channel: "chat", status: "sent", daysAgo: 4,
-			body: "Hi {{ contact.first_name | default: \"there\" }}, want a hand getting set up? " +
-				"I can walk you through the inbox in 15 minutes.",
-			audience: "free", open: 0.62, reply: 0.21, sentShare: 1,
-		},
-		{
-			name: "New pricing explained", channel: "post", status: "sent", daysAgo: 12,
-			subject:  "Our new pricing, and what it means for you",
-			body:     "Nothing changes for existing workspaces until January.\n\n[Compare plans](https://acme.test/pricing)",
-			audience: "admins", open: 0.58, click: 0.2, reply: 0.04, sentShare: 1,
-			links: []string{"https://acme.test/pricing"},
-		},
-		{
-			name: "Annual plan offer", channel: "email", status: "scheduled", daysAgo: -2,
-			subject: "Two months free when you switch to annual", preview: "Lock in this year's price.",
-			body: "Switch to annual before December and get two months free.", audience: "pro",
-		},
-		{
-			name: "Black Friday", channel: "email", status: "draft", subject: "30% off your first year",
-			body: "Only until Monday.", audience: "free",
-		},
-	}
+type demoSeed struct {
+	ws, member ids.UUID
+	made       []ids.UUID
 }
 
 /*
-history seeds every demo broadcast and its recipients.
+topics seeds the lists people subscribe to.
 */
-func (s *demoSeed) history(ctx context.Context, tx *database.Tx) error {
-	for _, b := range demoBroadcasts() {
-		id, err := s.broadcast(ctx, tx, b)
-		if err != nil {
-			return err
-		}
-
-		if b.sentShare > 0 {
-			if err := s.recipients(ctx, tx, id, b); err != nil {
-				return err
-			}
-		}
-
-		for i, url := range b.links {
-			if _, err := tx.Exec(ctx, `INSERT INTO broadcast_links (workspace_id, broadcast_id, n, url, clicks)
-				VALUES ($1, $2, $3, $4, (SELECT count(*) * $5::float8 FROM broadcast_recipients
-				WHERE broadcast_id = $2 AND clicked_at IS NOT NULL))`, s.ws, id, i+1, url, 1/float64(i+1)); err != nil {
-				return fmt.Errorf("seed link: %w", err)
-			}
-		}
-
-		s.made = append(s.made, id)
+func (s *demoSeed) topics(ctx context.Context, tx *database.Tx) error {
+	_, err := tx.Exec(ctx, `INSERT INTO broadcast_topics (workspace_id, name, description, consent) VALUES
+		($1, 'Product updates', 'New features and improvements, about once a month.', 'opt_out'),
+		($1, 'Webinars and events', 'Invitations to live sessions and meetups.', 'opt_in'),
+		($1, 'Offers', 'Discounts and plan offers.', 'opt_in')
+		ON CONFLICT DO NOTHING`, s.ws)
+	if err != nil {
+		return fmt.Errorf("seed topics: %w", err)
 	}
 
 	return nil

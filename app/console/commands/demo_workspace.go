@@ -5,7 +5,7 @@
 | The Demo Workspace
 |--------------------------------------------------------------------------
 |
-| How the demo commands find the Stowline workspace workspace:demo left:
+| How the demo commands find the Stowline workspace db:seed left:
 | its owner, and the Support inbox with its messenger connection, where
 | simulated customers write in.
 |
@@ -72,7 +72,7 @@ func demoOwner(ctx context.Context, a *app.App) (authz.Membership, error) {
 		return authz.Membership{}, err
 	}
 	if !found {
-		return authz.Membership{}, errors.New("no Stowline workspace; run workspace:demo first")
+		return authz.Membership{}, errors.New("no Stowline workspace; run db:seed first")
 	}
 	var member models.WorkspaceMember
 	err = a.DB.Transaction(tenancy.With(ctx, w.ID.String()), func(ctx context.Context, tx *database.Tx) error {
