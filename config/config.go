@@ -88,5 +88,9 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.Frontend.check(); err != nil {
+		return err
+	}
+
 	return c.Channels.check()
 }

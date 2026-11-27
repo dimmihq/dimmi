@@ -122,6 +122,36 @@ func TestAppPage(t *testing.T) {
 		assert.NotContains(t, quiet.Header.Get("Content-Security-Policy"), "errors.example.com")
 	})
 
+	t.Run("names the session recorder to the app and lets it load and record there", func(t *testing.T) {
+		t.Parallel()
+		silent := tests.New(t, withBuild())
+		tc := tests.New(t, withBuild(), tests.WithEnv(
+			"DIMMI_FRONTEND__SESSIONS_HOST=https://sessions.example.com",
+			"DIMMI_FRONTEND__SESSIONS_KEY=km_pub_0123abcd",
+		))
+
+		res := tc.Client().Send(fhttp.MethodGet, "/d", nil).AssertOK()
+
+		body := string(res.Body)
+		assert.Contains(t, body, `<meta name="dimmi-sessions-host" content="https://sessions.example.com">`)
+		assert.Contains(t, body, `<meta name="dimmi-sessions-key" content="km_pub_0123abcd">`)
+		policy := res.Header.Get("Content-Security-Policy")
+		assert.Contains(t, policy, "script-src 'self' 'nonce-")
+		assert.Regexp(t, `script-src [^;]* https://sessions\.example\.com`, policy)
+		assert.Regexp(t, `connect-src [^;]* https://sessions\.example\.com`, policy)
+		login := tc.Client().Send(fhttp.MethodGet, "/login", nil).AssertOK()
+		assert.Contains(t, string(login.Body), `<meta name="dimmi-sessions-key"`)
+		assert.Regexp(t, `script-src [^;]* https://sessions\.example\.com`, login.Header.Get("Content-Security-Policy"))
+		for _, path := range []string{"/hc/acme", "/auth/github/redirect"} {
+			other := tc.Client().Send(fhttp.MethodGet, path, nil).Header.Get("Content-Security-Policy")
+			assert.Contains(t, other, "default-src 'self'", path)
+			assert.NotContains(t, other, "sessions.example.com", path)
+		}
+		quiet := silent.Client().Send(fhttp.MethodGet, "/d", nil).AssertOK()
+		assert.NotContains(t, string(quiet.Body), "dimmi-sessions")
+		assert.NotContains(t, quiet.Header.Get("Content-Security-Policy"), "sessions.example.com")
+	})
+
 	t.Run("serves the same page for every path of the app, with a fresh nonce each time", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, withBuild())

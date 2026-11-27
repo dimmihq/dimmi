@@ -210,7 +210,9 @@ messenger from wherever it is served, and send the browser app's error
 reports to the tracker its DSN names, since the sign-in pages run the app
 too. Pages that show articles, the help center ("embeds") and the
 dashboard's writer, frame the allowed video and demo players; the dashboard
-also shows pictures Meta serves.
+also shows pictures Meta serves. The pages that run the browser app, the
+dashboard and the sign-in pages ("app"), load the session recorder and
+send it recordings when the server names one; no other page does.
 */
 func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources {
 	extra := captchaSources(p.App)
@@ -223,6 +225,11 @@ func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources
 	extra.Connect = append(extra.Connect, messenger...)
 	extra.Images = append(extra.Images, messenger...)
 	extra.Connect = append(extra.Connect, errorsSources(p.App)...)
+	if slices.Contains(params, "app") || slices.Contains(params, "dashboard") {
+		recorder := sessionsSources(p.App)
+		extra.Scripts = append(extra.Scripts, recorder...)
+		extra.Connect = append(extra.Connect, recorder...)
+	}
 	if slices.Contains(params, "embeds") || slices.Contains(params, "dashboard") {
 		extra.Frames = append(extra.Frames, markdown.EmbedOrigins()...)
 	}
@@ -247,6 +254,18 @@ func errorsSources(a *app.App) []string {
 	}
 
 	return []string{u.Scheme + "://" + u.Host}
+}
+
+/*
+sessionsSources returns the origin of the session recorder the browser
+app loads and sends recordings to, none when it records nothing.
+*/
+func sessionsSources(a *app.App) []string {
+	if origin := a.Config.Frontend.SessionsOrigin(); origin != "" {
+		return []string{origin}
+	}
+
+	return nil
 }
 
 /*
