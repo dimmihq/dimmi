@@ -33,6 +33,10 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 <!-- The first render waits for this (see ThemeProvider): the page is parsed. -->
 <div id="docs-end" hidden></div>
 <script>
+  import { startMonitoring } from "../../../site/src/monitoring";
+
+  startMonitoring();
+
   // Brings the current page's link into view in a long sidebar.
   const current = document.querySelector<HTMLElement>("#docs-sidebar [aria-current='page']");
   const sidebar = document.getElementById("docs-sidebar");

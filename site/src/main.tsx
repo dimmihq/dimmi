@@ -9,10 +9,12 @@ import { StrictMode } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
 
 import { App } from "./app";
+import { startMonitoring } from "./monitoring";
 import { findRoute, routes } from "./routes";
 import { headElements } from "./seo";
 
 if (typeof window !== "undefined") {
+  startMonitoring();
   const target = document.getElementById("root");
   if (target) {
     const app = (
