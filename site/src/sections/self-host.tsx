@@ -176,6 +176,8 @@ export function SelfHost() {
       </div>
       <div className="flex flex-wrap items-center gap-6 border-t border-separator-border pt-6">
         <MonoLink href="/vs/intercom">Compare dimmi vs Intercom</MonoLink>
+        <MonoLink href="/vs/chatwoot">Compare dimmi vs Chatwoot</MonoLink>
+        <MonoLink href="/vs">All comparisons</MonoLink>
         <MonoLink href="/pricing">See full pricing</MonoLink>
       </div>
     </Section>

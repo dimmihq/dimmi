@@ -495,6 +495,8 @@ export function VsIntercomPage() {
           />
         </div>
         <div className="flex flex-wrap gap-6 pt-3">
+          <MonoLink href="/vs">Compare all platforms</MonoLink>
+          <MonoLink href="/vs/chatwoot">Compare dimmi vs Chatwoot</MonoLink>
           <MonoLink href="/pricing">Explore dimmi pricing</MonoLink>
           <MonoLink href="/agents">See dimmi AI support agents</MonoLink>
           <MonoLink href="/procedures">See policy procedures</MonoLink>
