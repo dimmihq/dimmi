@@ -139,7 +139,8 @@ export function PrivacyPage() {
           prompt text goes to US AI providers (Anthropic, OpenAI, Voyage AI, and Cloudflare for the Clef decision
           model). We never sell personal data, we run zero analytics or advertising trackers on our website and docs,
           and no subprocessor trains AI models on Customer Data. The dashboard records masked sessions of signed-in
-          teammates on our own servers in the EU, so we can fix what broke. Your customers are never recorded.
+          teammates on our own servers in the EU, only to monitor the platform and fix what breaks. Your customers are
+          never recorded.
         </p>
       </Clause>
 
@@ -246,7 +247,7 @@ export function PrivacyPage() {
             ],
             [
               "Team members",
-              "Masked dashboard session recordings: page layout with every character of text and every input replaced by asterisks, clicks, page and request addresses with their timings, browser, device, and time zone, linked to your dimmi user ID, name, email, and workspace. No images, media, request bodies, or IP addresses.",
+              "Masked dashboard session recordings: page layout with every character of text and every input replaced by asterisks, clicks, page and request addresses with their timings, browser, device, and time zone, linked to your name, your workspace, and your dimmi user ID in it, never your email address. No images, media, request bodies, or IP addresses.",
               "Recorded in your browser while you are signed in to the dashboard.",
             ],
             [
@@ -294,7 +295,7 @@ export function PrivacyPage() {
               "Legitimate interests (NDPA s.25(1)(b)(v); GDPR Art. 6(1)(f))",
             ],
             [
-              "Finding and fixing dashboard bugs",
+              "Monitoring the platform and fixing dashboard problems",
               "Masked dashboard session recordings and error reports",
               "Legitimate interests (NDPA s.25(1)(b)(v); GDPR Art. 6(1)(f))",
             ],
