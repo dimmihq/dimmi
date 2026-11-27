@@ -61,7 +61,7 @@ Any Sentry-compatible tracker works, such as Sentry, GlitchTip or Rustrak. The s
 With a DSN set, the tracker also gets:
 
 - **Cron monitors.** Every scheduled job checks in when it starts and ends, so a missed, failed or stuck run is flagged.
-- **AI runs.** Each agent turn and Operator run is an agent run named after the agent, with its model and tool calls beneath it. A transfer to another agent shows as a handoff in the same trace, and a conversation's runs group together. Model calls made outside any agent, such as ticket summaries, show as runs named `background: <task>`.
+- **AI runs.** Each agent turn and Operator run is an agent run named after the agent, with its model and tool calls beneath it. A transfer to another agent shows as a handoff in the same trace, and a conversation's runs group together. Model calls made outside any agent, such as ticket summaries, show as runs named `background: <task>`. A tool call that fails is marked failed with an `error.type` such as `unavailable` or `invalid_arguments`; one waiting for approval is not a failure. Tool failures stay on the trace and open no issue.
 - **Logs.** Server log lines at `DIMMI_TELEMETRY__SENTRY_LOG_LEVEL` and above. Your usual log output doesn't change. Secrets, email addresses and email content are stripped before a line leaves the server.
 - **Web vitals.** The dashboard times page loads and route changes: all of them outside production, a fifth in production.
 

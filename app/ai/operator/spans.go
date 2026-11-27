@@ -2,6 +2,7 @@ package operator
 
 import (
 	"context"
+	"errors"
 
 	"github.com/dimmihq/dimmi/framework/telemetry"
 )
@@ -47,7 +48,8 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 
 /*
 runCall runs one call inside a tool span that records what it was given
-and what it returned.
+and what it returned. A call that fails is marked failed with its error
+type; one held back by the run's reading budget is refused, not failed.
 */
 func (e *Engine) runCall(ctx context.Context, s *session, p *pending) {
 	ctx, span := e.Telemetry.StartAI(ctx, telemetry.OpTool, "execute_tool "+p.call.Name)
@@ -59,8 +61,26 @@ func (e *Engine) runCall(ctx context.Context, s *session, p *pending) {
 	e.execCall(ctx, s, p)
 	span.Set("gen_ai.tool.output", p.out.text)
 
-	if p.err != nil {
-		span.Fail()
-		span.Set("gen_ai.tool.error", p.err.Error())
+	switch {
+	case p.err == nil:
+	case errors.Is(p.err, errSpent):
+		span.Set("dimmi.tool.outcome", "refused")
+	default:
+		span.FailWith(callFailure(p))
 	}
+}
+
+/*
+callFailure names how a call failed: a tool the run does not have,
+arguments that do not fit, or the error's own type.
+*/
+func callFailure(p *pending) string {
+	switch {
+	case !p.known && !p.layer:
+		return "unknown_tool"
+	case errors.Is(p.err, errBadArguments):
+		return "invalid_arguments"
+	}
+
+	return telemetry.ErrorType(p.err)
 }

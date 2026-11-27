@@ -15,6 +15,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/tests"
 )
 
 /*
@@ -39,14 +40,14 @@ type actionDesk struct {
 newActionDesk boots a harness whose agent may call actions, with every
 outbound request answered by stubs and any other refused.
 */
-func newActionDesk(t *testing.T, change func(*models.UpdateAgentParams)) *actionDesk {
+func newActionDesk(t *testing.T, change func(*models.UpdateAgentParams), opts ...tests.Option) *actionDesk {
 	t.Helper()
 	h := newHarness(t, func(p *models.UpdateAgentParams) {
 		p.ActionsEnabled = true
 		if change != nil {
 			change(p)
 		}
-	})
+	}, opts...)
 	return &actionDesk{harness: h, api: httpclienttest.New(h.d.TC.App.HTTP).PreventStrayRequests()}
 }
 

@@ -394,8 +394,10 @@ func (r *Runner) liveAction(ctx context.Context, st *run, public string) (action
 /*
 mockAction answers an action the simulated agent called with its mock.
 */
-func (r *Runner) mockAction(_ context.Context, st *run, live actionkit.Live, args json.RawMessage) string {
-	return r.runMock(st, live, args, false).Text
+func (r *Runner) mockAction(ctx context.Context, st *run, live actionkit.Live, args json.RawMessage) string {
+	reply := r.runMock(st, live, args, false)
+	traceAction(ctx, reply.CallReply)
+	return reply.Text
 }
 
 /*

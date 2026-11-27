@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/tests"
 )
@@ -69,4 +70,53 @@ func TestOperatorTraces(t *testing.T) {
 
 		assert.Equal(t, []string{"Operator internal_error"}, failed)
 	})
+}
+
+/*
+The tracker counts a tool call as failed by its status alone: set and
+not "ok" (apps/server/src/services/span.rs reduce_latency_groups and
+agent_summary); error.type names the failure for whoever reads it.
+*/
+func TestOperatorToolFailureTraces(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		call    contracts.ToolCall
+		status  string
+		errType string
+	}{
+		{"a tool Operator does not have", call("delete_everything", map[string]any{}), "not_found", "unknown_tool"},
+		{
+			"a conversation that does not exist", call("get_conversation_by_number", map[string]any{"number": 999999}),
+			"not_found", "not_found",
+		},
+		{"a tool that works", call("get_conversation_by_number", map[string]any{}), "", ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			tracker := tests.NewTracker(t)
+			k := newDesk(t, tracker.Option())
+			thread := k.thread(k.conversation("I was charged twice for March."))
+			k.llm.Script(tools(tc.call), reply("Done."))
+
+			k.ask(thread, "What does Ana want?").AssertOK()
+
+			var tool, run tests.TrackedSpan
+			for _, s := range k.d.TC.TrackedSpans(tracker) {
+				switch s.Kind() {
+				case "tool":
+					tool = s
+				case "agent":
+					run = s
+				}
+			}
+			require.NotEmpty(t, tool.SpanID)
+			assert.Equal(t, tc.status, tool.Status)
+			assert.Equal(t, tc.errType, tool.Attr("error.type"))
+			assert.Empty(t, run.Status, "Operator answered, so its run did not fail")
+		})
+	}
 }

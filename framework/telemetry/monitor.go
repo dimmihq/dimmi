@@ -15,12 +15,15 @@
 package telemetry
 
 import (
+	"cmp"
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/getsentry/sentry-go"
 
 	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/fault"
 )
 
 /*
@@ -137,9 +140,102 @@ func (s AISpan) Fail() {
 }
 
 /*
+FailWith marks the span as failed with a short, machine-readable error
+type, such as "timeout" or "unknown_tool", recorded as error.type. The
+type is never a message: it carries no customer data.
+*/
+func (s AISpan) FailWith(errorType string) {
+	if s.span != nil {
+		failWith(s.span, errorType)
+	}
+}
+
+/*
+FailTool marks the tool call the context is in as failed with the error
+type, for a tool that reports a failure without returning an error,
+such as an action whose request failed.
+*/
+func FailTool(ctx context.Context, errorType string) {
+	if span := sentry.SpanFromContext(ctx); span != nil && span.Op == OpTool {
+		failWith(span, errorType)
+	}
+}
+
+/*
+ToolOutcome records how the tool call the context is in ended when it
+ran and the answer was no, such as "pending_approval" or "refused": an
+outcome the agent works with, not a failure.
+*/
+func ToolOutcome(ctx context.Context, outcome string) {
+	if span := sentry.SpanFromContext(ctx); span != nil && span.Op == OpTool {
+		span.SetData("dimmi.tool.outcome", outcome)
+	}
+}
+
+/*
+ErrorType names an error for error.type: "timeout" or "canceled" for
+an ended context, the error's code when it carries one, else "error".
+*/
+func ErrorType(err error) string {
+	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		return "timeout"
+	case errors.Is(err, context.Canceled):
+		return "canceled"
+	}
+
+	return cmp.Or(fault.CodeOf(err), "error")
+}
+
+/*
+failWith sets the status the error type maps to, which the tracker
+counts as failed whatever it is as long as it is not "ok", and the
+error type beside it.
+*/
+func failWith(span *sentry.Span, errorType string) {
+	span.Status = statusOf(errorType)
+	span.SetData("error.type", errorType)
+}
+
+func statusOf(errorType string) sentry.SpanStatus {
+	switch errorType {
+	case "timeout":
+		return sentry.SpanStatusDeadlineExceeded
+	case "canceled":
+		return sentry.SpanStatusCanceled
+	case "invalid_arguments":
+		return sentry.SpanStatusInvalidArgument
+	case "unknown_tool", "not_found":
+		return sentry.SpanStatusNotFound
+	case "forbidden":
+		return sentry.SpanStatusPermissionDenied
+	case "rate_limited":
+		return sentry.SpanStatusResourceExhausted
+	case "unavailable":
+		return sentry.SpanStatusUnavailable
+	case "auth_failed":
+		return sentry.SpanStatusUnauthenticated
+	}
+
+	return sentry.SpanStatusInternalError
+}
+
+/*
 End finishes the span and, for the first span of a trace, sends it.
+Deferred, it also marks the span failed with the error type "panic"
+when the work it times panics, and lets the panic go on.
 */
 func (s AISpan) End() {
+	if p := recover(); p != nil {
+		s.FailWith("panic")
+		s.finish()
+		panic(p)
+	}
+
+	s.finish()
+}
+
+func (s AISpan) finish() {
 	if s.span != nil {
 		s.span.Finish()
 	}

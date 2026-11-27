@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/ai/ledger"
 	"github.com/dimmihq/dimmi/app/ai/toolset"
@@ -191,6 +192,7 @@ func (r *Runner) runTool(ctx context.Context, st *run, call contracts.ToolCall) 
 	if st.layer != nil && st.layer.set.Has(call.Name) {
 		err = errors.New(st.layer.set.Misdirected(call.Name))
 	}
+	failure := "unknown_tool"
 	blocked, refused := "", false
 	if allowed {
 		blocked, refused = r.gateProcedure(st, call.Name, t)
@@ -198,10 +200,16 @@ func (r *Runner) runTool(ctx context.Context, st *run, call contracts.ToolCall) 
 	switch {
 	case st.layer != nil && (call.Name == toolset.LoadTool || call.Name == toolset.CallTool):
 		ran, result, err = r.layerCall(ctx, st, call)
+		failure = telemetry.ErrorType(err)
 	case refused:
 		result, err = blocked, nil
+		telemetry.ToolOutcome(ctx, "refused")
 	case allowed:
 		result, err = t.handle(ctx, st, call.Arguments)
+		failure = telemetry.ErrorType(err)
+	}
+	if err != nil {
+		telemetry.FailTool(ctx, failure)
 	}
 
 	r.step(ctx, st, stepRecord{

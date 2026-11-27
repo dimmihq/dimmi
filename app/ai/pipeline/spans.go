@@ -6,6 +6,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/telemetry"
 
+	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	"github.com/dimmihq/dimmi/app/contracts"
 )
 
@@ -60,7 +61,9 @@ func (r *Runner) tracedHandoff(ctx context.Context, st *run) {
 
 /*
 callTool runs one tool the model asked for inside a tool span that
-records what it was given and what it returned.
+records what it was given and what it returned. A tool that fails is
+marked failed with its error type; one that answers no records how. A
+tool that panics is marked failed and the panic goes on.
 */
 func (r *Runner) callTool(ctx context.Context, st *run, call contracts.ToolCall) (string, bool) {
 	ctx, span := r.Telemetry.StartAI(ctx, telemetry.OpTool, "execute_tool "+call.Name)
@@ -73,4 +76,21 @@ func (r *Runner) callTool(ctx context.Context, st *run, call contracts.ToolCall)
 	span.Set("gen_ai.tool.output", result)
 
 	return result, refused
+}
+
+/*
+traceAction marks the tool span with how an action call ended: failed
+with its code, or the no it answered with.
+*/
+func traceAction(ctx context.Context, reply actionkit.CallReply) {
+	switch {
+	case reply.Failure != "":
+		telemetry.FailTool(ctx, reply.Failure)
+	case reply.Pending:
+		telemetry.ToolOutcome(ctx, "pending_approval")
+	case reply.Awaiting:
+		telemetry.ToolOutcome(ctx, "awaiting_confirmation")
+	case !reply.Succeeded:
+		telemetry.ToolOutcome(ctx, "refused")
+	}
 }
