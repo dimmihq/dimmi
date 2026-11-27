@@ -59,8 +59,15 @@ function toPosix(pathValue: string): string {
 
 function normalizeRoute(input: string): string {
   let route = input.trim();
-  if (route.startsWith(SITE_URL)) {
-    route = route.slice(SITE_URL.length);
+  if (/^https?:\/\//i.test(route)) {
+    try {
+      const parsed = new URL(route);
+      if (parsed.origin === SITE_URL) {
+        route = parsed.pathname;
+      }
+    } catch {
+      // Keep raw input when URL parsing fails.
+    }
   }
   route = route.split(/[?#]/)[0] ?? "";
   if (!route.startsWith("/")) {
