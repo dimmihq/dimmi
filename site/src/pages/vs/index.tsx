@@ -44,6 +44,26 @@ const COMPARISON_CARDS: ComparisonCard[] = [
     keyDiff: "100% MIT · single Go binary",
     tone: "#1f93ff",
   },
+  {
+    slug: "zendesk",
+    href: "/vs/zendesk",
+    rival: "Zendesk",
+    headline: "dimmi vs Zendesk",
+    summary:
+      "Compare $69 to $149 Suite seat tiers and $2.00 automated resolution fees against $0 seats with SLAs and workflow routing included.",
+    keyDiff: "SLAs & routing included · $0 seats",
+    tone: "#03363d",
+  },
+  {
+    slug: "help-scout",
+    href: "/vs/help-scout",
+    rival: "Help Scout",
+    headline: "dimmi vs Help Scout",
+    summary:
+      "Compare $25 to $45 seats, $10 to $12 extra inbox fees, and $0.75 Envoy resolutions against unlimited inboxes and BYO AI keys.",
+    keyDiff: "Unlimited inboxes · BYO AI keys",
+    tone: "#1292ee",
+  },
 ];
 
 export function VsHubPage() {
