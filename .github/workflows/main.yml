@@ -116,6 +116,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Check the edge sends every site path to the site
         run: scripts/check-site-paths.sh site/dist
+      - name: Publish gate
+        run: node scripts/publish-gate.ts site/dist --baseline https://trydimmi.com/sitemap.xml
+      - name: Upload publish gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-gate
+          path: site/dist/publish-gate.json
+          retention-days: 14
       - uses: docker/setup-buildx-action@v3
       - if: env.PUSH == 'true'
         uses: docker/login-action@v3

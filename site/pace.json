@@ -1,0 +1,5 @@
+{
+  "mode": "start",
+  "maxPerRelease": 20,
+  "maxPerWeek": 5
+}

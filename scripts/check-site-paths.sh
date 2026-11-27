@@ -16,6 +16,10 @@ matcher=" $(grep -E '^\s*@site path ' "$CADDYFILE" | sed -E 's/^\s*@site path//'
 missing=0
 for entry in "$DIST"/*; do
   name="$(basename "$entry")"
+  # Internal build and CI metadata files are never routed publicly at the edge.
+  if [[ "$name" == "pages.json" || "$name" == "publish-gate.json" ]]; then
+    continue
+  fi
   if [[ -d "$entry" ]]; then
     [[ "$name" == "index.html" ]] && continue
     if [[ -f "$entry/index.html" ]]; then want=("/$name" "/$name/*"); else want=("/$name/*"); fi

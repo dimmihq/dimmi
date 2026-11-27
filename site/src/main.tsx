@@ -45,6 +45,14 @@ export async function prerender(data: { url: string }) {
   const known = new Set(routes.map((r) => r.path));
   const links = new Set(parseLinks(html).filter((link) => known.has(link)));
 
+  // Expose route metadata to site/vite.config.ts so closeBundle writes site/dist/pages.json.
+  (globalThis as { __DIMMI_PAGES__?: unknown }).__DIMMI_PAGES__ = routes.map(({ path, title, description, meta }) => ({
+    path,
+    title,
+    description,
+    ...(meta ? { meta } : {}),
+  }));
+
   return {
     html,
     links,

@@ -1,0 +1,222 @@
+{
+  "/": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["images", "slop", "constants"]
+  },
+  "/agent-studio": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["description-length", "links-out"]
+  },
+  "/agents": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["images", "links-out"]
+  },
+  "/broadcasts": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["description-length", "links-out"]
+  },
+  "/changelog": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["description-length", "links-out"]
+  },
+  "/channels": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["constants"]
+  },
+  "/channels/api": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["constants"]
+  },
+  "/channels/email": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["constants"]
+  },
+  "/channels/facebook-messenger": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["constants", "description-length"]
+  },
+  "/channels/instagram": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["constants", "description-length"]
+  },
+  "/channels/messenger": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["constants"]
+  },
+  "/channels/slack": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["constants", "description-length"]
+  },
+  "/channels/whatsapp": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["constants", "description-length"]
+  },
+  "/feedback": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["description-length", "links-out"]
+  },
+  "/help-center": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["description-length", "links-out"]
+  },
+  "/inbox": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["images", "description-length"]
+  },
+  "/operator": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["images", "description-length", "links-out"]
+  },
+  "/pricing": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["images", "description-length", "links-out"]
+  },
+  "/privacy": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["slop", "uniqueness", "description-length", "links-out"]
+  },
+  "/procedures": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["links-out"]
+  },
+  "/reports": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["slop", "description-length", "links-out"]
+  },
+  "/routines": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["description-length", "links-out"]
+  },
+  "/terms": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["slop", "uniqueness", "description-length", "links-out"]
+  },
+  "/tickets": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["slop", "description-length", "links-out"]
+  },
+  "/workflows": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing marketing page tracked for follow-up cleanup (#90 image sizes/SDK count/copy slips, legacy meta descriptions and body links).",
+    "checks": ["description-length", "links-out"]
+  },
+  "/docs/ai/first-action": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide tracked for follow-up cleanup.",
+    "checks": ["slop"]
+  },
+  "/docs/ai/procedure-steps": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide with unsized screenshots tracked for follow-up cleanup.",
+    "checks": ["images"]
+  },
+  "/docs/ai/procedure-versions": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide with unsized screenshots tracked for follow-up cleanup.",
+    "checks": ["images"]
+  },
+  "/docs/ai/procedures": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide with unsized screenshots tracked for follow-up cleanup.",
+    "checks": ["images"]
+  },
+  "/docs/ai/test-procedures": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide with unsized screenshots tracked for follow-up cleanup.",
+    "checks": ["images"]
+  },
+  "/docs/api-reference/reports-and-data/export-conversations-contacts-or-the-whole-workspace": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing generated API reference endpoint title slightly over 60 chars.",
+    "checks": ["title"]
+  },
+  "/docs/channels/install-the-messenger": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide with unsized screenshots tracked for follow-up cleanup.",
+    "checks": ["images"]
+  },
+  "/docs/channels/sending-domain": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide with unsized screenshots tracked for follow-up cleanup.",
+    "checks": ["images"]
+  },
+  "/docs/developers/messenger/identity-verification": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide with unsized screenshots and literal underscore references.",
+    "checks": ["images", "slop"]
+  },
+  "/docs/developers/messenger/track-events": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide referencing legacy API slug tracked for follow-up cleanup.",
+    "checks": ["links-broken"]
+  },
+  "/docs/developers/webhooks/delivery-and-retries": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide with unsized screenshots and legacy API slug.",
+    "checks": ["images", "links-broken"]
+  },
+  "/docs/developers/webhooks/events": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide referencing legacy API slugs tracked for follow-up cleanup.",
+    "checks": ["links-broken"]
+  },
+  "/docs/developers/webhooks/receive": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide referencing legacy API slug tracked for follow-up cleanup.",
+    "checks": ["links-broken"]
+  },
+  "/docs/developers/webhooks/verify-signatures": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide referencing legacy API slug tracked for follow-up cleanup.",
+    "checks": ["links-broken"]
+  },
+  "/docs/help-center/theme-variables": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs reference page with table em-dashes tracked for follow-up cleanup.",
+    "checks": ["slop"]
+  },
+  "/docs/help-center/themes": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide with embedded theme preview headings tracked for follow-up cleanup.",
+    "checks": ["h1"]
+  },
+  "/docs/quickstart": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide with unsized screenshots tracked for follow-up cleanup.",
+    "checks": ["images"]
+  },
+  "/docs/self-hosting/configuration": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide referencing literal underscore characters in env vars.",
+    "checks": ["slop"]
+  },
+  "/docs/tickets/linked-incidents": {
+    "reviewBy": "2027-01-15",
+    "reason": "Pre-existing docs guide title slightly over 60 chars.",
+    "checks": ["title"]
+  }
+}
