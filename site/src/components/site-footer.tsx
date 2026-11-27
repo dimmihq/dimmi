@@ -11,6 +11,7 @@ const pages = new Map<string, string>([
   ...PRODUCT_GROUPS.flatMap((group) => group.products.map((p) => [p.name, p.href] as const)),
   ...CHANNELS.map((c) => [c.name, c.href] as const),
   ["Pricing", "/pricing"],
+  ["dimmi vs Intercom", "/vs/intercom"],
   ["Pricing comparison", "/pricing#compare"],
   ["Cost calculator", "/pricing#calculator"],
   ["Self-host", "/#self-host"],
@@ -40,7 +41,7 @@ const columns = [
     title: "Channels",
     links: CHANNELS.map((c) => c.name),
   },
-  { title: "Compare", links: ["Pricing comparison", "Cost calculator"] },
+  { title: "Compare", links: ["dimmi vs Intercom", "Pricing comparison", "Cost calculator"] },
   { title: "Run it", links: ["Self-host", "dimmi Cloud", "Security", "Self-Hosting Notice", "AI Transparency"] },
   { title: "Developers", links: ["Docs", "API reference", "SDKs", "Webhooks", "GitHub"] },
   {

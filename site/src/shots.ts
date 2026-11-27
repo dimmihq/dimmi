@@ -64,4 +64,6 @@ export const SHOTS: Record<string, { width: number; height: number; ready: boole
   "channel-api-rest": { width: 720, height: 640, ready: true },
   "channel-api-webhooks": { width: 720, height: 640, ready: true },
   "channel-api-sdks": { width: 720, height: 640, ready: true },
+  "vs-byo-key": { width: 1680, height: 1000, ready: true },
+  "vs-reports": { width: 1680, height: 1000, ready: true },
 };
