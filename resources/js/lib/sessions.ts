@@ -3,23 +3,24 @@
  * recorder and its project's public key; a page that names none records
  * nothing, as in development, tests and any server whose operator named no
  * recorder. The recorder loads from its own host only once the dashboard
- * knows who is signed in, and learns the teammate's id, name and email and
- * the workspace they are in, never anything about customers. Its project's
- * rules mask every character of text and every input in the browser before
- * anything is sent. Signing out stops it.
+ * knows who is signed in and in which workspace. It names the teammate by
+ * workspace and user id, as "ws_1:usr_42", so each workspace's recordings
+ * stand apart, and learns their name and the workspace's: never their email,
+ * never anything about customers. Its project's rules mask every character
+ * of text and every input in the browser before anything is sent. Signing
+ * out stops it.
  */
 
 export type Recorder = { host: string; key: string };
 
-/** The signed-in teammate, and the workspace they are in when there is one. */
+/** The signed-in teammate and the workspace they are in. */
 export type Teammate = {
   id: string;
   name: string;
-  email: string;
-  workspace?: { id: string; name: string } | null;
+  workspace: { id: string; name: string };
 };
 
-type Traits = { email?: string; name?: string; [key: string]: unknown };
+type Traits = { name?: string; [key: string]: unknown };
 
 type Kimmi = { identify(id: string, traits?: Traits): void; stop(): void };
 
@@ -55,17 +56,13 @@ let member: Teammate | null = null;
 let named = "";
 
 function identify(kimmi: Kimmi, teammate: Teammate): void {
-  const { id, name, email, workspace } = teammate;
-  const key = JSON.stringify([id, name, email, workspace?.id, workspace?.name]);
+  const { id, name, workspace } = teammate;
+  const key = JSON.stringify([id, name, workspace.id, workspace.name]);
   if (key === named) {
     return;
   }
   named = key;
-  kimmi.identify(id, {
-    name,
-    email,
-    ...(workspace ? { workspaceId: workspace.id, workspaceName: workspace.name } : {}),
-  });
+  kimmi.identify(`${workspace.id}:${id}`, { name, workspaceId: workspace.id, workspaceName: workspace.name });
 }
 
 /**
@@ -75,7 +72,7 @@ function identify(kimmi: Kimmi, teammate: Teammate): void {
  */
 export function recordSession(teammate: Teammate, doc: Document = document, win: Window = window): void {
   const recorder = readRecorder(doc);
-  if (!recorder || !teammate.id) {
+  if (!recorder || !teammate.id || !teammate.workspace.id) {
     return;
   }
 

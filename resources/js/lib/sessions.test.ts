@@ -14,13 +14,14 @@ function page(meta: Record<string, string>): Document {
 
 const named = { host: "https://sessions.example.com/", key: "km_pub_0123abcd" };
 
+// The signed-in user as the app holds them, email included: it must never reach the recorder.
 const ada = {
   id: "usr_42",
   name: "Ada Lovelace",
   email: "ada@example.com",
   workspace: { id: "ws_1", name: "Acme" },
 };
-const adaTraits = { name: "Ada Lovelace", email: "ada@example.com", workspaceId: "ws_1", workspaceName: "Acme" };
+const adaTraits = { name: "Ada Lovelace", workspaceId: "ws_1", workspaceName: "Acme" };
 
 function recorderScripts(doc: Document): HTMLScriptElement[] {
   return [...doc.querySelectorAll<HTMLScriptElement>("script[data-dimmi-sessions]")];
@@ -81,16 +82,35 @@ describe("recordSession", () => {
     window.kimmi = { identify, stop: vi.fn() };
     recorderScripts(doc)[0].dispatchEvent(new Event("load"));
 
-    expect(identify).toHaveBeenCalledExactlyOnceWith("usr_42", adaTraits);
+    expect(identify).toHaveBeenCalledExactlyOnceWith("ws_1:usr_42", adaTraits);
   });
 
-  it("names the member at once when the recorder already runs, without a workspace", () => {
+  it("names the member at once when the recorder already runs", () => {
     const identify = vi.fn();
     window.kimmi = { identify, stop: vi.fn() };
 
-    recordSession({ ...ada, workspace: null }, page(named));
+    recordSession(ada, page(named));
 
-    expect(identify).toHaveBeenCalledExactlyOnceWith("usr_42", { name: "Ada Lovelace", email: "ada@example.com" });
+    expect(identify).toHaveBeenCalledExactlyOnceWith("ws_1:usr_42", adaTraits);
+  });
+
+  it("never sends the member's email", () => {
+    const identify = vi.fn();
+    window.kimmi = { identify, stop: vi.fn() };
+
+    recordSession(ada, page(named));
+
+    expect(JSON.stringify(identify.mock.calls)).not.toContain("ada@example.com");
+    expect(identify.mock.calls[0][1]).not.toHaveProperty("email");
+  });
+
+  it("names no one without a workspace", () => {
+    const identify = vi.fn();
+    window.kimmi = { identify, stop: vi.fn() };
+
+    recordSession({ ...ada, workspace: { id: "", name: "" } }, page(named));
+
+    expect(identify).not.toHaveBeenCalled();
   });
 
   it("names the member again when their name or workspace changes, and only then", () => {
@@ -104,9 +124,9 @@ describe("recordSession", () => {
     recordSession({ ...ada, name: "Ada King", workspace: { id: "ws_2", name: "Globex" } }, doc);
 
     expect(identify.mock.calls).toEqual([
-      ["usr_42", adaTraits],
-      ["usr_42", { ...adaTraits, name: "Ada King" }],
-      ["usr_42", { ...adaTraits, name: "Ada King", workspaceId: "ws_2", workspaceName: "Globex" }],
+      ["ws_1:usr_42", adaTraits],
+      ["ws_1:usr_42", { ...adaTraits, name: "Ada King" }],
+      ["ws_2:usr_42", { name: "Ada King", workspaceId: "ws_2", workspaceName: "Globex" }],
     ]);
   });
 
