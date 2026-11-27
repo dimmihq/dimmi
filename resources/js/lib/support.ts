@@ -6,7 +6,7 @@
  * any server whose operator named none. It loads through @dimmi/react,
  * the package customers install, once a teammate is signed in. It has no
  * launcher of its own, which would sit over the corner of the pages: the
- * teammate opens it from their account menu. Signing out forgets the
+ * teammate opens it from the sidebar, below Settings. Signing out forgets the
  * visitor, so the next person at the browser starts a conversation of
  * their own.
  */
@@ -28,7 +28,7 @@ export function readSupportMessenger(doc: Document = document, win: Window = win
 /** The messenger's settings in the dashboard: no launcher. One object, so it is sent once. */
 export const supportSettings: MessengerSettings = { appearance: { launcher: { style: "hidden" } } };
 
-/** Opens the messenger, as from the account menu. */
+/** Opens the messenger, as from the sidebar. */
 export function openSupport(): void {
   getDimmi().show();
 }

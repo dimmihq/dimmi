@@ -27,6 +27,7 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 import {
   type DashboardAccount,
+  type DashboardNavItem,
   DashboardSidebar,
   type DashboardSwitcher,
 } from "@/components/application/dashboard/dashboard-sidebar";
@@ -51,7 +52,7 @@ import { notificationCountsQuery } from "@/lib/api/notifications";
 import { callerQuery } from "@/lib/api/workspace";
 import { RealtimeProvider } from "@/lib/realtime/provider";
 import { recordSession } from "@/lib/sessions";
-import { openSupport, readSupportMessenger, type SupportMessenger, supportSettings } from "@/lib/support";
+import { openSupport, readSupportMessenger, supportSettings } from "@/lib/support";
 
 import { useAvailability } from "./availability";
 import { GetStarted } from "./get-started";
@@ -161,7 +162,7 @@ function useSwitcher(me: Me): DashboardSwitcher {
   };
 }
 
-function useAccount(me: Me, workspace: string | undefined, support: SupportMessenger | null): DashboardAccount {
+function useAccount(me: Me, workspace: string | undefined): DashboardAccount {
   const availability = useAvailability(workspace);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -195,9 +196,6 @@ function useAccount(me: Me, workspace: string | undefined, support: SupportMesse
         ],
       },
       { id: "personal", items: [] },
-      ...(support
-        ? [{ id: "help", items: [{ icon: RiCustomerService2Line, label: "Chat with support", onSelect: openSupport }] }]
-        : []),
       {
         id: "session",
         items: [{ icon: RiLogoutBoxRLine, label: "Sign out", onSelect: () => leave.mutate() }],
@@ -241,7 +239,7 @@ function SignedInShell({
   const { current: onScreen } = useCurrentWorkspace(me.workspaces);
   // The server's own messenger, when its page names one, for the signed-in teammate.
   const [support] = useState(() => readSupportMessenger());
-  const account = useAccount(me, onScreen?.id, support);
+  const account = useAccount(me, onScreen?.id);
   const { current: workspace } = useCurrentWorkspace(me.workspaces);
   const { id } = me.user;
   const workspaceId = workspace?.id ?? "";
@@ -275,7 +273,11 @@ function SignedInShell({
         },
         caller?.member?.permissions,
       );
-  const secondary = inSettings ? [] : [settingsLink];
+  // Below Settings, so it shows on every page and as an icon on the folded rail.
+  const help: DashboardNavItem[] = support
+    ? [{ key: "support", label: "Chat with support", icon: RiCustomerService2Line, onSelect: openSupport }]
+    : [];
+  const secondary = inSettings ? help : [settingsLink, ...help];
   const selected = selectedKey(sections, secondary, path);
   const sidebar = (mobile: boolean) => (
     <DashboardSidebar
