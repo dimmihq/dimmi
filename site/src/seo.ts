@@ -171,6 +171,50 @@ function personSchema(authorId: string) {
   };
 }
 
+function breadcrumbItems(route: Route) {
+  const items: { "@type": "ListItem"; position: number; name: string; item: string }[] = [
+    { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+  ];
+  const prefixes: [string, string, string][] = [
+    ["/channels/", "Channels", `${SITE_URL}/channels`],
+    ["/vs/", "Compare", `${SITE_URL}/vs`],
+    ["/tools/", "Tools", `${SITE_URL}/pricing`],
+  ];
+  const parent = prefixes.find(([prefix]) => route.path.startsWith(prefix));
+  if (parent) {
+    items.push({ "@type": "ListItem", position: 2, name: parent[1], item: parent[2] });
+    items.push({ "@type": "ListItem", position: 3, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
+  } else {
+    items.push({ "@type": "ListItem", position: 2, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
+  }
+  return items;
+}
+
+function buildMetaSchema(route: Route, schemaType: "WebPage" | "WebApplication"): Record<string, unknown> | null {
+  if (!route.meta) {
+    return null;
+  }
+  const base: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": schemaType,
+    name: route.title,
+    description: route.description,
+    url: canonicalUrl(route.path),
+    datePublished: route.meta.published,
+    dateModified: route.meta.updated,
+    author: personSchema(route.meta.author),
+  };
+  if (schemaType === "WebApplication") {
+    base.applicationCategory = "BusinessApplication";
+    base.operatingSystem = "Any";
+    base.offers = { "@type": "Offer", price: "0", priceCurrency: "USD" };
+  }
+  if (route.meta.reviewedBy) {
+    base.reviewedBy = personSchema(route.meta.reviewedBy);
+  }
+  return base;
+}
+
 export function pageSchemas(route: Route | undefined): Record<string, unknown>[] {
   if (!route) {
     return [];
@@ -179,47 +223,28 @@ export function pageSchemas(route: Route | undefined): Record<string, unknown>[]
     return [ORGANIZATION_SCHEMA, WEBSITE_SCHEMA, SOFTWARE_SCHEMA];
   }
 
-  const items: { "@type": "ListItem"; position: number; name: string; item: string }[] = [
-    { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
-  ];
-
-  if (route.path.startsWith("/channels/")) {
-    items.push({ "@type": "ListItem", position: 2, name: "Channels", item: `${SITE_URL}/channels` });
-    items.push({ "@type": "ListItem", position: 3, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
-  } else if (route.path.startsWith("/vs/")) {
-    items.push({ "@type": "ListItem", position: 2, name: "Compare", item: `${SITE_URL}/vs` });
-    items.push({ "@type": "ListItem", position: 3, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
-  } else {
-    items.push({ "@type": "ListItem", position: 2, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
-  }
-
   const schemas: Record<string, unknown>[] = [
     {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
-      itemListElement: items,
+      itemListElement: breadcrumbItems(route),
     },
   ];
 
   if (route.path === "/pricing") {
     schemas.push(SOFTWARE_SCHEMA);
   }
-
-  if (route.meta && (route.path === "/vs" || route.path.startsWith("/vs/"))) {
-    const webPage: Record<string, unknown> = {
-      "@context": "https://schema.org",
-      "@type": "WebPage",
-      name: route.title,
-      description: route.description,
-      url: canonicalUrl(route.path),
-      datePublished: route.meta.published,
-      dateModified: route.meta.updated,
-      author: personSchema(route.meta.author),
-    };
-    if (route.meta.reviewedBy) {
-      webPage.reviewedBy = personSchema(route.meta.reviewedBy);
+  if (route.path.startsWith("/tools/")) {
+    const app = buildMetaSchema(route, "WebApplication");
+    if (app) {
+      schemas.push(app);
     }
-    schemas.push(webPage);
+  }
+  if (route.path === "/vs" || route.path.startsWith("/vs/")) {
+    const page = buildMetaSchema(route, "WebPage");
+    if (page) {
+      schemas.push(page);
+    }
   }
 
   return schemas;

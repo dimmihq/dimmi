@@ -495,6 +495,7 @@ export function VsIntercomPage() {
           />
         </div>
         <div className="flex flex-wrap gap-6 pt-3">
+          <MonoLink href="/tools/intercom-cost-calculator">Open the Intercom cost calculator</MonoLink>
           <MonoLink href="/pricing">Explore dimmi pricing</MonoLink>
           <MonoLink href="/agents">See dimmi AI support agents</MonoLink>
           <MonoLink href="/procedures">See policy procedures</MonoLink>
