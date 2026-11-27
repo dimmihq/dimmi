@@ -82,8 +82,8 @@ export function BillDuel({
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <SliderField
             id={`vs-seats-${rival.slug}`}
-            label="Teammates"
-            valueLabel={`${seats} ${seats === 1 ? "seat" : "seats"}`}
+            label="Seats"
+            valueLabel={String(seats)}
             min={1}
             max={25}
             step={1}
@@ -92,7 +92,7 @@ export function BillDuel({
           />
           <SliderField
             id={`vs-conv-${rival.slug}`}
-            label="Conversations / month"
+            label="Monthly threads"
             valueLabel={conversations.toLocaleString("en-US")}
             min={200}
             max={10000}
@@ -102,7 +102,7 @@ export function BillDuel({
           />
           <SliderField
             id={`vs-ai-${rival.slug}`}
-            label="AI-handled share"
+            label="AI share"
             valueLabel={`${Math.round(aiShare * 100)}%`}
             min={0}
             max={100}
@@ -143,41 +143,23 @@ export function BillDuel({
         )}
 
         <div className="flex flex-col gap-3 border-t border-separator-border pt-6">
-          <BillBar
-            label="dimmi self-hosted (MIT)"
-            total={0}
-            max={maxBill}
-            accent
-            note="$0 to dimmi; your own server + keys"
-          />
-          <BillBar
-            label="dimmi Cloud · BYO keys"
-            total={dimmiByok}
-            max={maxBill}
-            accent
-            note="Unlimited seats, plus your model API"
-          />
-          <BillBar
-            label="dimmi Cloud · AI included"
-            total={dimmiCloud}
-            max={maxBill}
-            accent
-            note="Unlimited seats, 100 free chats/mo"
-          />
+          <BillBar label="Self-host" total={0} max={maxBill} accent note="MIT" />
+          <BillBar label="BYOK" total={dimmiByok} max={maxBill} accent note="+API" />
+          <BillBar label="Cloud" total={dimmiCloud} max={maxBill} accent note="AI" />
           <BillBar
             label={`${rival.name} ${entryPlan?.name ?? "entry"}`}
             total={rivalEntry}
             max={maxBill}
             rival
-            note={usePromo && entryPlan?.promoSeatPrice ? "Promo annual seat rate" : entryPlan?.billingNote}
+            note={usePromo && entryPlan?.promoSeatPrice ? "Promo" : entryPlan?.billingNote}
           />
           {rivalFull != null && rival.competitor && (
             <BillBar
-              label={`${rival.name} ${rival.competitor.full.plan} (feature parity)`}
+              label={`${rival.name} ${rival.competitor.full.plan}`}
               total={rivalFull}
               max={maxBill}
               rival
-              note={`Adds ${rival.competitor.full.adds}`}
+              note={`+${rival.competitor.full.adds}`}
             />
           )}
         </div>
@@ -185,8 +167,8 @@ export function BillDuel({
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-separator-border pt-4 text-[13px] leading-5 text-text-tertiary">
           <span>
             {savings > 0
-              ? `dimmi Cloud saves about ${dollars(savings)}/month against ${rival.name} ${entryPlan?.name ?? "entry"} at this volume.`
-              : `${rival.name} ${entryPlan?.name ?? "entry"} costs ${dollars(Math.abs(savings))}/month less than dimmi Cloud here (self-hosting dimmi is $0).`}
+              ? `Delta: -${dollars(savings)}/mo vs ${rival.name} ${entryPlan?.name ?? "entry"}.`
+              : `Delta: +${dollars(Math.abs(savings))}/mo vs ${rival.name} ${entryPlan?.name ?? "entry"}.`}
             {note ? ` ${note}` : ""}
           </span>
           <a
@@ -195,7 +177,7 @@ export function BillDuel({
             target="_blank"
             className="inline-flex items-center gap-1 text-text-secondary underline-offset-4 hover:text-text-primary hover:underline"
           >
-            Source checked {formatIsoDate(rival.checkedOn)}
+            {rival.name} {formatIsoDate(rival.checkedOn)}
             <RiExternalLinkLine className="size-3.5 shrink-0" aria-hidden />
           </a>
         </div>

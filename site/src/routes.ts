@@ -29,8 +29,10 @@ import { RoutinesPage } from "./pages/routines";
 import { TermsPage } from "./pages/terms";
 import { TicketsPage } from "./pages/tickets";
 import { VsChatwootPage } from "./pages/vs/chatwoot";
+import { VsHelpScoutPage } from "./pages/vs/help-scout";
 import { VsHubPage } from "./pages/vs/index";
 import { VsIntercomPage } from "./pages/vs/intercom";
+import { VsZendeskPage } from "./pages/vs/zendesk";
 import { WorkflowsPage } from "./pages/workflows";
 import { SDK_COUNT } from "./sdks";
 
@@ -230,9 +232,9 @@ export const routes: Route[] = [
   },
   {
     path: "/vs",
-    title: "Compare dimmi against Intercom and Chatwoot | dimmi",
+    title: "Compare dimmi against top customer support tools | dimmi",
     description:
-      "Honest side-by-side comparisons of dimmi vs Intercom and Chatwoot: verified pricing, real product screenshots, MIT self-hosting, and trade-offs.",
+      "Honest side-by-side comparisons of dimmi vs Intercom, Chatwoot, Zendesk, and Help Scout: verified pricing, product captures, and MIT self-hosting.",
     page: VsHubPage,
     meta: {
       type: "alternatives",
@@ -285,6 +287,46 @@ export const routes: Route[] = [
       answer: "Pick Chatwoot if you need Telegram or LINE channels today",
       proof: ["/shots/vs-sso-light.webp"],
       rivals: [{ name: "Chatwoot", checkedOn: "2026-11-27", source: "https://www.chatwoot.com/pricing" }],
+    },
+  },
+  {
+    path: "/vs/zendesk",
+    title: "dimmi vs Zendesk: open-source Zendesk alternative",
+    description:
+      "dimmi vs Zendesk: $69 to $149 Suite seats and $2.00 AI resolutions vs unlimited free seats, included SLAs and routing, BYO keys, and MIT self-hosting.",
+    page: VsZendeskPage,
+    meta: {
+      type: "vs",
+      status: "published",
+      published: "2026-11-27",
+      updated: "2026-11-27",
+      author: "frantz-kati",
+      reviewedBy: "frantz-kati",
+      reviewedOn: "2026-11-27",
+      keyword: "zendesk alternative",
+      answer: "Pick Zendesk if you run a 200+ seat call center needing SOC 2",
+      proof: ["/shots/vs-sla-light.webp", "/shots/workflow-canvas-light.webp"],
+      rivals: [{ name: "Zendesk", checkedOn: "2026-11-27", source: "https://www.zendesk.com/pricing/" }],
+    },
+  },
+  {
+    path: "/vs/help-scout",
+    title: "dimmi vs Help Scout: open-source Help Scout alternative",
+    description:
+      "dimmi vs Help Scout: $25 to $45 seats, $10 extra inbox fees, and $0.75 Envoy resolutions vs unlimited inboxes, free seats, BYO keys, and MIT code.",
+    page: VsHelpScoutPage,
+    meta: {
+      type: "vs",
+      status: "published",
+      published: "2026-11-27",
+      updated: "2026-11-27",
+      author: "frantz-kati",
+      reviewedBy: "frantz-kati",
+      reviewedOn: "2026-11-27",
+      keyword: "help scout alternative",
+      answer: "Pick Help Scout if you want a veteran email-first help desk",
+      proof: ["/shots/help-center-light.webp", "/shots/vs-inboxes-light.webp"],
+      rivals: [{ name: "Help Scout", checkedOn: "2026-11-27", source: "https://www.helpscout.com/pricing/" }],
     },
   },
   {

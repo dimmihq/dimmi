@@ -346,8 +346,80 @@ export const RIVALS: Record<string, Rival> = {
       "No $1.50 to $2.00 automated resolution fees; plug in your own AI model key.",
       "MIT open source and self-hostable on one Linux server.",
     ],
-    switchTriggers: [],
-    teams: [],
+    switchTriggers: [
+      {
+        trigger: "Tier jumps for SLAs and skills routing",
+        rivalReality:
+          "Suite Team ($69/agent monthly, $55 annual) omits SLAs, side conversations, skills routing, and multilingual docs until Suite Professional ($149 monthly, $115 annual).",
+        dimmiReality: "SLAs, workflow routing, internal notes, and multilingual help centers ship on every workspace.",
+        sourceLabel: "Zendesk pricing",
+        sourceUrl: "https://www.zendesk.com/pricing/",
+      },
+      {
+        trigger: "$1.50 to $2.00 automated resolution overages",
+        rivalReality:
+          "After 5 to 10 automated resolutions per agent/month, extra AI resolutions cost $2.00 pay-as-you-go ($1.50 committed).",
+        dimmiReality:
+          "Bring your own OpenAI or Anthropic key to drop Cloud AI fees by 50% to 83%, or self-host for $0.",
+        sourceLabel: "Zendesk pricing",
+        sourceUrl: "https://www.zendesk.com/pricing/",
+      },
+      {
+        trigger: "$50/agent Copilot and WFM add-ons",
+        rivalReality:
+          "Teammate Copilot ($50/agent/mo) and Workforce Engagement ($50/agent/mo) stack on top of Suite seats.",
+        dimmiReality:
+          "Operator teammate copilot lives inside the same conversation meter with zero per-seat surcharge.",
+        sourceLabel: "Zendesk pricing",
+        sourceUrl: "https://www.zendesk.com/pricing/",
+      },
+      {
+        trigger: "Heavy enterprise admin overhead for small teams",
+        rivalReality:
+          "Closed SaaS tuned for 200+ seat call centers with complex views, triggers, and annual contracts.",
+        dimmiReality: "MIT open source in one Go binary, ready in 5 minutes on Cloud or your own Linux server.",
+        sourceLabel: "dimmi GitHub",
+        sourceUrl: "https://github.com/dimmihq/dimmi",
+      },
+    ],
+    teams: [
+      {
+        profile: "4-person SaaS support team (2,000 chats/mo)",
+        seats: 4,
+        conversations: 2000,
+        aiShare: 0.75,
+        pick: "dimmi",
+        reason: "Eliminates $596/mo in Suite Professional seats plus $2.00 resolution overages.",
+        rivalPlanLabel: "Suite Team ($69 x 4) + AR",
+      },
+      {
+        profile: "12-person technical team needing SLAs and engineering logins",
+        seats: 12,
+        conversations: 5000,
+        aiShare: 0.7,
+        pick: "dimmi",
+        reason: "Free seats let every engineer inspect tickets while SLAs and workflows come unlocked.",
+        rivalPlanLabel: "Suite Pro ($149 x 12) + AR",
+      },
+      {
+        profile: "300-seat global enterprise call center needing HIPAA and IVR",
+        seats: 25,
+        conversations: 10000,
+        aiShare: 0.5,
+        pick: "rival",
+        reason: "Zendesk holds SOC 2, ISO 27001, HIPAA, and 1,800+ marketplace integrations dimmi does not have yet.",
+        rivalPlanLabel: "Suite Enterprise",
+      },
+      {
+        profile: "Privacy-first EU team self-hosting in its own VPC",
+        seats: 8,
+        conversations: 3000,
+        aiShare: 0.8,
+        pick: "dimmi",
+        reason: "dimmi runs inside your own Postgres database under MIT for $0 software fees.",
+        rivalPlanLabel: "Suite Pro ($149 x 8) + AR",
+      },
+    ],
   },
   "help-scout": {
     slug: "help-scout",
@@ -399,8 +471,76 @@ export const RIVALS: Record<string, Rival> = {
       "Bring your own AI model keys instead of $0.75 per Envoy resolution.",
       "Open-source MIT codebase with procedures, workflows, and self-hosting.",
     ],
-    switchTriggers: [],
-    teams: [],
+    switchTriggers: [
+      {
+        trigger: "Per-inbox and per-Docs-site surcharges",
+        rivalReality: "Standard includes only 2 inboxes (+$10-$12/mo each) and 2 Docs sites (+$20-$24/mo each).",
+        dimmiReality: "Create separate inboxes for support, billing, security, and brands at $0 extra.",
+        sourceLabel: "Help Scout pricing",
+        sourceUrl: "https://www.helpscout.com/pricing/",
+      },
+      {
+        trigger: "$0.75 per Envoy AI resolution",
+        rivalReality:
+          "After the introductory trial, Envoy bills $0.75 on every resolved AI thread on top of user seats.",
+        dimmiReality: "AI starts at $0.10/conversation on Cloud, or drops to human rates with your own model key.",
+        sourceLabel: "Help Scout pricing",
+        sourceUrl: "https://www.helpscout.com/pricing/",
+      },
+      {
+        trigger: "Round robin, teams, and SAML SSO tier walls",
+        rivalReality: "Round robin needs Plus ($45/user/mo); SAML SSO needs Pro ($75/user/mo with a 10-user minimum).",
+        dimmiReality:
+          "Round robin, teams, SLAs, and SAML SSO ship on every dimmi workspace, including free and MIT self-hosted.",
+        sourceLabel: "Help Scout pricing",
+        sourceUrl: "https://www.helpscout.com/pricing/",
+      },
+      {
+        trigger: "Closed SaaS with no self-hosting",
+        rivalReality: "Help Scout runs exclusively on its hosted cloud with no open-source code.",
+        dimmiReality: "Full MIT Go and React repository you can audit and run on your own Linux box.",
+        sourceLabel: "dimmi GitHub",
+        sourceUrl: "https://github.com/dimmihq/dimmi",
+      },
+    ],
+    teams: [
+      {
+        profile: "Multi-brand SaaS running 6 shared inboxes (5 seats, 2,000 chats)",
+        seats: 5,
+        conversations: 2000,
+        aiShare: 0.7,
+        pick: "dimmi",
+        reason: "Unlimited inboxes and free seats avoid Help Scout Plus ($225/mo) plus $0.75 Envoy resolution fees.",
+        rivalPlanLabel: "Standard + 4 inboxes + AI",
+      },
+      {
+        profile: "30-person company inviting engineers into support",
+        seats: 30,
+        conversations: 3000,
+        aiShare: 0.65,
+        pick: "dimmi",
+        reason: "Crossing 25 users forces Help Scout Plus ($45 x 30 = $1,350/mo) before AI; dimmi seats are $0.",
+        rivalPlanLabel: "Plus ($45 x 30) + AI",
+      },
+      {
+        profile: "Tiny 3-person email shop under 25 contacts/month",
+        seats: 3,
+        conversations: 50,
+        aiShare: 0,
+        pick: "rival",
+        reason: "Help Scout's Free tier and email-first polish fit ultra-low volume email teams that also want SOC 2.",
+        rivalPlanLabel: "Help Scout Free ($0)",
+      },
+      {
+        profile: "Engineering team needing SAML SSO without a 10-seat Pro floor",
+        seats: 6,
+        conversations: 1500,
+        aiShare: 0.75,
+        pick: "dimmi",
+        reason: "Help Scout Pro starts at $750/mo minimum (10 x $75); dimmi includes SAML SSO on every plan.",
+        rivalPlanLabel: "Pro (10-seat min $750)",
+      },
+    ],
   },
   front: {
     slug: "front",
@@ -457,8 +597,80 @@ export const RIVALS: Record<string, Rival> = {
       "Unlimited free seats instead of $25 to $105 per seat.",
       "MIT open source and self-hostable with zero WhatsApp 20% admin markup.",
     ],
-    switchTriggers: [],
-    teams: [],
+    switchTriggers: [
+      {
+        trigger: "One channel type limit on Starter ($25/seat)",
+        rivalReality:
+          "Running email plus live chat or WhatsApp forces an immediate jump to Professional ($65/seat/mo).",
+        dimmiReality: "Web chat, email, Slack, WhatsApp, Instagram, and Messenger are all unlocked from day one.",
+        sourceLabel: "Front pricing",
+        sourceUrl: "https://front.com/pricing",
+      },
+      {
+        trigger: "WhatsApp 20% admin fee and $20/seat Copilot",
+        rivalReality: "Front adds a 20% admin fee on Meta WhatsApp costs and bills Copilot at $20/seat on Starter/Pro.",
+        dimmiReality: "Connect your own Meta account with 0% markup from dimmi, and use Operator without seat fees.",
+        sourceLabel: "Front pricing",
+        sourceUrl: "https://front.com/pricing",
+      },
+      {
+        trigger: "Autopilot at $0.39/conversation on top of seats",
+        rivalReality: "Front Autopilot starts at $0.39 per conversation with no option to bring your own LLM API key.",
+        dimmiReality:
+          "Cloud AI starts at $0.10/conversation, or drops to human rates when you connect your own API key.",
+        sourceLabel: "Front pricing",
+        sourceUrl: "https://front.com/pricing",
+      },
+      {
+        trigger: "Enterprise ($105/seat) wall for custom reports and multilingual docs",
+        rivalReality:
+          "Unlimited rules, multilingual knowledge base, and custom reporting sit on Enterprise ($105/seat).",
+        dimmiReality: "Visual workflows, multilingual help centers, and workspace reports ship on every plan.",
+        sourceLabel: "Front pricing",
+        sourceUrl: "https://front.com/pricing",
+      },
+    ],
+    teams: [
+      {
+        profile: "6-person product team running email + live chat + WhatsApp",
+        seats: 6,
+        conversations: 2000,
+        aiShare: 0.7,
+        pick: "dimmi",
+        reason:
+          "Adding chat beside email forces Front Professional ($390/mo seats + Autopilot); dimmi includes every channel.",
+        rivalPlanLabel: "Front Pro ($65 x 6) + AI",
+      },
+      {
+        profile: "15-person B2B logistics team collaborating across email only",
+        seats: 15,
+        conversations: 3000,
+        aiShare: 0.1,
+        pick: "rival",
+        reason:
+          "Front excels as a shared email client for sales, dispatch, and account managers with mature CRM sync and SOC 2.",
+        rivalPlanLabel: "Front Pro ($65 x 15)",
+      },
+      {
+        profile: "12-person SaaS support team with 5,000 monthly chats",
+        seats: 12,
+        conversations: 5000,
+        aiShare: 0.8,
+        pick: "dimmi",
+        reason:
+          "Exceeding 10 seats forces Front Professional ($780/mo) plus $1,560/mo Autopilot; dimmi stays a fraction of that.",
+        rivalPlanLabel: "Front Pro + Autopilot",
+      },
+      {
+        profile: "Developer-led startup needing open-source API and MCP access",
+        seats: 4,
+        conversations: 1000,
+        aiShare: 0.75,
+        pick: "dimmi",
+        reason: "dimmi ships 12 typed SDKs, an MCP server, and MIT self-hosting with no $200 API rate-limit add-on.",
+        rivalPlanLabel: "Front Starter + Autopilot",
+      },
+    ],
   },
   freshdesk: {
     slug: "freshdesk",
@@ -521,8 +733,81 @@ export const RIVALS: Record<string, Rival> = {
       "Predictable per-conversation AI pricing with BYO model keys instead of expiring 100-session packs.",
       "Full MIT open source you can inspect and self-host.",
     ],
-    switchTriggers: [],
-    teams: [],
+    switchTriggers: [
+      {
+        trigger: "Expiring 100-session Freddy AI packs ($49/pack)",
+        rivalReality:
+          "Freddy AI Agent bills $49 per 100 sessions (with 72-hour email windows) that expire at the end of the billing cycle.",
+        dimmiReality:
+          "Pay only for real conversations after 100 free monthly chats, or plug in your own OpenAI/Anthropic key.",
+        sourceLabel: "Freshdesk pricing",
+        sourceUrl: "https://www.freshworks.com/freshdesk/pricing/",
+      },
+      {
+        trigger: "Pro ($55) and Enterprise ($89) tier locks for SLAs and audit logs",
+        rivalReality:
+          "Multiple SLAs and multilingual docs require Pro ($55/agent); audit logs require Enterprise ($89/agent).",
+        dimmiReality: "Multiple SLA policies, multilingual help centers, and full audit logs ship on every plan.",
+        sourceLabel: "Freshdesk pricing",
+        sourceUrl: "https://www.freshworks.com/freshdesk/pricing/",
+      },
+      {
+        trigger: "Add-on meter for Copilot, MCP actions, and connector tasks",
+        rivalReality:
+          "Freddy Copilot ($29/agent/mo), MCP actions ($15/1,000), and connector tasks ($80/5,000) bill separately.",
+        dimmiReality: "Built-in MCP server costs $0 per call, and Operator needs zero per-seat add-on.",
+        sourceLabel: "Freshdesk pricing",
+        sourceUrl: "https://www.freshworks.com/freshdesk/pricing/",
+      },
+      {
+        trigger: "Proprietary cloud with no self-hosting",
+        rivalReality: "Closed-source SaaS with no way to host support data inside your own database.",
+        dimmiReality: "MIT open-source build that deploys onto one Linux server with your own Postgres.",
+        sourceLabel: "dimmi GitHub",
+        sourceUrl: "https://github.com/dimmihq/dimmi",
+      },
+    ],
+    teams: [
+      {
+        profile: "5-person SaaS team running AI email + chat (2,000 chats/mo)",
+        seats: 5,
+        conversations: 2000,
+        aiShare: 0.75,
+        pick: "dimmi",
+        reason: "Avoids 15+ Freddy session packs ($735+) on top of Pro seats ($275/mo) with BYO model keys.",
+        rivalPlanLabel: "Growth + Freddy packs",
+      },
+      {
+        profile: "2-person manual-only team on Growth ($19 x 2)",
+        seats: 2,
+        conversations: 2000,
+        aiShare: 0,
+        pick: "rival",
+        reason:
+          "If you use zero AI and only need basic ticketing without multiple SLAs, Freshdesk Growth ($38/mo) beats dimmi Cloud ($60/mo) on paper (though self-hosting dimmi is $0).",
+        rivalPlanLabel: "Freshdesk Growth ($19 x 2)",
+      },
+      {
+        profile: "15-person B2B team needing multiple SLAs and audit logs",
+        seats: 15,
+        conversations: 4000,
+        aiShare: 0.7,
+        pick: "dimmi",
+        reason:
+          "Audit logs force Freshdesk Enterprise ($89 x 15 = $1,335/mo) before Freddy AI; dimmi includes them at $0 seats.",
+        rivalPlanLabel: "Enterprise ($89 x 15) + AI",
+      },
+      {
+        profile: "Company standardized on Freshsales CRM and Freshcaller phone",
+        seats: 10,
+        conversations: 2500,
+        aiShare: 0.4,
+        pick: "rival",
+        reason:
+          "Keeping CRM, ITSM, and voice under one Freshworks contract with SOC 2 and ISO 27001 is simpler if you already use the suite.",
+        rivalPlanLabel: "Freshdesk Pro ($55 x 10)",
+      },
+    ],
   },
   chatwoot: {
     slug: "chatwoot",

@@ -68,4 +68,6 @@ export const SHOTS: Record<string, { width: number; height: number; ready: boole
   "vs-reports": { width: 1680, height: 1000, ready: true },
   "vs-sso": { width: 1680, height: 1000, ready: true },
   "vs-members": { width: 1680, height: 1000, ready: true },
+  "vs-sla": { width: 1680, height: 1000, ready: true },
+  "vs-inboxes": { width: 1680, height: 1000, ready: true },
 };

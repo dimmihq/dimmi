@@ -534,8 +534,9 @@ export function VsChatwootPage() {
         <div className="flex flex-wrap gap-6 pt-3">
           <MonoLink href="/vs">See all comparisons</MonoLink>
           <MonoLink href="/vs/intercom">Compare dimmi vs Intercom</MonoLink>
+          <MonoLink href="/vs/zendesk">Compare dimmi vs Zendesk</MonoLink>
+          <MonoLink href="/vs/help-scout">Compare dimmi vs Help Scout</MonoLink>
           <MonoLink href="/pricing">Explore dimmi pricing</MonoLink>
-          <MonoLink href="/docs/self-hosting">Read self-hosting docs</MonoLink>
         </div>
       </ProofBand>
 
