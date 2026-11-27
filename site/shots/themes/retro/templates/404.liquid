@@ -1,0 +1,11 @@
+{%- comment -%}The page that is not there, as a browser error.{%- endcomment -%}
+<section class="window dialog">
+{% render 'window', title: 'Error' %}
+<div class="body">
+<p class="error"><span class="glyph stop" aria-hidden="true"></span><b>{{ 'not_found_title' | t }}</b></p>
+<p>{{ 'not_found_body' | t }}</p>
+<p class="mono">HTTP 404 - File not found</p>
+{% render 'search_bar', query: "" %}
+<div class="row"><a class="btn" href="{{ help_center.home_url }}">OK</a></div>
+</div>
+</section>

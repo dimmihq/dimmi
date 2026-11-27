@@ -19,6 +19,7 @@ import {
   WriterFragment,
 } from "../fragments/help-center-fragments";
 import { FinalCta } from "../sections/final-cta";
+import { ThemeShowcase } from "../sections/theme-showcase";
 
 const steps = [
   {
@@ -55,7 +56,11 @@ const how = [
 
 const more = [
   { icon: Globe, title: "Your own domain", body: "Host at help.yourcompany.com with automatic HTTPS." },
-  { icon: PaintBrush, title: "Your brand", body: "Match your logo, colors, and greeting in light and dark mode." },
+  {
+    icon: PaintBrush,
+    title: "Your brand, or a whole new look",
+    body: "Set your logo, colors, and greeting, or redesign every page to match your own site.",
+  },
   {
     icon: LockKey,
     title: "Private articles",
@@ -115,6 +120,11 @@ const questions = [
       "Add your languages and dimmi drafts translations beside the original for a teammate to review. Whenever you edit the main article, translations get flagged as stale.",
   },
   {
+    question: "Can we change more than the colors?",
+    answer:
+      "All of it. Every page, from articles to feature requests, can get a completely new design. You see it with your real articles before customers do.",
+  },
+  {
     question: "Can I host our developer API docs here?",
     answer:
       "Use a dedicated docs tool for that. dimmi is built for customer help centers, not OpenAPI reference generators or versioned developer docs.",
@@ -146,6 +156,7 @@ export function HelpCenterPage() {
         steps={how}
         visual={(step) => <AskFlowFragment step={step} />}
       />
+      <ThemeShowcase />
       <FeatureGrid
         title="Everything you need to run docs customers read."
         body="Match your brand, import old articles, and see which questions still need answers."

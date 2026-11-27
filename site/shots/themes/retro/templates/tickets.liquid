@@ -1,0 +1,21 @@
+{%- comment -%}The reader's requests as an inbox window.{%- endcomment -%}
+<section class="window wide">
+{% render 'window', title: 'Inbox - Your requests' %}
+<div class="menubar">{% if tickets.types.size > 0 %}<a class="btn small" href="{{ tickets.new_url }}">✉ New request</a>{% endif %}
+{%- if tickets.company %}{% for tab in tickets.tabs %} <a class="btn small{% if tab.current %} pressed{% endif %}" href="{{ tab.url }}">{{ tab.name }}</a>{% endfor %}{% endif %}</div>
+<div class="body">
+{%- if tickets.items.size == 0 %}
+<p class="center">📭 No requests yet. When you ask us for something, it shows here with where it stands.</p>
+{%- else %}
+<table class="grid-table">
+<thead><tr><th>Ref</th><th>Subject</th><th>Type</th><th>Status</th><th>Updated</th></tr></thead>
+<tbody>
+{%- for r in tickets.items %}
+<tr><td class="mono">{{ r.ref }}</td><td><a href="{{ r.url }}">{{ r.title }}</a>{% unless r.mine %} <i>(company)</i>{% endunless %}</td><td>{{ r.type }}</td><td><span class="sticker {{ r.group }}">{{ r.label }}</span></td><td>{{ r.updated }}</td></tr>
+{%- endfor %}
+</tbody>
+</table>
+{%- endif %}
+</div>
+<div class="statusbar"><span>{{ tickets.items.size }} message(s)</span><span>Online</span></div>
+</section>

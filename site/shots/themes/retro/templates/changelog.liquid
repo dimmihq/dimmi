@@ -1,0 +1,34 @@
+{%- comment -%}The changelog as a newsletter window: signup, label filters and the entries.{%- endcomment -%}
+<section class="window wide">
+{%- assign wtitle = changelog.title | append: " - What's New!" %}
+{% render 'window', title: wtitle %}
+<div class="body">
+<h1 class="rainbow">{{ changelog.title }}</h1>
+<p class="center">{{ 'changelog_tagline' | t: product: help_center.product }} <span class="new">HOT!</span></p>
+{%- unless changelog.no_subscribe %}{% render 'subscribe_box', subscribed: changelog.subscribed %}{% endunless %}
+<p class="center"><a href="{{ changelog.feed_url }}">📡 {{ 'subscribe_rss' | t }}</a></p>
+{%- if changelog.labels.size > 0 %}
+<nav class="chips" aria-label="{{ 'labels' | t }}">
+{%- for chip in changelog.chips %}<a class="btn small{% if chip.current %} pressed{% endif %}" href="{{ chip.url }}"{% if chip.current %} aria-current="page"{% endif %}>{{ chip.name }}{% if chip.count > 0 %} ({{ chip.count }}){% endif %}</a>{% endfor %}
+</nav>
+{%- endif %}
+</div>
+</section>
+{%- for e in changelog.entries %}
+<article class="window wide">
+{%- assign etitle = e.published | format_date: 'short' | append: ' - ' | append: e.title %}
+{% render 'window', title: etitle %}
+<div class="body">
+<p class="stickers">{% render 'tags', labels: e.labels, version: e.version %}</p>
+<h2 class="entry-title"><a href="{{ e.url }}">{{ e.title }}</a></h2>
+{%- if e.cover != "" %}<a href="{{ e.url }}" class="frame"><img src="{{ e.cover }}" alt="" loading="lazy"></a>{% endif %}
+{%- if e.full %}<div class="prose">{{ e.body }}</div>{% else %}<p>{{ e.summary }}</p><p><a href="{{ e.url }}">{{ 'read_more' | t }} &raquo;</a></p>{% endif %}
+<div class="entry-foot">{% render 'reaction_row', entry: e %}{% if e.authors.size > 0 %}<i>— {{ e.author_names }}</i>{% endif %}</div>
+</div>
+</article>
+{%- else %}
+<section class="window wide">{% render 'window', title: 'Empty' %}<div class="body"><p class="construction"><span>NOTHING HERE YET</span></p></div></section>
+{%- endfor %}
+{%- if changelog.newer_url != "" or changelog.older_url != "" %}
+<div class="pager">{% if changelog.newer_url != "" %}<a class="btn" href="{{ changelog.newer_url }}">&lt; {{ 'newer_updates' | t }}</a>{% endif %}{% if changelog.older_url != "" %}<a class="btn" href="{{ changelog.older_url }}">{{ 'older_updates' | t }} &gt;</a>{% endif %}</div>
+{%- endif %}

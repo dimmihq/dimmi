@@ -1,0 +1,28 @@
+{%- comment -%}Posting a feature request; similar ones show first to vote for instead.{%- endcomment -%}
+<section class="window dialog wider">
+{% render 'window', title: 'New Idea Wizard' %}
+<div class="body">
+<p class="path">C:\<a href="{{ help_center.feedback_url }}">FEEDBACK</a>\NEW.TXT</p>
+<div class="wizard">
+<div class="wizard-art" aria-hidden="true">💡</div>
+<div>
+<h1>{{ 'submit_an_idea' | t }}</h1>
+<p>{{ 'idea_tagline' | t }}</p>
+{%- if form.error != "" %}<p class="error"><span class="glyph stop" aria-hidden="true"></span>{{ form.error }}</p>{% endif %}
+{%- if form.similar.size > 0 %}
+<fieldset><legend>{{ 'similar_ideas' | t }}</legend><ul class="ideas">{% for idea in form.similar %}{% render 'idea_line', idea: idea %}{% endfor %}</ul></fieldset>
+{%- endif %}
+<form method="post" action="{{ help_center.feedback_url }}" class="stack">
+{{ form_token_field }}
+{%- if form.similar.size > 0 %}<input type="hidden" name="sure" value="1">{% endif %}
+{%- if form.boards.size > 1 %}
+<label>{{ 'board' | t }}:<select name="board">{% for b in form.boards %}<option value="{{ b.slug }}"{% if b.slug == form.board %} selected{% endif %}>{{ b.name }}</option>{% endfor %}</select></label>
+{%- elsif form.board != "" %}<input type="hidden" name="board" value="{{ form.board }}">{% endif %}
+<label>{{ 'idea_title' | t }}:<input type="text" name="title" value="{{ form.title }}" required maxlength="150" placeholder="{{ 'idea_title_placeholder' | t }}"></label>
+<label>{{ 'idea_details' | t }}:<textarea name="details" rows="6" placeholder="{{ 'idea_details_placeholder' | t }}">{{ form.details }}</textarea></label>
+<div class="row"><a class="btn" href="{{ help_center.feedback_url }}">{{ 'cancel' | t }}</a><button type="submit" class="btn default">{% if form.similar.size > 0 %}{{ 'post_anyway' | t }}{% else %}{{ 'submit_idea' | t }}{% endif %} &gt;</button></div>
+</form>
+</div>
+</div>
+</div>
+</section>

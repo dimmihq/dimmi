@@ -1,0 +1,5 @@
+{%- comment -%}A chunky vote button; posting again takes the vote back.{%- endcomment -%}
+<form method="post" action="{{ idea.vote_url }}" class="vote">
+{{ form_token_field }}
+<button type="submit" class="btn vote-btn{% if idea.voted %} pressed{% endif %}" aria-pressed="{{ idea.voted }}" aria-label="{{ 'vote_for' | t: title: idea.title, count: idea.votes }}"><span aria-hidden="true">▲</span><b>{{ idea.votes }}</b></button>
+</form>

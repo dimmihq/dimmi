@@ -1,0 +1,6 @@
+{%- comment -%}A comment as a message-board post, replies nested under it.{%- endcomment -%}
+<li class="post">
+<p class="post-head"><b>{{ comment.author }}</b>{% if comment.from_team %} <span class="sticker team">{{ 'team' | t }}</span>{% endif %} <i>{{ comment.at }}</i></p>
+{%- if comment.html != "" %}<div class="prose">{{ comment.html }}</div>{% else %}<p class="pre">{{ comment.body }}</p>{% endif %}
+{%- if comment.replies.size > 0 %}<ol class="posts">{% for reply in comment.replies %}{% render 'post', comment: reply %}{% endfor %}</ol>{% endif %}
+</li>

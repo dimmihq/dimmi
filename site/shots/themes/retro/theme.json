@@ -1,0 +1,12 @@
+{
+  "api_version": 1,
+  "name": "Retro 95",
+  "version": "1.0.0",
+  "author": "dimmi theme demo",
+  "settings": [
+    { "id": "desktop", "type": "color", "label": "Desktop color", "default": "#008080" },
+    { "id": "title_bar", "type": "color", "label": "Title bar color", "default": "#000080" },
+    { "id": "marquee", "type": "text", "label": "Scrolling banner", "default": "*** Welcome, surfer! Best viewed in Netscape Navigator 3.0 at 800x600 ***" },
+    { "id": "show_counter", "type": "checkbox", "label": "Show the hit counter", "default": true }
+  ]
+}

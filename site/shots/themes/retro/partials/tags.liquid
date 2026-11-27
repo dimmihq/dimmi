@@ -1,0 +1,3 @@
+{%- comment -%}A changelog entry's labels and version, as stickers.{%- endcomment -%}
+{%- if version != "" %}<span class="sticker version">v{{ version | remove_first: 'v' }}</span>{% endif %}
+{%- for l in labels %}<a class="sticker" href="{{ l.url }}" style="background: {{ l.color }}">{{ l.name }}</a>{% endfor %}

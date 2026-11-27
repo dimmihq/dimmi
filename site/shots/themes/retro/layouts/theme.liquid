@@ -1,0 +1,54 @@
+{%- comment -%}
+  A 1995 desktop: a teal background, beveled grey windows with navy
+  title bars, a taskbar with a start button along the bottom. Pages
+  that need dimmi's own script keep its stylesheet too.
+{%- endcomment -%}
+{%- comment -%}Every page is drawn by this theme except the one that signs a reader in from the messenger, which needs dimmi's script.{%- endcomment -%}
+{%- assign borrowed = "sign_in_return" | split: "," -%}
+<!DOCTYPE html>
+<html lang="{{ locale.code }}" dir="{{ locale.dir }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ page.title }}</title>
+{%- if help_center.tab_icon != "" %}
+<link rel="icon" href="{{ help_center.tab_icon }}">
+{%- endif %}
+{{ seo_tags }}
+{%- if borrowed contains page.template %}
+{{ platform_assets }}
+{%- endif %}
+{{ 'retro.css' | asset_url | stylesheet_tag }}
+<style>:root{--desktop:{{ settings.desktop }};--title:{{ settings.title_bar }}}</style>
+{{ messenger_snippet }}
+</head>
+<body class="retro">
+<div class="desktop">
+<aside class="icons" aria-label="Shortcuts">
+<a class="icon" href="{{ help_center.home_url }}"><span class="glyph computer" aria-hidden="true"></span>My Help</a>
+{%- for s in help_center.sections %}
+{%- unless forloop.first %}
+<a class="icon" href="{{ s.url }}"><span class="glyph folder" aria-hidden="true"></span>{{ s.name }}</a>
+{%- endunless %}
+{%- endfor %}
+<a class="icon" href="{{ help_center.search_url }}"><span class="glyph find" aria-hidden="true"></span>{{ 'search' | t }}</a>
+</aside>
+<main id="main" class="stage">
+{{ content_for_layout }}
+</main>
+</div>
+<footer class="taskbar">
+<a class="start" href="{{ help_center.home_url }}"><span class="flag" aria-hidden="true"></span>Start</a>
+<span class="task">{{ page.title | truncate: 40 }}</span>
+{%- if help_center.footer_text != "" %}
+<span class="task tray-text">{{ help_center.footer_text | truncate: 40 }}</span>
+{%- endif %}
+{%- if help_center.signed_in %}
+<form method="post" action="{{ help_center.sign_out_url }}" class="tray-form">{{ form_token_field }}<button class="btn small" type="submit">🔒 {{ 'sign_out' | t }}</button></form>
+{%- elsif help_center.sign_in_url != "" %}
+<a class="btn small tray-form" href="{{ help_center.sign_in_url }}">🔑 {{ 'sign_in' | t }}</a>
+{%- endif %}
+<span class="tray">{{ 'now' | date: '%I:%M %p' }}</span>
+</footer>
+</body>
+</html>

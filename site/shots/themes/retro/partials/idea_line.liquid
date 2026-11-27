@@ -1,0 +1,7 @@
+{%- comment -%}A feature request as a line in a list.{%- endcomment -%}
+<li class="idea">
+{% render 'vote', idea: idea %}
+<div class="idea-text">{% if idea.url != "" %}<a href="{{ idea.url }}">{{ idea.title }}</a>{% else %}<b>{{ idea.title }}</b>{% endif %}
+{%- if idea.details != "" %}<small>{{ idea.details | truncate: 90 }}</small>{% endif %}
+{%- if idea.comments > 0 %}<span class="badge">💬 {{ idea.comments }}</span>{% endif %}</div>
+</li>

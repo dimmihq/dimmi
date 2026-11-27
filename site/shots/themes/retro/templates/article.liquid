@@ -1,0 +1,44 @@
+{%- comment -%}An article in a Notepad window, with Back and Next buttons and the helpful question.{%- endcomment -%}
+<section class="window wide">
+{%- assign wtitle = article.title | append: '.txt - Notepad' %}
+{% render 'window', title: wtitle %}
+<div class="menubar" aria-hidden="true"><u>F</u>ile <u>E</u>dit <u>S</u>earch <u>H</u>elp</div>
+<div class="body">
+{% render 'crumbs', crumbs: breadcrumb %}
+<div class="paper">
+<h1>{{ article.title }}</h1>
+{%- if article.description != "" %}<p class="lede">{{ article.description }}</p>{% endif %}
+<p class="meta">{% if article.author.name != "" %}{{ 'written_by' | t: name: article.author.name }} · {% endif %}{{ article.updated | format_date }} · {{ 'reading_time' | t: count: article.minutes }}</p>
+<hr>
+<div class="prose">{{ article.body }}</div>
+</div>
+<div class="nav-buttons">
+{%- if article.previous %}<a class="btn" href="{{ article.previous.url }}">&lt; Back</a>{% else %}<span class="btn disabled">&lt; Back</span>{% endif %}
+{%- if article.next %}<a class="btn" href="{{ article.next.url }}">Next &gt;</a>{% else %}<span class="btn disabled">Next &gt;</span>{% endif %}
+</div>
+</div>
+</section>
+
+{%- assign f = article.feedback %}
+<section class="window dialog" id="feedback">
+{% render 'window', title: 'Feedback' %}
+<div class="body">
+{%- if f.answer == "" %}
+<form method="post" action="{{ f.url }}" class="ask">
+{{ form_token_field }}
+<span class="glyph question" aria-hidden="true"></span>
+<p>{{ 'helpful_question' | t }}</p>
+<div class="row"><button class="btn" name="helpful" value="yes">{{ 'yes' | t }}</button><button class="btn" name="helpful" value="no">{{ 'no' | t }}</button></div>
+</form>
+{%- elsif f.answer == "no" and f.commented == false %}
+<form method="post" action="{{ f.comment_url }}">
+{{ form_token_field }}
+<label for="comment">{{ 'missing_question' | t }}</label>
+<textarea id="comment" name="comment" rows="3" required maxlength="2000"></textarea>
+<div class="row"><button class="btn">{{ 'send_feedback' | t }}</button></div>
+</form>
+{%- else %}
+<p>{% if f.answer == "yes" %}{{ 'thanks_yes' | t }}{% else %}{{ 'thanks_note' | t }}{% endif %}</p>
+{%- endif %}
+</div>
+</section>
