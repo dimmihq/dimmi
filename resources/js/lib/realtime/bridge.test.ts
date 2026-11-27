@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 
 import { Bridge, type Envelope } from "./bridge";
 import { realtimeKeys } from "./keys";
@@ -197,6 +197,56 @@ describe("Bridge", () => {
     );
     expect(bridge.apply(ws, "conversation:conv_1", echo)).toBe(false);
     expect(client.getQueryData(key)).toEqual({ id: "conv_1", object: "conversation", status: "closed" });
+  });
+
+  it("applies an event on each channel it reaches, whichever comes first", () => {
+    const { client, bridge } = setup();
+    const timeline = realtimeKeys.messages(ws, "conv_1");
+    const list = [...realtimeKeys.conversations(ws), { view: "all" }];
+    client.setQueryData(timeline, [{ id: "msg_1", object: "message", body: "Hi" }]);
+    client.setQueryData(list, { data: [{ id: "conv_1", object: "conversation", preview: "Hi" }] });
+    const id = "evt_reply";
+    const row = { id: "conv_1", object: "conversation", preview: "Try a code" };
+    const message = { id: "msg_2", object: "message", conversation_id: "conv_1", body: "Try a code" };
+
+    expect(bridge.apply(ws, `workspace_conversations:${ws}`, envelope("message.created", row, { id }))).toBe(true);
+    expect(bridge.apply(ws, "conversation:conv_1", envelope("message.created", message, { id }))).toBe(true);
+    expect(bridge.apply(ws, "conversation:conv_1", envelope("message.created", message, { id }))).toBe(false);
+
+    expect(client.getQueryData(timeline)).toEqual([{ id: "msg_1", object: "message", body: "Hi" }, message]);
+    expect(client.getQueryData(list)).toEqual({ data: [row] });
+  });
+
+  it("fetches a timeline again when a message lands while it is being fetched", async () => {
+    vi.useFakeTimers();
+    try {
+      const { client, bridge } = setup();
+      const key = realtimeKeys.messages(ws, "conv_1");
+      const old = [{ id: "msg_1", object: "message", body: "Hi" }];
+      const message = { id: "msg_2", object: "message", conversation_id: "conv_1", body: "Try a code" };
+      // The first read starts before the message is saved and answers after it lands.
+      let answer: (rows: unknown[]) => void = () => undefined;
+      const reads = [
+        new Promise<unknown[]>((resolve) => {
+          answer = resolve;
+        }),
+        Promise.resolve([...old, message]),
+      ];
+      client.setQueryData(key, old);
+      const observer = new QueryObserver(client, { queryKey: key, queryFn: () => reads.shift(), staleTime: 1000 });
+      const unsubscribe = observer.subscribe(() => undefined);
+      void client.refetchQueries({ queryKey: key });
+      expect(client.getQueryState(key)?.fetchStatus).toBe("fetching");
+
+      bridge.apply(ws, "conversation:conv_1", envelope("message.created", message));
+      answer(old);
+      await vi.runAllTimersAsync();
+
+      expect(client.getQueryData(key)).toEqual([...old, message]);
+      unsubscribe();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("refetches the workspace, its members and the member's counts", () => {
