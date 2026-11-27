@@ -1,0 +1,13 @@
+{%- comment -%}The articles before and after this one in its collection.{%- endcomment -%}
+{%- if article.previous or article.next -%}
+<nav aria-label="{{ 'more_in_collection' | t }}" class="mt-6 grid gap-3 sm:grid-cols-2">
+{%- if article.previous %}
+<a href="{{ article.previous.url }}" class="group flex flex-col rounded-2xl border border-border-button-default p-4 outline-none transition hover:border-border-button-hover hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring "><span class="flex items-center gap-1 text-caption-1-medium text-text-tertiary">{{ 'arrow-left' | icon: 'size-3.5 rtl:-scale-x-100' }}{{ 'previous' | t }}</span><span class="mt-1 text-body-medium text-text-primary">{{ article.previous.title }}</span></a>
+{%- else %}
+<span></span>
+{%- endif %}
+{%- if article.next %}
+<a href="{{ article.next.url }}" class="group flex flex-col rounded-2xl border border-border-button-default p-4 outline-none transition hover:border-border-button-hover hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring sm:items-end sm:text-end"><span class="flex items-center gap-1 text-caption-1-medium text-text-tertiary">{{ 'next' | t }}{{ 'arrow-right' | icon: 'size-3.5 rtl:-scale-x-100' }}</span><span class="mt-1 text-body-medium text-text-primary">{{ article.next.title }}</span></a>
+{%- endif %}
+</nav>
+{%- endif -%}

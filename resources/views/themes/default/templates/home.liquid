@@ -1,0 +1,27 @@
+{%- comment -%}
+  The front page, one calm column: the logo and name, a greeting, one
+  box to ask anything, then the collections in their groups, each
+  opening in place. The latest changes close it.
+{%- endcomment -%}
+{%- capture sidebar %}{% render 'help_sidebar', current: "", article: "" %}{% endcapture -%}
+<div class="mx-auto w-full max-w-[42rem] px-5 pt-14 md:pt-20">
+<header class="stagger">
+<div class="flex items-center gap-3 [&_img]:h-9 [&_span]:text-title-2-semibold">{% render 'logo' %}</div>
+<h1 class="mt-5 text-title-1-medium tracking-tight text-balance">
+<span data-greeting data-morning="{{ 'good_morning' | t }}" data-afternoon="{{ 'good_afternoon' | t }}" data-evening="{{ 'good_evening' | t }}">{{ 'hi_there' | t }}</span>
+<span class="text-text-tertiary">{{ help_center.home_title }}</span>
+</h1>
+{%- if help_center.tagline != "" %}
+<p class="mt-1 text-body-regular text-text-secondary">{{ help_center.tagline }}</p>
+{%- endif %}
+<div class="mt-6">{% render 'ask_box', query: "", suggestions: popular %}</div>
+</header>
+<div class="stagger mt-10 flex flex-col gap-8">
+{%- for col in collections %}
+{% render 'collection_group', collection: col, current: "", article: "" %}
+{%- endfor %}
+</div>
+{%- if updates.size > 0 %}
+<div class="mt-14">{% render 'latest_updates' %}</div>
+{%- endif %}
+</div>

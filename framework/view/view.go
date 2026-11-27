@@ -16,6 +16,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,6 +30,14 @@ Component is a renderable piece of HTML, as generated from a template
 file or written by hand with templ.ComponentFunc.
 */
 type Component = templ.Component
+
+/*
+Func is a component written as a function, such as a page rendered by
+another template engine.
+*/
+func Func(render func(ctx context.Context, w io.Writer) error) Component {
+	return templ.ComponentFunc(render)
+}
 
 /*
 HTML renders the component to a string.

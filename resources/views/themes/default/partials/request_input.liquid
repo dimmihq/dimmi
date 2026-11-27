@@ -1,0 +1,23 @@
+{%- comment -%}One field of a request form, shown only once `field.show_field` has a value when it names one.{%- endcomment -%}
+{%- assign input_class = 'h-10 rounded-xl border border-border-button-default bg-background-primary-default px-3 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint' -%}
+{%- assign name = 'field.' | append: field.key -%}
+<div class="flex flex-col gap-1.5" data-field="{{ field.key }}" data-show-field="{{ field.show_field }}" data-show-equals="{{ field.show_equals }}"{% if field.show_field != "" %} hidden{% endif %}>
+<span class="text-body-medium">{{ field.label }}{% unless field.required %} <span class="text-text-tertiary">(optional)</span>{% endunless %}</span>
+{%- if field.description != "" %}<span class="text-body-2-regular text-text-tertiary">{{ field.description }}</span>{% endif %}
+{%- case field.data_type %}
+{%- when 'long_text' %}
+<textarea name="{{ name }}" rows="4"{% if field.required %} required{% endif %} aria-label="{{ field.label }}" class="{{ input_class }} h-auto py-2.5">{{ field.value }}</textarea>
+{%- when 'single_choice' %}
+<select name="{{ name }}"{% if field.required %} required{% endif %} aria-label="{{ field.label }}" class="{{ input_class }}"><option value="">Choose…</option>{% for o in field.options %}<option value="{{ o }}"{% if o == field.value %} selected{% endif %}>{{ o }}</option>{% endfor %}</select>
+{%- when 'multiple_choice' %}
+<span class="flex flex-wrap gap-2">{% for o in field.options %}<label class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-lg border border-border-button-default px-3 text-body-2-regular has-[:checked]:border-link has-[:checked]:bg-tint"><input type="checkbox" name="{{ name }}" value="{{ o }}" class="accent-[var(--brand)]">{{ o }}</label>{% endfor %}</span>
+{%- when 'boolean' %}
+<label class="inline-flex items-center gap-2 text-body-regular"><input type="checkbox" name="{{ name }}" value="true"{% if field.value == "true" %} checked{% endif %}>Yes</label>
+{%- when 'number', 'decimal', 'currency' %}
+<input type="number" step="any" name="{{ name }}" value="{{ field.value }}"{% if field.required %} required{% endif %} aria-label="{{ field.label }}" class="{{ input_class }}">
+{%- when 'date' %}
+<input type="date" name="{{ name }}" value="{{ field.value }}"{% if field.required %} required{% endif %} aria-label="{{ field.label }}" class="{{ input_class }}">
+{%- else %}
+<input type="text" name="{{ name }}" value="{{ field.value }}"{% if field.required %} required{% endif %} aria-label="{{ field.label }}" class="{{ input_class }}">
+{%- endcase %}
+</div>

@@ -154,7 +154,7 @@ func helpCenter(pages *routing.Router, a *app.App) {
 		Vite:   vite.New(vite.Options{Build: a.Frontend, Base: "/build", HotFile: a.Config.Frontend.HotPath}),
 		AppURL: a.Application.Config.App.URL, Ratings: a.Actions.HelpRatings, Passes: a.Actions.IdentityPasses,
 		Analytics: a.Actions.HelpAnalytics, Addresses: a.Actions.HelpCenterAddresses, Lang: a.Lang,
-		Clock: a.Clock,
+		Clock: a.Clock, Themes: a.Actions.HelpThemes, IDs: a.IDs, FormKey: a.DerivedKey("help.forms"),
 	}
 	cl := web.ChangelogController{HelpCenterController: hc}
 	images := &web.HelpImageController{Disks: a.Storage, Dir: helpcenters.ImageDir}
@@ -162,7 +162,7 @@ func helpCenter(pages *routing.Router, a *app.App) {
 		pages.Handle(fhttp.MethodGet, "/hc/{center}"+path, name, h)
 	}
 	post := func(path, name string, h fhttp.HandlerFunc) {
-		pages.Handle(fhttp.MethodPost, "/hc/{center}"+path, name, h)
+		pages.Handle(fhttp.MethodPost, "/hc/{center}"+path, name, hc.GuardForm(h))
 	}
 
 	get("", "hc.home", hc.Home)
@@ -182,11 +182,20 @@ func helpCenter(pages *routing.Router, a *app.App) {
 	get("/help-images/{file}", "hc.help-images.show", images.Show)
 	portalPages(get, post, web.PortalController{HelpCenterController: hc, Requests: a.Actions.Tickets})
 	get("/assets/{file}", "hc.assets", hc.Asset)
+	get("/theme-assets/*", "hc.theme-assets", hc.ThemeAsset)
+	siteFiles(get, hc)
+	get("/*", "hc.missing", hc.NotFound)
+}
+
+/*
+siteFiles declares the files a help center keeps for crawlers and
+agents: its sitemap, robots rules and llms.txt.
+*/
+func siteFiles(get func(path, name string, h fhttp.HandlerFunc), hc *web.HelpCenterController) {
 	get("/sitemap.xml", "hc.sitemap", hc.Sitemap)
 	get("/robots.txt", "hc.robots", hc.Robots)
 	get("/llms.txt", "hc.llms", hc.LLMs)
 	get("/llms-full.txt", "hc.llms-full", hc.LLMsFull)
-	get("/*", "hc.missing", hc.NotFound)
 }
 
 /*

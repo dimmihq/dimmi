@@ -1,0 +1,9 @@
+{%- comment -%}
+  Opens the help center's messenger, and draws nothing when it shows
+  none. It reads Ask AI where the AI agent answers first, Contact us
+  where the team does. Takes `class`, an optional `lead` said before the
+  label and an optional `icon_class` that draws the icon.
+{%- endcomment -%}
+{%- if help_center.messenger -%}
+<button type="button" data-dimmi="open" title="{{ help_center.help_label }}" class="cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring {{ class }}">{% if icon_class %}{{ help_center.help_icon | icon: icon_class }}{% endif %}<span>{{ lead }}{{ help_center.help_label }}</span></button>
+{%- endif -%}

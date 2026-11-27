@@ -106,5 +106,7 @@ func excluded() map[string]string {
 		"channels.instagram.signups.store":       "Finishes Meta's sign-in in a browser; only the browser calls it.",
 		"migrations.records.store": "Records carry customer data, which never passes through an AI model; " +
 			"the dimmi CLI sends them.",
+		"help-centers.themes.store":        "Takes a theme's folder as a zip file; the dimmi CLI uploads it.",
+		"help-centers.themes.archive.show": "Answers with a zip file; the dimmi CLI downloads it.",
 	}
 }

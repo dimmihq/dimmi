@@ -1,0 +1,12 @@
+{%- comment -%}
+  The reader's way in: a sign-in button, or their initials linking to
+  their conversations once signed in. A reader signed in through the
+  team's product gets a sign-out button instead.
+{%- endcomment -%}
+{%- if reader -%}
+<a href="{{ reader.conversations_url }}" title="{{ reader.name }}" class="flex items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring">{% render 'avatar', person: reader, size: 'size-8 text-caption-1-semibold' %}</a>
+{%- elsif help_center.signed_in -%}
+<form method="post" action="{{ help_center.sign_out_url }}">{{ form_token_field }}<button type="submit" class="inline-flex h-8 cursor-pointer items-center rounded-full border border-border-button-default px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'sign_out' | t }}</button></form>
+{%- elsif help_center.sign_in_url != "" -%}
+<a href="{{ help_center.sign_in_url }}" class="button-brand inline-flex h-8 items-center whitespace-nowrap rounded-full px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'sign_in' | t }}</a>
+{%- endif -%}

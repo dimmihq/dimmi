@@ -26,6 +26,7 @@ func otherTexts() map[string]map[string]string {
 		otherTextsFromUpdateInboxPreferences(),
 		otherTextsFromUpdateNotificationSettings(),
 		otherTextsFromUpdateWidgetSettings(),
+		helpCenterThemeTexts(),
 	} {
 		mergeTexts(out, part)
 	}

@@ -32,6 +32,8 @@ import (
 	"io/fs"
 	"maps"
 	"slices"
+	"sort"
+	"strings"
 
 	"golang.org/x/text/language"
 )
@@ -181,6 +183,26 @@ func (t *Translator) Match(locale string) (string, bool) {
 	}
 
 	return t.locales[index], true
+}
+
+/*
+Keys returns the keys of the source locale's messages that start with
+the prefix, sorted, such as every word of one group.
+*/
+func (t *Translator) Keys(prefix string) []string {
+	var keys []string
+	for _, tag := range t.loaded {
+		if tag.String() != Source {
+			continue
+		}
+		for key := range t.messages[tag] {
+			if strings.HasPrefix(key, prefix) {
+				keys = append(keys, key)
+			}
+		}
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 /*

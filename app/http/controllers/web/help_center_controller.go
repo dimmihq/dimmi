@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/clock"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/i18n"
+	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/view"
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
@@ -58,7 +59,9 @@ Ratings keeps readers' answers about articles, and Passes signs readers
 in to the messenger on the help center's pages. Analytics counts views
 and searches, and Addresses names the help center's canonical address.
 Lang holds the words of the pages in every language.
-Clock says how long ago an article changed.
+Clock says how long ago an article changed. Themes holds the themes
+teams publish, IDs reads their public ids, and FormKey signs the
+anti-forgery tokens of the pages' forms.
 */
 type HelpCenterController struct {
 	Library     *helpsample.Library
@@ -77,6 +80,9 @@ type HelpCenterController struct {
 	Addresses   helpcenters.Addresses
 	Lang        *i18n.Translator
 	Clock       clock.Clock
+	Themes      *helpcenters.Themes
+	IDs         *ids.Registry
+	FormKey     []byte
 }
 
 /*
@@ -114,7 +120,7 @@ func (c *HelpCenterController) Home(w fhttp.ResponseWriter, r *fhttp.Request) {
 	}
 
 	c.respond(w, r, fhttp.StatusOK, helpcenter.Home(
-		center, lib.Collections(), lib.Popular(), lib.Updates(3), c.styles(),
+		center, lib.Collections(), lib.Popular(), lib.Updates(3),
 	))
 }
 
@@ -137,7 +143,7 @@ func (c *HelpCenterController) Collection(w fhttp.ResponseWriter, r *fhttp.Reque
 		localize(&center, s.snap, s.at, indexed(s.collectionIn(r.PathValue("slug"))))
 	}
 
-	c.respond(w, r, fhttp.StatusOK, helpcenter.CollectionPage(center, lib.Collections(), col, trail, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.CollectionPage(center, lib.Collections(), col, trail))
 }
 
 /*
@@ -182,7 +188,7 @@ func (c *HelpCenterController) Article(w fhttp.ResponseWriter, r *fhttp.Request)
 	if c.Clock != nil {
 		article.Age = center.Ago(article.Updated, c.Clock.Now())
 	}
-	page := helpcenter.ArticlePage(center, lib.Collections(), article, helpful, c.styles())
+	page := helpcenter.ArticlePage(center, lib.Collections(), article, helpful)
 	c.respond(w, r, fhttp.StatusOK, page)
 }
 
@@ -198,7 +204,7 @@ func (c *HelpCenterController) Search(w fhttp.ResponseWriter, r *fhttp.Request) 
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	results := lib.Search(query)
 	c.countSearch(r, lib, query, len(results))
-	page := helpcenter.SearchPage(center, lib.Collections(), query, results, c.styles())
+	page := helpcenter.SearchPage(center, lib.Collections(), query, results)
 	c.respond(w, r, fhttp.StatusOK, page)
 }
 
@@ -246,7 +252,7 @@ func (c *HelpCenterController) missing(w fhttp.ResponseWriter, r *fhttp.Request,
 	if s, ok := lib.(*site); ok {
 		localize(&center, s.snap, s.at, unindexed(func(string) (string, bool) { return "/", false }))
 	}
-	page := helpcenter.NotFoundPage(center, lib.Collections(), lib.Popular(), c.styles())
+	page := helpcenter.NotFoundPage(center, lib.Collections(), lib.Popular())
 	c.respond(w, r, fhttp.StatusNotFound, page)
 }
 
@@ -316,6 +322,11 @@ func (c *HelpCenterController) center(w fhttp.ResponseWriter, r *fhttp.Request) 
 		center.Origin = "https://" + r.Host
 	}
 
+	center.Theming.FormToken = c.formToken(r)
+	center.Theming.Assets = c.styles()
+	if theme, err := c.Themes.Default(); err == nil {
+		center.Theming.Theme = theme
+	}
 	if cookie, err := r.Cookie(visitorCookie); err == nil && cookie.Value == "1" {
 		visitor := helpsample.Visitor()
 		center.Visitor = &visitor

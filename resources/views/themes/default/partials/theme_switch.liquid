@@ -1,0 +1,17 @@
+{%- comment -%}
+  Lets a reader pick light, dark or their system's theme, shown only
+  where the team left the choice to readers.
+{%- endcomment -%}
+{%- if help_center.appearance == "" -%}
+<details data-menu data-theme-switch class="relative">
+<summary aria-label="{{ 'theme' | t }}" title="{{ 'theme' | t }}" class="grid size-8 cursor-pointer list-none place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring"><span data-theme-icon="light">{{ 'sun' | icon: 'size-4' }}</span><span data-theme-icon="dark">{{ 'moon' | icon: 'size-4' }}</span><span data-theme-icon="system">{{ 'system' | icon: 'size-4' }}</span></summary>
+<div class="absolute end-0 top-10 z-40 w-44 rounded-xl border border-border-button-default bg-background-primary-default p-1 shadow-lg">
+{%- assign choices = "light:sun,dark:moon,system:system" | split: "," %}
+{%- for choice in choices %}
+{%- assign parts = choice | split: ":" %}
+{%- assign label = "theme_" | append: parts[0] %}
+<button type="button" data-theme-choice="{{ parts[0] }}" aria-pressed="false" class="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-2-medium text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:bg-background-secondary-hover">{{ parts[1] | icon: 'size-4 text-foreground-icon-tertiary' }}<span class="flex-1 text-start">{{ label | t }}</span>{{ 'check' | icon: 'size-4 text-link' }}</button>
+{%- endfor %}
+</div>
+</details>
+{%- endif -%}

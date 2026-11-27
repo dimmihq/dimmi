@@ -1,0 +1,9 @@
+{%- comment -%}
+  The logo in its light or dark version to match the page, or the
+  company's square mark beside the product's name, or the name alone.
+{%- endcomment -%}
+{%- if help_center.logo_light != "" -%}
+<img src="{{ help_center.logo_light }}" alt="{{ help_center.product }}" height="22" class="theme-logo-light h-[1.375rem] w-auto"><img src="{{ help_center.logo_dark }}" alt="{{ help_center.product }}" height="22" class="theme-logo-dark h-[1.375rem] w-auto">
+{%- else -%}
+<span class="flex min-w-0 items-center gap-2">{% if help_center.mark != "" %}<img src="{{ help_center.mark }}" alt="" width="28" height="28" class="aspect-square h-7 w-auto shrink-0 rounded-lg object-cover">{% endif %}<span class="truncate text-headline-semibold text-text-primary">{{ help_center.product }}</span></span>
+{%- endif -%}

@@ -1644,6 +1644,7 @@ type HelpCenter struct {
 	UpdatedAt       time.Time       `json:"updated_at"`
 	CustomDomain    *string         `json:"custom_domain"`
 	Locales         []string        `json:"locales"`
+	ThemeID         *ids.UUID       `json:"theme_id"`
 }
 
 type HelpCenterDomain struct {
@@ -1685,6 +1686,29 @@ type HelpCenterRedirect struct {
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
 	TargetLocale       *string    `json:"target_locale"`
+}
+
+type HelpCenterTheme struct {
+	ID           ids.UUID        `json:"id"`
+	WorkspaceID  ids.UUID        `json:"workspace_id"`
+	HelpCenterID ids.UUID        `json:"help_center_id"`
+	Version      int32           `json:"version"`
+	Name         string          `json:"name"`
+	Manifest     json.RawMessage `json:"manifest"`
+	ContentHash  string          `json:"content_hash"`
+	FileCount    int32           `json:"file_count"`
+	SizeBytes    int32           `json:"size_bytes"`
+	Settings     json.RawMessage `json:"settings"`
+	CreatedBy    *ids.UUID       `json:"created_by"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
+}
+
+type HelpCenterThemeFile struct {
+	ThemeID     ids.UUID `json:"theme_id"`
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Path        string   `json:"path"`
+	Body        []byte   `json:"body"`
 }
 
 type HelpSearchTerm struct {

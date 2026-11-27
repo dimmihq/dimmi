@@ -1,0 +1,29 @@
+{%- comment -%}
+  A collection as a group: its name over a card of rows, one for each
+  collection inside it, which opens to list its articles, and one for
+  each article it holds itself. The collection holding `current` starts
+  open, with the article whose slug is `article` marked.
+{%- endcomment -%}
+{%- if collection.children.size > 0 or collection.articles.size > 0 -%}
+<section aria-label="{{ collection.title }}">
+<h2 class="px-1 pb-2 text-caption-1-medium text-text-tertiary"><a href="{{ collection.url }}" class="hover:text-text-primary">{{ collection.title }}</a></h2>
+<div class="overflow-hidden rounded-xl border border-border-button-default bg-background-primary-default">
+{%- for sub in collection.children %}
+<details data-accordion class="group/row border-separator-border [&+*]:border-t"{% if sub.slugs contains current %} open{% endif %}>
+<summary class="flex cursor-pointer list-none items-center gap-3 px-4 py-2.5 text-body-medium outline-none transition-colors hover:bg-background-secondary-hover focus-visible:bg-background-secondary-hover"><span class="min-w-0 flex-1 truncate">{{ sub.title }}</span><span class="text-caption-1-medium tabular-nums text-text-tertiary">{{ sub.count }}</span>{{ 'chevron-right' | icon: 'size-4 shrink-0 text-foreground-icon-tertiary transition-transform group-open/row:rotate-90 rtl:-scale-x-100' }}</summary>
+<ul data-accordion-body class="overflow-hidden pb-2">
+{%- for a in sub.articles %}
+<li><a href="{{ a.url }}"{% if a.slug == article %} aria-current="page"{% endif %} class="mx-2 block rounded-lg px-3.5 py-1.5 text-body-2-regular text-text-secondary transition-colors hover:bg-background-secondary-hover hover:text-text-primary aria-[current=page]:bg-background-secondary-default aria-[current=page]:text-text-primary">{{ a.title }}</a></li>
+{%- endfor %}
+{%- for deeper in sub.children %}
+<li><a href="{{ deeper.url }}" class="mx-2 flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-body-2-medium text-text-secondary hover:bg-background-secondary-hover hover:text-text-primary">{{ 'book' | icon: 'size-3.5 text-foreground-icon-tertiary' }}{{ deeper.title }}</a></li>
+{%- endfor %}
+</ul>
+</details>
+{%- endfor %}
+{%- for a in collection.articles %}
+<a href="{{ a.url }}"{% if a.slug == article %} aria-current="page"{% endif %} class="flex items-center gap-3 border-separator-border px-4 py-2.5 text-body-medium outline-none transition-colors hover:bg-background-secondary-hover focus-visible:bg-background-secondary-hover aria-[current=page]:bg-background-secondary-default [&+*]:border-t"><span class="min-w-0 flex-1 truncate">{{ a.title }}</span></a>
+{%- endfor %}
+</div>
+</section>
+{%- endif -%}

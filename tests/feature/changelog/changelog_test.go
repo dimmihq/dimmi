@@ -65,10 +65,29 @@ func (l log) page(path string) *testkit.Response {
 }
 
 /*
+forms gives the client the token the changelog's pages carry for it.
+*/
+func (l log) forms(client *testkit.Client) *testkit.Client {
+	return tests.HelpForms(l.d.TC.T, client, "/hc/"+l.subdomain)
+}
+
+/*
+formsAt gives the client the token for posting to a link a mail holds,
+on the host the link names: the help center's own on an instance with a
+help domain.
+*/
+func (l log) formsAt(client *testkit.Client, link string) *testkit.Client {
+	if u, err := url.Parse(link); err == nil && u.Host != "" {
+		return tests.HelpForms(l.d.TC.T, client, u.Scheme+"://"+u.Host)
+	}
+	return l.forms(client)
+}
+
+/*
 form posts a form of the public changelog.
 */
 func (l log) form(path string, values url.Values) *testkit.Response {
-	return l.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
+	return l.forms(l.d.TC.Client()).WithHeader("Content-Type", "application/x-www-form-urlencoded").
 		WithHeader("Accept", "text/html").Send("POST", "/hc/"+l.subdomain+path, values.Encode())
 }
 
@@ -327,7 +346,7 @@ func TestChangelogPublishing(t *testing.T) {
 		t.Parallel()
 		l := newLog(t)
 		l.published(t, testkit.JSON{"title": "Party"})
-		background := l.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
+		background := l.forms(l.d.TC.Client()).WithHeader("Content-Type", "application/x-www-form-urlencoded").
 			WithHeader("Accept", "application/json")
 		send := func(path string, values url.Values) *testkit.Response {
 			return background.Send("POST", "/hc/"+l.subdomain+path, values.Encode())
@@ -363,7 +382,7 @@ func TestChangelogSubscribers(t *testing.T) {
 		l.d.Owner.GetJSON("/api/v1/help-centers/"+l.id+"/changelog-subscribers?status=pending").AssertOK().
 			AssertJSONPath("data.#", 1)
 
-		done := l.d.TC.Client().WithHeader("Accept", "text/html").Send("POST", path, nil).AssertOK()
+		done := l.formsAt(l.d.TC.Client(), path).WithHeader("Accept", "text/html").Send("POST", path, nil).AssertOK()
 		assert.Contains(t, string(done.Body), "subscribed")
 		l.d.Owner.GetJSON("/api/v1/help-centers/"+l.id+"/changelog-subscribers?status=active").AssertOK().
 			AssertJSONPath("data.0.email", "bob@example.org")
@@ -376,7 +395,7 @@ func TestChangelogSubscribers(t *testing.T) {
 		l.form("/changelog/subscriptions", url.Values{"email": {"ana@example.org"}})
 		confirm, _ := tests.LastSent[appmail.ChangelogConfirmMail](l.d.TC, fake)
 		path := strings.TrimPrefix(confirm.Link, l.d.TC.App.Application.Config.App.URL)
-		l.d.TC.Client().Send("POST", path, nil).AssertOK()
+		l.formsAt(l.d.TC.Client(), path).Send("POST", path, nil).AssertOK()
 
 		l.form("/changelog/subscriptions", url.Values{"email": {"ana@example.org"}}).
 			AssertStatus(fhttp.StatusSeeOther).AssertHeader("Location", "/hc/"+l.subdomain+"/changelog?subscribed#main")
@@ -394,7 +413,9 @@ func TestChangelogSubscribers(t *testing.T) {
 		path := strings.TrimPrefix(confirm.Link, l.d.TC.App.Application.Config.App.URL)
 		forged := path[:len(path)-4] + "AAAA"
 
-		page := l.d.TC.Client().WithHeader("Accept", "text/html").Send("POST", forged, nil).AssertOK()
+		page := l.formsAt(
+			l.d.TC.Client(), forged,
+		).WithHeader("Accept", "text/html").Send("POST", forged, nil).AssertOK()
 
 		assert.Contains(t, string(page.Body), "no longer works")
 		l.d.Owner.GetJSON("/api/v1/help-centers/"+l.id+"/changelog-subscribers?status=active").AssertOK().
@@ -411,7 +432,7 @@ func TestChangelogSubscribers(t *testing.T) {
 		for i, m := range confirms {
 			if sentConfirms[i].Message.To[0].Email == "sam@example.org" {
 				path := strings.TrimPrefix(m.Link, l.d.TC.App.Application.Config.App.URL)
-				l.d.TC.Client().Send("POST", path, nil).AssertOK()
+				l.formsAt(l.d.TC.Client(), path).Send("POST", path, nil).AssertOK()
 			}
 		}
 		id := l.entry(t, testkit.JSON{"title": "Big launch", "body_markdown": "![x](/help-images/a.png)"})
@@ -427,10 +448,10 @@ func TestChangelogSubscribers(t *testing.T) {
 		assert.Contains(t, mails[0].Entry.BodyHTML, `src="http`)
 
 		unsub := strings.TrimPrefix(mails[0].Entry.Unsubscribe, l.d.TC.App.Application.Config.App.URL)
-		l.d.TC.Client().Send("POST", unsub, nil).AssertOK()
+		l.formsAt(l.d.TC.Client(), unsub).Send("POST", unsub, nil).AssertOK()
 		l.d.Owner.GetJSON("/api/v1/help-centers/"+l.id+"/changelog-subscribers?status=unsubscribed").AssertOK().
 			AssertJSONPath("data.0.email", "sam@example.org")
-		l.d.TC.Client().Send("POST", unsub, nil).AssertOK()
+		l.formsAt(l.d.TC.Client(), unsub).Send("POST", unsub, nil).AssertOK()
 	})
 
 	t.Run("publishes without mail when nobody asked to notify", func(t *testing.T) {

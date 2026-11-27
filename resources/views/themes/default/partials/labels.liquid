@@ -1,0 +1,3 @@
+{%- if labels.size > 0 -%}
+<span class="flex flex-wrap items-center gap-1.5">{% for l in labels %}<a href="{{ l.url }}" class="inline-flex h-6 items-center gap-1.5 rounded-full bg-background-secondary-default px-2.5 text-caption-1-medium text-text-secondary transition-colors hover:text-text-primary">{% render 'dot', color: l.color %}{{ l.name }}</a>{% endfor %}</span>
+{%- endif -%}

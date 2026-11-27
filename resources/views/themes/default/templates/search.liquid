@@ -1,0 +1,22 @@
+{%- comment -%}What a question found, each result with where it lives and the text that matched.{%- endcomment -%}
+{%- capture sidebar %}{% render 'help_sidebar', current: "", article: "" %}{% endcapture -%}
+<div class="mx-auto w-full max-w-[46rem] animate-rise px-5 pt-12 md:pt-16">
+{% render 'ask_box', query: search.query, suggestions: nil %}
+{%- if search.query == "" %}
+<p class="mt-8 text-body-regular text-text-secondary">{{ 'search_hint' | t }}</p>
+{%- elsif search.results.size == 0 %}
+<div class="mt-8 rounded-2xl border border-dashed border-border-button-default px-6 py-12 text-center">
+<span class="mx-auto grid size-11 place-items-center rounded-2xl bg-background-secondary-default text-foreground-icon-tertiary">{{ 'search' | icon: 'size-5' }}</span>
+<h1 class="mt-4 text-headline-semibold">{{ 'no_answers' | t: query: search.query }}</h1>
+<p class="mt-1 text-body-regular text-text-secondary">{% if help_center.messenger %}{{ 'try_fewer_or_ask' | t }}{% else %}{{ 'try_fewer' | t }}{% endif %}</p>
+{% render 'help_button', class: 'button-brand mt-5 inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-body-medium', icon_class: 'size-4' %}
+</div>
+{%- else %}
+<h1 class="mt-8 text-body-regular text-text-secondary">{{ 'results_match' | t: count: search.results.size }} <span class="text-body-medium text-text-primary">“{{ search.query }}”</span></h1>
+<ul class="mt-4 overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
+{%- for r in search.results %}
+<li class="border-separator-border [&+&]:border-t"><a href="{{ r.url }}" class="group block px-5 py-4 outline-none transition-colors hover:bg-background-secondary-hover focus-visible:bg-background-secondary-hover"><span class="flex items-center gap-1.5 text-caption-1-medium text-text-tertiary">{% if r.kind == "changelog" %}{{ 'megaphone' | icon: 'size-3.5' }}{% else %}{{ 'file' | icon: 'size-3.5' }}{% endif %}{{ r.trail }}</span><span class="mt-1 block text-body-semibold text-text-primary">{{ r.title }}</span><span class="mt-1 line-clamp-2 block text-body-2-regular text-text-secondary">{{ r.excerpt }}</span></a></li>
+{%- endfor %}
+</ul>
+{%- endif %}
+</div>

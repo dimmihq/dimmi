@@ -1,0 +1,14 @@
+{%- capture sidebar %}{% render 'demo_conversations_sidebar' %}{% endcapture -%}
+<div class="stagger mx-auto w-full max-w-[36rem] px-5 pt-12 md:pt-16">
+<h1 class="text-display-4-medium tracking-tight">Ask a human</h1>
+<p class="mt-2 text-title-3-regular text-text-secondary">Our team usually replies within a few hours on weekdays.</p>
+<form method="post" action="{{ help_center.conversations_url }}" class="mt-8 flex flex-col gap-5">
+{{ form_token_field }}
+{%- unless reader %}
+{% render 'demo_field', name: 'email', label: 'Your email', kind: 'email', placeholder: 'you@company.com', required: true %}
+{%- endunless %}
+{% render 'demo_field', name: 'subject', label: 'Subject', kind: 'text', placeholder: 'What do you need help with?', required: true %}
+<label class="flex flex-col gap-1.5"><span class="text-body-medium">Message</span><textarea name="body" rows="6" required placeholder="Tell us what happened and what you expected." class="rounded-xl border border-border-button-default bg-background-primary-default px-3 py-2.5 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"></textarea></label>
+<div><button type="submit" class="button-brand inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'send' | icon: 'size-4' }}Send message</button></div>
+</form>
+</div>

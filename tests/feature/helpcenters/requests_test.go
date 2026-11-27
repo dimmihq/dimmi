@@ -49,7 +49,7 @@ func (c center) typeID(t *testing.T, name string) string {
 post sends a form of the portal as the reader.
 */
 func (c center) post(cookie *fhttp.Cookie, path string, values url.Values) *testkit.Response {
-	return c.d.TC.Client().WithCookie(cookie).WithHeader("Content-Type", "application/x-www-form-urlencoded").
+	return c.forms(c.d.TC.Client().WithCookie(cookie)).WithHeader("Content-Type", "application/x-www-form-urlencoded").
 		WithHeader("Accept", "text/html").Send("POST", c.address(path), values.Encode())
 }
 

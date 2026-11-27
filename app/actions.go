@@ -155,6 +155,7 @@ type Actions struct {
 	HelpImages                 *helpcenters.Images
 	HelpCenterAddresses        helpcenters.Addresses
 	HelpPublic                 *helpcenters.Public
+	HelpThemes                 *helpcenters.Themes
 	HelpReaders                *helpcenters.Readers
 	HelpRatings                *helpcenters.Ratings
 	HelpDomains                *helpcenters.Domains

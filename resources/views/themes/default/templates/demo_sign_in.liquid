@@ -1,0 +1,13 @@
+{%- comment -%}The sample help center's sign-in, a demo of a link sent by email.{%- endcomment -%}
+{%- capture sidebar %}{% render 'help_sidebar', current: "", article: "" %}{% endcapture -%}
+<div class="stagger mx-auto w-full max-w-[26rem] px-5 pt-16 md:pt-24">
+<span class="button-brand grid size-11 place-items-center rounded-2xl">{{ 'login' | icon: 'size-5' }}</span>
+<h1 class="mt-6 text-title-1-medium tracking-tight">Sign in to {{ help_center.product }}</h1>
+<p class="mt-2 text-body-regular text-text-secondary">Follow your conversations with our team and the ideas you voted for.</p>
+<form method="post" action="{{ help_center.demo_sign_in_url }}" class="mt-8 flex flex-col gap-4">
+{{ form_token_field }}
+{% render 'demo_field', name: 'email', label: 'Email', kind: 'email', placeholder: 'you@company.com', required: true %}
+<button type="submit" class="button-brand inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">Email me a sign-in link</button>
+</form>
+<p class="mt-6 text-body-2-regular text-text-tertiary">Signed in to {{ help_center.product }} already? You'll be signed in here automatically when you open the portal from the app.</p>
+</div>

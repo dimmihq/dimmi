@@ -112,7 +112,7 @@ func (c PortalController) realBoard(w fhttp.ResponseWriter, r *fhttp.Request, s 
 		s.center.SignInURL = signInFor(s, "/feedback")
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
-	c.respond(w, r, fhttp.StatusOK, helpcenter.FeedbackPage(s.center, out, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.FeedbackPage(s.center, out))
 }
 
 /*
@@ -195,7 +195,7 @@ ideaForm shows the form to post a request.
 */
 func (c PortalController) ideaForm(w fhttp.ResponseWriter, r *fhttp.Request, s liveSite, form helpcenter.IdeaForm) {
 	w.Header().Set("Cache-Control", "private, no-store")
-	c.respond(w, r, fhttp.StatusOK, helpcenter.NewIdeaPage(s.center, form, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.NewIdeaPage(s.center, form))
 }
 
 func (c PortalController) signInFirst(w fhttp.ResponseWriter, s liveSite, path string) {
@@ -369,7 +369,7 @@ func (c PortalController) ideaPage(w fhttp.ResponseWriter, r *fhttp.Request, s l
 		s.center.SignInURL = v.SignIn
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
-	c.respond(w, r, fhttp.StatusOK, helpcenter.IdeaPage(s.center, v, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.IdeaPage(s.center, v))
 }
 
 /*

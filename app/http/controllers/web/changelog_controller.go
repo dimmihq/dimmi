@@ -75,7 +75,7 @@ func (c ChangelogController) Index(w fhttp.ResponseWriter, r *fhttp.Request) {
 	}
 
 	index.Subscribed = r.URL.Query().Has("subscribed")
-	c.respond(w, r, fhttp.StatusOK, changelog.IndexPage(center, index, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, changelog.IndexPage(center, index))
 }
 
 /*
@@ -117,5 +117,5 @@ func (c ChangelogController) Entry(w fhttp.ResponseWriter, r *fhttp.Request) {
 		return
 	}
 
-	c.respond(w, r, fhttp.StatusOK, changelog.EntryPage(center, c.Library.Labels(), page, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, changelog.EntryPage(center, c.Library.Labels(), page))
 }

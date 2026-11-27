@@ -1,0 +1,27 @@
+{%- comment -%}Asks which kind of request the reader has, then shows that type's form.{%- endcomment -%}
+{%- assign input_class = 'h-10 rounded-xl border border-border-button-default bg-background-primary-default px-3 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint' -%}
+<div class="stagger mx-auto w-full max-w-[36rem] px-5 pt-12 md:pt-16">
+<h1 class="text-display-4-medium tracking-tight">How can we help?</h1>
+<p class="mt-2 text-title-3-regular text-text-secondary">Pick what fits best, so it reaches the right people.</p>
+<div class="mt-8 flex flex-col gap-2" role="radiogroup" aria-label="Kind of request">
+{%- for t in ticket_form.types %}
+{%- assign on = false %}{% if t.id == ticket_form.type.id %}{% assign on = true %}{% endif %}
+<a href="{{ t.url }}" role="radio" aria-checked="{{ on }}" class="flex items-center gap-3 rounded-2xl border px-4 py-3 outline-none transition focus-visible:ring-4 focus-visible:ring-tint {% if on %}border-link bg-tint{% else %}border-border-button-default bg-background-primary-default hover:border-border-button-hover{% endif %}"><span class="grid size-9 shrink-0 place-items-center rounded-xl bg-background-secondary-default text-foreground-icon-secondary">{{ t.icon | icon: 'size-4' }}</span><span class="min-w-0 flex-1"><span class="block text-body-medium">{{ t.name }}</span>{% if t.description != "" %}<span class="block text-body-2-regular text-text-tertiary">{{ t.description }}</span>{% endif %}</span><span class="grid size-4 shrink-0 place-items-center rounded-full border {% if on %}border-[5px] border-link{% else %}border-border-button-default{% endif %}" aria-hidden="true"></span></a>
+{%- endfor %}
+</div>
+{%- if ticket_form.type.id != "" %}
+<form method="post" action="{{ ticket_form.action }}" class="mt-8 flex animate-rise flex-col gap-5" data-request-form>
+{{ form_token_field }}
+<input type="hidden" name="key" value="{{ ticket_form.key }}">
+{%- if ticket_form.error != "" %}
+<p role="alert" class="rounded-xl bg-tint px-4 py-3 text-body-2-medium text-link">{{ ticket_form.error }}</p>
+{%- endif %}
+<label class="flex flex-col gap-1.5"><span class="text-body-medium">Subject</span><input type="text" name="title" value="{{ ticket_form.title }}" required maxlength="200" placeholder="A short summary" class="{{ input_class }}"></label>
+<label class="flex flex-col gap-1.5"><span class="text-body-medium">Details</span><textarea name="description" rows="5" placeholder="Tell us what happened and what you expected." class="{{ input_class }} h-auto py-2.5">{{ ticket_form.description }}</textarea></label>
+{%- for f in ticket_form.fields %}
+{% render 'request_input', field: f %}
+{%- endfor %}
+<div><button type="submit" class="button-brand inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'send' | icon: 'size-4' }}Send request</button></div>
+</form>
+{%- endif %}
+</div>

@@ -50,7 +50,7 @@ func (c *HelpCenterController) EmailSignIn(w fhttp.ResponseWriter, r *fhttp.Requ
 	}
 
 	w.Header().Set("Cache-Control", "no-store")
-	c.respond(w, r, fhttp.StatusOK, helpcenter.ReaderEmailPage(center, f, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.ReaderEmailPage(center, f))
 }
 
 /*
@@ -85,7 +85,7 @@ func (c *HelpCenterController) SendCode(w fhttp.ResponseWriter, r *fhttp.Request
 	})
 	if err == nil {
 		f.Masked = sentTo
-		c.respond(w, r, fhttp.StatusOK, helpcenter.ReaderCodePage(center, f, c.styles()))
+		c.respond(w, r, fhttp.StatusOK, helpcenter.ReaderCodePage(center, f))
 
 		return
 	}
@@ -99,12 +99,12 @@ func (c *HelpCenterController) SendCode(w fhttp.ResponseWriter, r *fhttp.Request
 	f.Error = message
 	if r.FormValue("resend") != "" {
 		f.Masked = masked(f.Email)
-		c.respond(w, r, status, helpcenter.ReaderCodePage(center, f, c.styles()))
+		c.respond(w, r, status, helpcenter.ReaderCodePage(center, f))
 
 		return
 	}
 
-	c.respond(w, r, status, helpcenter.ReaderEmailPage(center, f, c.styles()))
+	c.respond(w, r, status, helpcenter.ReaderEmailPage(center, f))
 }
 
 /*
@@ -137,17 +137,20 @@ func (c *HelpCenterController) CheckCode(w fhttp.ResponseWriter, r *fhttp.Reques
 
 	w.Header().Set("Cache-Control", "no-store")
 	f.Error, f.Masked = message, masked(f.Email)
-	c.respond(w, r, status, helpcenter.ReaderCodePage(center, f, c.styles()))
+	c.respond(w, r, status, helpcenter.ReaderCodePage(center, f))
 }
 
 /*
 readerCenter is the frame of the sign-in pages, which show no reader but
-the same sections in the header as every other page.
+the same sections in the header as every other page, in the help
+center's theme. A team's theme that fails to load leaves the pages in
+the default theme, so a reader can still sign in.
 */
 func (c *HelpCenterController) readerCenter(r *fhttp.Request, snap helpcenters.Snapshot, base string,
 ) helpcenter.Center {
 	center := c.centerOf(snap, base)
 	center.Origin = origin(r)
+	_ = c.theme(r, &center, snap.HelpCenter, base)
 	c.withMessenger(&center, snap)
 	c.announce(r, snap.HelpCenter, &center)
 
