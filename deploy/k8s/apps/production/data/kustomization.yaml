@@ -52,6 +52,14 @@ patches:
       - op: add
         path: /data/DIMMI_FRONTEND__ERRORS_DSN
         value: https://76f1924f64f127f474b8cc70bb4a2530@errors.trydimmi.com/2
+      # The dashboard records its teammates' sessions, masked in the browser,
+      # on the shared recorder (infrastructure/kimmi.yaml), in production's project.
+      - op: add
+        path: /data/DIMMI_FRONTEND__SESSIONS_HOST
+        value: https://sessions.trydimmi.com
+      - op: add
+        path: /data/DIMMI_FRONTEND__SESSIONS_KEY
+        value: km_pub_58f104442330e6b9
       - op: add
         path: /data/DIMMI_FILESYSTEMS__DISKS__S3__PUBLIC_ENDPOINT
         value: https://files.trydimmi.com

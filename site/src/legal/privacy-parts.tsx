@@ -95,15 +95,16 @@ export function PrivacySupportingParts() {
         subtitle="Complete inventory of every first-party cookie and browser storage entry used by trydimmi.com, dimmi Cloud, customer help centers, and the web messenger."
       />
 
-      <Clause anchor="cookies-inventory" number="III.1" title="Zero analytics or advertising trackers">
+      <Clause anchor="cookies-inventory" number="III.1" title="Zero advertising trackers">
         <p>
           dimmi sets{" "}
           <strong className="font-medium text-text-primary">
             zero analytics cookies, zero advertising pixels, and zero cross-site tracking cookies
           </strong>{" "}
           across trydimmi.com, our docs, the dimmi Cloud dashboard, and the web messenger. Every entry below is
-          first-party and strictly necessary or user-preference functional. If we ever introduce non-essential cookies
-          in the future, an explicit Accept / Reject consent banner visible without scrolling will be deployed first.
+          first-party and strictly necessary, a preference, or the dashboard's own diagnostics. If we ever introduce
+          non-essential cookies in the future, an explicit Accept / Reject consent banner visible without scrolling will
+          be deployed first.
         </p>
         <LegalTable
           caption="Complete cookie and browser storage inventory"
@@ -124,6 +125,12 @@ export function PrivacySupportingParts() {
           Turnstile on sign-up and sign-in pages (bot protection). Customer-sent broadcast and series emails always
           include a first-party open pixel, and rewrite links to count clicks by default (no IP address or user agent is
           stored; click tracking can be disabled per broadcast). Transactional and support replies carry no tracking.
+        </p>
+        <p>
+          The dashboard records masked sessions of signed-in teammates on a recorder we host ourselves, in the EU, at
+          sessions.trydimmi.com. Your browser replaces every character of text and every input with asterisks before
+          anything is sent, and leaves out images and media. Help centers, the web messenger, and your customers' sites
+          never load it, so your customers are never recorded.
         </p>
       </Clause>
 

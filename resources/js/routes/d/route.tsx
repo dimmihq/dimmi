@@ -7,6 +7,7 @@ import { NotAMember } from "@/features/shell/not-a-member";
 import { addressed, showSlug } from "@/features/shell/workspace";
 import { workspaceQuery } from "@/lib/api/workspace";
 import { currentUser } from "@/lib/session";
+import { recordSession } from "@/lib/sessions";
 
 export const Route = createFileRoute("/d")({
   beforeLoad: async ({ context, location }) => {
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/d")({
     if (!me) {
       throw redirect({ to: "/login", search: { redirect: location.href } });
     }
+    recordSession(me.user.id);
     const { workspace: current, missing, stale } = addressed(me.workspaces);
     if (missing) {
       return { missing };

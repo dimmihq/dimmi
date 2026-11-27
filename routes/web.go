@@ -35,7 +35,7 @@ import (
 Web declares the browser page routes.
 */
 func Web(a *app.App) {
-	spa := &web.AppController{Vite: a.Vite, Errors: a.Errors, Reporting: reporting(a)}
+	spa := &web.AppController{Vite: a.Vite, Errors: a.Errors, Reporting: reporting(a), Recording: recording(a)}
 	redirect := &web.OAuthRedirectController{
 		Providers: a.Providers, Attempts: a.OAuthAttempts, Cookies: a.Cookies, Clock: a.Clock,
 		ConfirmationTTL: a.Config.Auth.PasswordConfirmation.TTL, Errors: a.Errors,
@@ -53,7 +53,7 @@ func Web(a *app.App) {
 	})
 
 	a.Router.Group("", func(pages *routing.Router) {
-		pages.Middleware("csp")
+		pages.Middleware("csp:app")
 
 		pages.Handle(fhttp.MethodGet, "/", "home", fhttp.HandlerFunc(func(w fhttp.ResponseWriter, _ *fhttp.Request) {
 			w.Header().Set("Location", "/d")
@@ -285,4 +285,12 @@ func reporting(a *app.App) spaview.Reporting {
 		Environment: a.Application.Config.Telemetry.Environment,
 		Release:     a.Application.Config.App.Release,
 	}
+}
+
+/*
+recording tells the browser app where to record its sessions: nowhere
+unless the server names a recorder.
+*/
+func recording(a *app.App) spaview.Recording {
+	return spaview.Recording{Host: a.Config.Frontend.SessionsOrigin(), Key: a.Config.Frontend.SessionsKey}
 }

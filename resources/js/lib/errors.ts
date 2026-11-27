@@ -2,10 +2,11 @@
  * Error reports from the browser app. The server's page names the tracker
  * (a Sentry-compatible DSN) with its environment and release; a page that
  * names none reports nothing, as in development and tests. Reports carry
- * no personal data: no addresses, cookies or request bodies, and no
- * session replays. A failed API call is the server's to report, so only
- * the app's own crashes are sent. Page loads and route changes are timed
- * too, for web vitals: every one outside production, a fifth in it.
+ * no personal data: no addresses, cookies or request bodies. Session
+ * recordings go to their own recorder (./sessions), never with a report.
+ * A failed API call is the server's to report, so only the app's own
+ * crashes are sent. Page loads and route changes are timed too, for web
+ * vitals: every one outside production, a fifth in it.
  */
 import * as Sentry from "@sentry/react";
 

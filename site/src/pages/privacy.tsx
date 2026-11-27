@@ -50,7 +50,7 @@ const parts: PartSummary[] = [
     id: "cookie-notice",
     numeral: "III",
     title: "Cookie Notice",
-    description: "Every first-party cookie and browser storage key. Zero analytics or ads.",
+    description: "Every first-party cookie and browser storage key. Zero ads.",
     items: [{ id: "cookies-inventory", label: "III.1 Complete cookie table" }],
   },
   {
@@ -137,8 +137,9 @@ export function PrivacyPage() {
           Your database, files, and backups live on Hetzner servers and object storage in Germany (EU), and
           outbound/inbound email runs through AWS in Frankfurt, Germany. When a workspace enables built-in AI features,
           prompt text goes to US AI providers (Anthropic, OpenAI, Voyage AI, and Cloudflare for the Clef decision
-          model). We never sell personal data, we run zero analytics or advertising trackers on our website, docs, and
-          dashboard, and no subprocessor trains AI models on Customer Data.
+          model). We never sell personal data, we run zero analytics or advertising trackers on our website and docs,
+          and no subprocessor trains AI models on Customer Data. The dashboard records masked sessions of signed-in
+          teammates on our own servers in the EU, so we can fix what broke. Your customers are never recorded.
         </p>
       </Clause>
 
@@ -180,7 +181,7 @@ export function PrivacyPage() {
             ],
             [
               "Workspace owners & team members",
-              "Sign-up profile, credentials, 2FA/passkeys, sessions, security/audit logs, browser push subscriptions, Paystack billing details.",
+              "Sign-up profile, credentials, 2FA/passkeys, sessions, masked dashboard session recordings, security/audit logs, browser push subscriptions, Paystack billing details.",
               "Data Controller",
               "Part I (Privacy Policy)",
             ],
@@ -245,6 +246,11 @@ export function PrivacyPage() {
             ],
             [
               "Team members",
+              "Masked dashboard session recordings: page layout with every character of text and every input replaced by asterisks, clicks, page and request addresses with their timings, browser, device, and time zone, linked to your dimmi user ID. No images, media, request bodies, or IP addresses.",
+              "Recorded in your browser while you are signed in to the dashboard.",
+            ],
+            [
+              "Team members",
               "Browser web-push subscription endpoint and encryption keys.",
               "Collected only if you opt in to browser notifications.",
             ],
@@ -285,6 +291,11 @@ export function PrivacyPage() {
             [
               "Account security, fraud prevention, Turnstile bot checks, audit logs, and AUP enforcement",
               "Sessions, IP addresses, security/audit logs, Turnstile signals, server logs",
+              "Legitimate interests (NDPA s.25(1)(b)(v); GDPR Art. 6(1)(f))",
+            ],
+            [
+              "Finding and fixing dashboard bugs",
+              "Masked dashboard session recordings and error reports",
               "Legitimate interests (NDPA s.25(1)(b)(v); GDPR Art. 6(1)(f))",
             ],
             [
@@ -396,8 +407,8 @@ export function PrivacyPage() {
           We protect data using TLS in transit, Argon2id password hashing, passkeys and 2FA, SAML/OIDC SSO,
           per-workspace credential encryption, PostgreSQL row-level security, ClamAV scanning, and 365-day audit logs
           (full details and honest boundaries in <LegalLink href="#security-overview">Part VI</LegalLink>). We use only
-          strictly necessary first-party cookies and local storage with zero analytics or ads (full inventory in{" "}
-          <LegalLink href="#cookie-notice">Part III</LegalLink>).
+          first-party cookies and browser storage with zero ads, and the dashboard's masked session recorder runs on our
+          own servers (full inventory in <LegalLink href="#cookie-notice">Part III</LegalLink>).
         </p>
       </Clause>
 
@@ -460,9 +471,9 @@ export function PrivacyPage() {
         </p>
         <p>
           <strong className="font-medium text-text-primary">Self-hosted dimmi:</strong> Self-hosted installations send
-          zero telemetry or data to {LEGAL_ENTITY.name}. We have no access to them; the self-host operator is solely
-          responsible for its privacy practices (see{" "}
-          <LegalLink href="/terms#self-hosting-notice">Self-Hosting Notice</LegalLink>).
+          zero telemetry or data to {LEGAL_ENTITY.name} and record no sessions unless the operator configures a
+          recorder. We have no access to them; the self-host operator is solely responsible for its privacy practices
+          (see <LegalLink href="/terms#self-hosting-notice">Self-Hosting Notice</LegalLink>).
         </p>
       </Clause>
 

@@ -1,0 +1,247 @@
+# Session recordings of the dashboard, kept on this cluster. kimmi records
+# what a signed-in teammate's browser shows, masked in the browser before
+# anything is sent: every character of text and every input value becomes
+# asterisks, images and media are left out, and IP addresses are not
+# stored. One instance serves staging and production, each its own project:
+#
+#   production  the dashboard at trydimmi.com
+#   staging     the dashboard at staging.trydimmi.com
+#
+# Browsers load the recorder from and send recordings to the public host,
+# sessions.trydimmi.com, which staging's edge serves
+# (apps/staging/edge/sessions.caddy).
+#
+# Both projects, their public keys and their privacy rules are fixed in
+# bootstrap.json below. A public key only lets a browser send recordings,
+# and it ships to every browser anyway, so it is not a secret.
+#
+# Secret kimmi holds the server's signing key and the first owner.
+# scripts/kimmi.sh makes it once, before this is applied, and never prints
+# a value. Read the owner's sign-in with:
+#
+#   kubectl -n kimmi get secret kimmi -o jsonpath='{.data.KIMMI_OWNER}' | base64 -d
+#
+# Recordings are diagnostics, not customers' records, so the database has no
+# off-site backup; its volumes are kept like every other (data-retain).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kimmi
+  labels:
+    dimmi.com/protected: "true"
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: kimmi-postgres
+  namespace: kimmi
+  labels:
+    dimmi.com/protected: "true"
+spec:
+  instances: 1
+  inheritedMetadata:
+    labels:
+      dimmi.com/protected: "true"
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-trixie
+  storage:
+    storageClass: data-retain
+    size: 10Gi
+  bootstrap:
+    initdb:
+      database: kimmi
+      owner: kimmi
+      dataChecksums: true
+  postgresql:
+    parameters:
+      max_connections: "50"
+      shared_buffers: 64MB
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+---
+# The recordings themselves; the database holds only their index.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kimmi-data
+  namespace: kimmi
+  labels:
+    dimmi.com/protected: "true"
+spec:
+  storageClassName: data-retain
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 50Gi
+---
+# Applied on every start. A project already in the database is left as it
+# is, so a change here reaches only a project kimmi does not have yet; change
+# an existing one in kimmi's own settings.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kimmi
+  namespace: kimmi
+data:
+  bootstrap.json: |
+    {
+      "projects": [
+        {
+          "name": "production",
+          "slug": "production",
+          "platform": "react",
+          "origin": "https://trydimmi.com",
+          "origins": ["https://trydimmi.com"],
+          "publicKey": "km_pub_58f104442330e6b9",
+          "settings": {
+            "privacy": { "maskAllText": true, "maskAllInputs": true, "blockMedia": true, "ip": "none" },
+            "capture": { "console": false, "network": true, "networkBodies": false },
+            "retention": { "days": 30, "keepStarred": true }
+          }
+        },
+        {
+          "name": "staging",
+          "slug": "staging",
+          "platform": "react",
+          "origin": "https://staging.trydimmi.com",
+          "origins": ["https://staging.trydimmi.com"],
+          "publicKey": "km_pub_78e91f486fbaa2a4",
+          "settings": {
+            "privacy": { "maskAllText": true, "maskAllInputs": true, "blockMedia": true, "ip": "none" },
+            "capture": { "console": false, "network": true, "networkBodies": false },
+            "retention": { "days": 30, "keepStarred": true }
+          }
+        }
+      ]
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kimmi
+  namespace: kimmi
+  labels:
+    app.kubernetes.io/name: kimmi
+spec:
+  replicas: 1
+  # One process per data folder, and the volume mounts on one pod at a time.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kimmi
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kimmi
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: kimmi
+          image: ghcr.io/dimmihq/kimmi:0.1.0
+          ports:
+            - name: http
+              containerPort: 8700
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kimmi-postgres-app
+                  key: password
+            - name: KIMMI_DATABASE_URL
+              value: postgres://kimmi:$(DB_PASSWORD)@kimmi-postgres-rw:5432/kimmi
+            - name: KIMMI_HTTP_ADDR
+              value: ":8700"
+            - name: KIMMI_PUBLIC_URL
+              value: https://sessions.trydimmi.com
+            - name: KIMMI_STORAGE
+              value: local
+            - name: KIMMI_STORAGE_PATH
+              value: /data/recordings
+            - name: KIMMI_SIGNUPS
+              value: closed
+            - name: KIMMI_ORG
+              value: dimmi
+            - name: KIMMI_BOOTSTRAP
+              value: /etc/kimmi/bootstrap.json
+            # The edge pods, so a visitor's address is read from
+            # X-Forwarded-For. Both projects are set to store no address.
+            - name: KIMMI_TRUSTED_PROXIES
+              value: 10.42.0.0/16
+            # A soft limit, below the container's, so Go collects garbage first.
+            - name: KIMMI_MEMORY_LIMIT
+              value: 192MiB
+            - name: KIMMI_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: kimmi
+                  key: KIMMI_SECRET
+            - name: KIMMI_OWNER
+              valueFrom:
+                secretKeyRef:
+                  name: kimmi
+                  key: KIMMI_OWNER
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /etc/kimmi/bootstrap.json
+              subPath: bootstrap.json
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: kimmi-data
+        - name: config
+          configMap:
+            name: kimmi
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kimmi
+  namespace: kimmi
+spec:
+  selector:
+    app.kubernetes.io/name: kimmi
+  ports:
+    - name: http
+      port: 8700
+      targetPort: http

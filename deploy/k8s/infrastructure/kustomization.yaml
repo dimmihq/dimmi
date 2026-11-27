@@ -9,3 +9,4 @@ resources:
   - observability.yaml
   - clamav.yaml
   - rustrak.yaml
+  - kimmi.yaml
