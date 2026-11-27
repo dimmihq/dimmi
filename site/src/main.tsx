@@ -9,6 +9,8 @@ import { StrictMode } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
 
 import { App } from "./app";
+import { publishedBlogPosts } from "./blog/posts";
+import { renderBlogRss } from "./blog/rss";
 import { startMonitoring } from "./monitoring";
 import { DEFAULT_TITLE, findRoute, routes } from "./routes";
 import { headElements } from "./seo";
@@ -45,13 +47,14 @@ export async function prerender(data: { url: string }) {
   const known = new Set(routes.map((r) => r.path));
   const links = new Set(parseLinks(html).filter((link) => known.has(link)));
 
-  // Expose route metadata to site/vite.config.ts so closeBundle writes site/dist/pages.json.
+  // Expose route metadata and RSS feed to site/vite.config.ts so closeBundle writes them to dist/.
   (globalThis as { __DIMMI_PAGES__?: unknown }).__DIMMI_PAGES__ = routes.map(({ path, title, description, meta }) => ({
     path,
     title,
     description,
     ...(meta ? { meta } : {}),
   }));
+  (globalThis as { __DIMMI_BLOG_RSS__?: string }).__DIMMI_BLOG_RSS__ = renderBlogRss(publishedBlogPosts);
 
   return {
     html,

@@ -1,0 +1,61 @@
+---
+title: "Why we built dimmi: an open-source Intercom alternative"
+heading: "Why we built dimmi: open customer support with zero seat taxes."
+description: "Why we built an MIT-licensed support platform with free seats, BYO AI keys, and 100 free monthly chats instead of paying per seat and per AI outcome."
+type: "blog"
+keyword: "open source intercom alternative"
+answer: "We built dimmi because support platforms charge twice: once for every teammate seat and again at $0.99 per AI resolution. dimmi gives you free seats, BYO model keys, and MIT self-hosting."
+author: "frantz-kati"
+published: "2026-11-27"
+updated: "2026-11-27"
+status: "published"
+reviewedBy: "frantz-kati"
+reviewedOn: "2026-11-27"
+proof:
+  - "shots/inbox-light.webp"
+  - "shots/agent-studio-hero-light.webp"
+---
+
+Every growing software team hits the same billing wall once support gets busy. First you pay `$29` to `$132` per teammate every month just to let engineers read customer threads. Then you turn on an AI agent and pay `$0.99` on top for every resolved conversation.
+
+We built dimmi to remove both taxes from the ground up. You can inspect our [per-conversation pricing breakdown](/pricing) or read the [self-hosting guide](/#self-host) to see the numbers side by side.
+
+## Why charge per conversation instead of per seat?
+
+Per-seat pricing punishes teams for bringing engineers, founders, and finance reviewers into the customer inbox. When every login costs extra, companies share passwords or copy screenshots into Slack instead of fixing bugs at the source.
+
+On dimmi Cloud, teammate seats cost `$0` forever. Every workspace gets 100 free conversations a month with workflows, SLAs, tickets, help center, and SAML SSO unlocked. After the free tier, human conversations start at `$0.03` and managed AI conversations start at `$0.10`.
+
+<ProductShot
+  name="inbox"
+  alt="dimmi shared inbox showing customer messages, internal notes, and account context side by side with unlimited free teammate seats"
+/>
+
+## Why allow bring-your-own OpenAI and Anthropic keys?
+
+Closed help desks mark up token costs by 10x or more when they charge per resolution. A routine billing lookup costs a fraction of a cent in raw API tokens, yet vendors bill `$0.75` to `$2.00` per resolved ticket.
+
+Inside dimmi, you can paste your own OpenAI, Anthropic, DeepSeek, Mistral, or OpenRouter API key in Workspace Settings. Your model provider bills you directly at raw API prices, and dimmi Cloud drops AI chats to the human conversation rate (cutting AI charges by 50% to 83%). If you self-host, dimmi bills you `$0`.
+
+## How does the architecture run on a single Linux server?
+
+Most open-source support tools ask you to maintain a heavy Ruby or Java stack with multiple background containers before your first message arrives. We wrote dimmi as one compiled Go binary paired with a React dashboard and PostgreSQL.
+
+- **Single server setup:** Install on one 2 vCPU Linux VPS with PostgreSQL in about 5 minutes using the script on our [home page self-host section](/#self-host).
+- **Full product surface:** The same open codebase ships the [shared inbox](/inbox), [AI support agents](/agents), Agent Studio simulations, visual workflows, tickets, and multilingual help center.
+- **Developer first:** Every endpoint is backed by a strict OpenAPI contract, signed webhooks, an MCP server, and 12 typed SDKs documented in the [dimmi docs](/docs).
+
+<ProductShot
+  name="agent-studio-hero"
+  alt="dimmi Agent Studio displaying policy guidance chips, draft versus live comparison, and multi-turn simulation results"
+/>
+
+## Can you self-host the entire platform under MIT?
+
+Yes. The entire repository on GitHub ships under the MIT license with zero closed enterprise folder. Workflows, SAML SSO, business-hour SLAs, Operator, and AI agents run identically whether you host on your own server or sign up on dimmi Cloud.
+
+We believe support software works best when your team owns its customer history, controls its AI spend, and never gets locked behind an enterprise tier just to add a second inbox or a custom SLA.
+
+## What ships next on this blog?
+
+We will publish hands-on architecture notes, live pricing audits, and developer walkthroughs each week. Every article starts with verifiable numbers, working code, or live product captures rather than recycled marketing checklists. Product release notes stay in dimmi's own Changelog inside our help center so this feed stays focused on deep guides.

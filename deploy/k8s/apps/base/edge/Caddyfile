@@ -48,7 +48,7 @@ http:// {
 {$HOST} {
 	{$HOST_TLS}
 	encode zstd gzip
-	@site path / /0025af97c7ef203a83f7c0f277fbbeb1.txt /apple-touch-icon.png /favicon.ico /favicon.svg /llms.txt /llms-full.txt /logo.png /og.png /robots.txt /sitemap.xml /docs /docs/* /assets/* /logos/* /shots/* /agent /agent/* /agent-studio /agent-studio/* /agents /agents/* /broadcasts /broadcasts/* /changelog /changelog/* /channels /channels/* /compare /compare/* /feedback /feedback/* /help-center /help-center/* /inbox /inbox/* /operator /operator/* /pricing /pricing/* /privacy /privacy/* /procedures /procedures/* /reports /reports/* /routines /routines/* /terms /terms/* /tickets /tickets/* /workflows /workflows/*
+	@site path / /0025af97c7ef203a83f7c0f277fbbeb1.txt /apple-touch-icon.png /favicon.ico /favicon.svg /llms.txt /llms-full.txt /logo.png /og.png /robots.txt /sitemap.xml /docs /docs/* /assets/* /logos/* /shots/* /agent /agent/* /agent-studio /agent-studio/* /agents /agents/* /blog /blog/* /broadcasts /broadcasts/* /changelog /changelog/* /channels /channels/* /compare /compare/* /feedback /feedback/* /help-center /help-center/* /inbox /inbox/* /operator /operator/* /pricing /pricing/* /privacy /privacy/* /procedures /procedures/* /reports /reports/* /routines /routines/* /terms /terms/* /tickets /tickets/* /workflows /workflows/*
 	handle @site {
 		header X-Robots-Tag {$SITE_ROBOTS:all}
 		reverse_proxy site:8080

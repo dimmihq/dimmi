@@ -2,6 +2,7 @@
  * Canonical URLs, Open Graph/Twitter metadata, and JSON-LD structured data
  * emitted for every prerendered page and kept in sync on client navigation.
  */
+import { getAuthor } from "./authors";
 import { GITHUB_URL } from "./links";
 import { BANDS, cents, FREE_CONVERSATIONS } from "./pricing/prices";
 import { DEFAULT_TITLE, type Route } from "./routes";
@@ -21,11 +22,16 @@ export function headElements(route: Route | undefined) {
   const title = route?.title ?? DEFAULT_TITLE;
   const description = route?.description ?? "";
   const url = canonicalUrl(route?.path ?? "/");
+  const ogType = route?.meta?.type === "blog" ? "article" : "website";
 
-  return new Set([
+  const tags = [
     { type: "link", props: { rel: "canonical", href: url } },
+    {
+      type: "link",
+      props: { rel: "alternate", type: "application/rss+xml", title: "dimmi blog", href: `${SITE_URL}/blog/rss.xml` },
+    },
     { type: "meta", props: { name: "description", content: description } },
-    { type: "meta", props: { property: "og:type", content: "website" } },
+    { type: "meta", props: { property: "og:type", content: ogType } },
     { type: "meta", props: { property: "og:site_name", content: "dimmi" } },
     { type: "meta", props: { property: "og:url", content: url } },
     { type: "meta", props: { property: "og:title", content: title } },
@@ -38,7 +44,9 @@ export function headElements(route: Route | undefined) {
     { type: "meta", props: { name: "twitter:title", content: title } },
     { type: "meta", props: { name: "twitter:description", content: description } },
     { type: "meta", props: { name: "twitter:image", content: OG_IMAGE_URL } },
-  ]);
+  ];
+
+  return new Set(tags);
 }
 
 function upsertHeadTag(tag: "meta" | "link", matchAttr: string, matchVal: string, attrs: Record<string, string>) {
@@ -58,11 +66,12 @@ export function syncHead(route: Route | undefined) {
   const title = route?.title ?? DEFAULT_TITLE;
   const description = route?.description ?? "";
   const url = canonicalUrl(route?.path ?? "/");
+  const ogType = route?.meta?.type === "blog" ? "article" : "website";
 
   document.title = title;
   upsertHeadTag("link", "rel", "canonical", { href: url });
   upsertHeadTag("meta", "name", "description", { content: description });
-  upsertHeadTag("meta", "property", "og:type", { content: "website" });
+  upsertHeadTag("meta", "property", "og:type", { content: ogType });
   upsertHeadTag("meta", "property", "og:site_name", { content: "dimmi" });
   upsertHeadTag("meta", "property", "og:url", { content: url });
   upsertHeadTag("meta", "property", "og:title", { content: title });
@@ -159,6 +168,63 @@ function breadcrumbLabel(route: Route): string {
   return beforePipe || route.path;
 }
 
+function breadcrumbItems(route: Route): { "@type": "ListItem"; position: number; name: string; item: string }[] {
+  const items: { "@type": "ListItem"; position: number; name: string; item: string }[] = [
+    { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+  ];
+
+  if (route.path.startsWith("/channels/")) {
+    items.push({ "@type": "ListItem", position: 2, name: "Channels", item: `${SITE_URL}/channels` });
+    items.push({ "@type": "ListItem", position: 3, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
+  } else if (route.path.startsWith("/blog/")) {
+    items.push({ "@type": "ListItem", position: 2, name: "Blog", item: `${SITE_URL}/blog` });
+    items.push({ "@type": "ListItem", position: 3, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
+  } else {
+    items.push({ "@type": "ListItem", position: 2, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
+  }
+
+  return items;
+}
+
+function blogPostingSchema(route: Route): Record<string, unknown> | null {
+  if (route.meta?.type !== "blog") {
+    return null;
+  }
+  const author = getAuthor(route.meta.author);
+  const url = canonicalUrl(route.path);
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: route.title,
+    description: route.description,
+    datePublished: route.meta.published,
+    dateModified: route.meta.updated,
+    image: OG_IMAGE_URL,
+    url,
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": url,
+    },
+    author: {
+      "@type": "Person",
+      name: author.name,
+      jobTitle: author.role,
+      url: author.url,
+      sameAs: author.sameAs,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "dimmi",
+      url: `${SITE_URL}/`,
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE_URL}/favicon.svg`,
+      },
+    },
+  };
+}
+
 export function pageSchemas(route: Route | undefined): Record<string, unknown>[] {
   if (!route) {
     return [];
@@ -167,24 +233,35 @@ export function pageSchemas(route: Route | undefined): Record<string, unknown>[]
     return [ORGANIZATION_SCHEMA, WEBSITE_SCHEMA, SOFTWARE_SCHEMA];
   }
 
-  const items: { "@type": "ListItem"; position: number; name: string; item: string }[] = [
-    { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
-  ];
-
-  if (route.path.startsWith("/channels/")) {
-    items.push({ "@type": "ListItem", position: 2, name: "Channels", item: `${SITE_URL}/channels` });
-    items.push({ "@type": "ListItem", position: 3, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
-  } else {
-    items.push({ "@type": "ListItem", position: 2, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
-  }
-
   const schemas: Record<string, unknown>[] = [
     {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
-      itemListElement: items,
+      itemListElement: breadcrumbItems(route),
     },
   ];
+
+  const posting = blogPostingSchema(route);
+  if (posting) {
+    schemas.push(posting);
+  } else if (route.meta) {
+    const author = getAuthor(route.meta.author);
+    schemas.push({
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: route.title,
+      description: route.description,
+      url: canonicalUrl(route.path),
+      datePublished: route.meta.published,
+      dateModified: route.meta.updated,
+      author: {
+        "@type": "Person",
+        name: author.name,
+        jobTitle: author.role,
+        url: author.url,
+      },
+    });
+  }
 
   if (route.path === "/pricing") {
     schemas.push(SOFTWARE_SCHEMA);
