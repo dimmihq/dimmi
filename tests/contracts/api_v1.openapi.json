@@ -34319,6 +34319,18 @@
         ],
         "type": "object"
       },
+      "ResourceThemePreview": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ThemePreview"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceTicket": {
         "additionalProperties": false,
         "properties": {
@@ -42003,6 +42015,38 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "ThemePreview": {
+        "additionalProperties": false,
+        "properties": {
+          "location": {
+            "description": "Where the page sends the reader instead, for a redirect. Left out otherwise.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "status": {
+            "description": "The HTTP status the page answers with, such as 200, 302 or 404.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "template": {
+            "description": "The theme template the page renders, such as article. Left out for a redirect.",
+            "type": "string"
+          },
+          "variables": {
+            "additionalProperties": {},
+            "description": "The variables the template reads, by name. HTML and times are one-key objects, {\"$html\": ...} and {\"$time\": ...}.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "object",
+          "status"
+        ],
         "type": "object"
       },
       "Ticket": {
@@ -66799,6 +66843,60 @@
           }
         },
         "summary": "Change the theme a help center wears",
+        "x-abilities": [
+          "settings:write"
+        ]
+      }
+    },
+    "/help-centers/{help_center}/theme-preview": {
+      "get": {
+        "description": "Builds one page of the help center with its live content, as a theme would render it, without rendering it. The dimmi CLI renders the page in the theme on the developer's computer. Returns the page's status, its redirect when it has one, and the template and variables it renders.",
+        "operationId": "help-centers.theme-preview.show",
+        "parameters": [
+          {
+            "description": "Id of the help center, starting with hc_, such as hc_01jx2m8k4t. Find it with GET /help-centers.",
+            "in": "path",
+            "name": "help_center",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The page's path, such as /articles/install or /fr.",
+            "explode": false,
+            "in": "query",
+            "name": "path",
+            "schema": {
+              "description": "The page's path, such as /articles/install or /fr.",
+              "maxLength": 2048,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceThemePreview"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Build a help center page for a theme preview",
         "x-abilities": [
           "settings:write"
         ]

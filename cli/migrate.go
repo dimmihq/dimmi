@@ -181,7 +181,7 @@ func (a *app) disconnect() error {
 		return err
 	}
 
-	a.say("Forgot the saved Intercom token.", nil)
+	a.say("Forgot the saved Intercom token.")
 
 	return nil
 }

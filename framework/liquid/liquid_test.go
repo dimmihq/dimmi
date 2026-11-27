@@ -2,6 +2,7 @@ package liquid
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -267,5 +268,25 @@ func TestRenderTemplateWithLocals(t *testing.T) {
 	}
 	if b.String() != "[T]" || locals["seen"] != true || res.Assigned["seen"] != true {
 		t.Fatalf("got %q %+v", b.String(), res)
+	}
+}
+
+func TestEncodeDecodeKeepsHTMLAndTimes(t *testing.T) {
+	when := time.Date(2026, 10, 8, 12, 0, 0, 0, time.UTC)
+	in := map[string]any{"body": HTML("<p>x</p>"), "at": when, "n": 3, "list": []any{"a", HTML("<b>")}}
+	raw, err := json.Marshal(Encode(in))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var back any
+	if err := json.Unmarshal(raw, &back); err != nil {
+		t.Fatal(err)
+	}
+	out, ok := Decode(back).(map[string]any)
+	at, isTime := out["at"].(time.Time)
+	items, isList := out["list"].([]any)
+	if !ok || !isTime || !isList || out["body"] != HTML("<p>x</p>") || out["n"] != 3 || !at.Equal(when) ||
+		items[1] != HTML("<b>") {
+		t.Fatalf("decoded %#v", out)
 	}
 }
