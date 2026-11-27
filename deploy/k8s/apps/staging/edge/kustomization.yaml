@@ -1,7 +1,8 @@
 # The staging load balancer forwards ports 80 and 443 to these node ports.
 #
-# This edge also serves the error tracker's host (errors.caddy), which every
-# environment shares, so it goes live with main's deploys.
+# This edge also serves the error tracker's host (errors.caddy) and the
+# session recorder's (sessions.caddy), which every environment shares, so
+# they go live with main's deploys.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: dimmi-staging
@@ -12,6 +13,7 @@ configMapGenerator:
     behavior: merge
     files:
       - errors.caddy
+      - sessions.caddy
   - name: edge
     literals:
       - HOST=staging.trydimmi.com

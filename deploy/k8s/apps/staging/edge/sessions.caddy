@@ -1,0 +1,8 @@
+# The session recorder (infrastructure/kimmi.yaml) answers on its own host:
+# its dashboard, the recorder script the dashboard loads, and the ingest
+# that browsers in every environment send recordings to. One instance serves
+# staging and production; staging's edge serves its host, so it goes live
+# with main's deploys.
+sessions.trydimmi.com {
+	reverse_proxy kimmi.kimmi.svc.cluster.local:8700
+}
