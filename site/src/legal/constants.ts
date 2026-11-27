@@ -266,7 +266,7 @@ export const RETENTION_SCHEDULE: RetentionRow[] = [
   {
     category: "Dashboard session recordings (signed-in teammates)",
     scope: "Controller",
-    period: "30 days",
+    period: "30 days, or until we purge the workspace",
     notes:
       "Masked in the browser and kept on dimmi's own servers in the EU. Recordings we star to fix a bug stay until unstarred.",
   },
