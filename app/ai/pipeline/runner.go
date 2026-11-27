@@ -29,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	fevents "github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/tickets"
@@ -79,6 +80,7 @@ type Runner struct {
 	Decider          contracts.Decider
 	DecisionProvider string
 	DecisionPrice    float64
+	Telemetry        *telemetry.Telemetry
 
 	ProcedureVectors ProcedureVectors
 
@@ -148,7 +150,7 @@ func (r *Runner) RunConversationTurn(ctx context.Context, args Args, settings *T
 		d = skipped(skipResolutionConfirmed)
 	}
 	if d == nil {
-		d = r.turn(ctx, st)
+		d = r.tracedTurn(ctx, st, args)
 	}
 
 	res, err := r.close(ctx, st, d)

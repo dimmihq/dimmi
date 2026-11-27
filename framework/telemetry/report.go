@@ -54,12 +54,16 @@ func (t *Telemetry) setupReporting(cfg Config) error {
 		Environment:      cfg.Environment,
 		Release:          cfg.Release,
 		AttachStacktrace: true,
+		// Only AI runs start transactions, so every one of them is kept.
+		EnableTracing:    true,
+		TracesSampleRate: 1,
 	})
 	if err != nil {
 		return fmt.Errorf("create sentry client: %w", err)
 	}
 
 	t.reporter = client
+	t.hub = sentry.NewHub(client, sentry.NewScope())
 	t.shutdowns = append(t.shutdowns, func(ctx context.Context) error {
 		defer client.Close()
 

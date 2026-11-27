@@ -1,5 +1,5 @@
 import { ApiError } from "./api/client";
-import { readReporting, reportable } from "./errors";
+import { readReporting, reportable, tracesRate } from "./errors";
 
 function page(meta: Record<string, string>): Document {
   const doc = document.implementation.createHTMLDocument();
@@ -36,5 +36,12 @@ describe("reportable", () => {
 
   it("reports the app's own crashes", () => {
     expect(reportable(new TypeError("x is undefined"))).toBe(true);
+  });
+});
+
+describe("tracesRate", () => {
+  it("times a fifth of production page loads and every other one", () => {
+    expect(tracesRate("production")).toBe(0.2);
+    expect(tracesRate("staging")).toBe(1);
   });
 });

@@ -37,12 +37,21 @@ the test ends.
 func newQueue(t *testing.T) *queue.Queue {
 	t.Helper()
 
+	return newCheckingQueue(t, nil)
+}
+
+/*
+newCheckingQueue is newQueue with runs of monitored jobs checked in.
+*/
+func newCheckingQueue(t *testing.T, checkIn queue.CheckIn) *queue.Queue {
+	t.Helper()
+
 	url := testkit.NewDatabase(t).URL
 	_, err := migrate.Runner{URL: url, Steps: []migrate.Step{queue.Migration()}}.Up(t.Context())
 	require.NoError(t, err)
 
 	q, err := queue.New(t.Context(), database.Config{URL: url, PoolMode: database.PoolModeSession},
-		queue.Config{MaxConns: 3, PollInterval: 20 * time.Millisecond})
+		queue.Config{MaxConns: 3, PollInterval: 20 * time.Millisecond, CheckIn: checkIn})
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		_ = q.Stop(context.WithoutCancel(t.Context()))
@@ -161,6 +170,27 @@ func TestApply(t *testing.T) {
 			assert.Equal(t, pruneArgs{Table: "sessions"}, got)
 		case <-clock.System().After(30 * time.Second):
 			t.Fatal("the scheduled job never ran")
+		}
+	})
+
+	t.Run("each run checks in with the task's schedule", func(t *testing.T) {
+		t.Parallel()
+		ended := make(chan queue.Monitor, 1)
+		q := newCheckingQueue(t, func(m queue.Monitor) func(error) {
+			return func(error) { ended <- m }
+		})
+		require.NoError(t, queue.Register(q, make(pruneWorker, 1)))
+		s := schedule.New(q)
+		s.Job(pruneArgs{Table: "sessions"}).DailyAt("03:10").RunOnStart()
+
+		require.NoError(t, s.Apply())
+		require.NoError(t, q.Start(t.Context()))
+
+		select {
+		case got := <-ended:
+			assert.Equal(t, queue.Monitor{Slug: "prune", Schedule: "10 3 * * *", Timezone: "UTC"}, got)
+		case <-clock.System().After(30 * time.Second):
+			t.Fatal("the scheduled job never checked in")
 		}
 	})
 }

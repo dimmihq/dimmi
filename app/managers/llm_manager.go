@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -62,6 +63,7 @@ type LLMManager struct {
 	cache     map[string]cachedDriver
 	order     []string
 	renewing  map[ids.UUID]*sync.Mutex
+	telemetry *telemetry.Telemetry
 }
 
 /*
@@ -83,6 +85,8 @@ type LLMDeps struct {
 	Config config.AIConfig
 	Clock  clock.Clock
 	DB     *database.DB
+	// Telemetry receives a span for each model call; nil sends none.
+	Telemetry *telemetry.Telemetry
 }
 
 /*
@@ -95,7 +99,7 @@ func NewLLMManager(deps LLMDeps) *LLMManager {
 		clk = clock.System()
 	}
 	m := &LLMManager{
-		keys: deps.Keys, http: deps.HTTP, config: deps.Config, clock: clk, db: deps.DB,
+		keys: deps.Keys, http: deps.HTTP, config: deps.Config, clock: clk, db: deps.DB, telemetry: deps.Telemetry,
 		factories: make(map[enums.AIProvider]DriverFactory), cache: map[string]cachedDriver{},
 		breakers: llmretry.NewBreakers(clk, deps.Config.Breaker), renewing: map[ids.UUID]*sync.Mutex{},
 	}
@@ -186,12 +190,12 @@ wrap adds retries, the per-model breakers and timeout enforcement.
 */
 func (m *LLMManager) wrap(key models.AiProviderKey, drv contracts.LLM) contracts.LLM {
 	prefix := key.ID.String() + ":"
-	return llmretry.Wrap(drv, llmretry.Options{
+	return traced(m.telemetry, llmretry.Wrap(drv, llmretry.Options{
 		Clock:         m.clock,
 		MaxAttempts:   m.config.Retry.MaxAttempts,
 		MaxRetryAfter: m.config.Retry.MaxRetryAfter,
 		BreakerFor:    func(model string) *llmretry.Breaker { return m.breakers.For(prefix + model) },
-	})
+	}))
 }
 
 /*

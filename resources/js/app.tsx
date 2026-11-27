@@ -16,7 +16,7 @@ import { createRoot } from "react-dom/client";
 import { LocaleRoot } from "./features/shell/locale-root";
 import { RouteError } from "./features/shell/route-error";
 import { syncTheme } from "./features/theme/theme-sync";
-import { startReporting } from "./lib/errors";
+import { startReporting, startTracing } from "./lib/errors";
 import "./lib/i18n";
 import { workspaceAddress } from "./features/shell/workspace";
 import { routeTree } from "./route-tree.gen";
@@ -32,6 +32,7 @@ const router = createRouter({
   defaultErrorComponent: RouteError,
   rewrite: workspaceAddress,
 });
+startTracing(router);
 
 declare module "@tanstack/react-router" {
   interface Register {

@@ -98,6 +98,14 @@ data:
     platform = "javascript-react"
     sentry_key = "76f1924f64f127f474b8cc70bb4a2530"
 
+    # The marketing site and its docs, at trydimmi.com and trydimmi.com/docs.
+    [[bootstrap.projects]]
+    id = 3
+    name = "website"
+    slug = "website"
+    platform = "javascript"
+    sentry_key = "ee0d3c1646fa87790f5f180d1d4ba547"
+
     [[bootstrap.tokens]]
     name = "ci"
     description = "Uploads the dashboard's source maps from main's build"

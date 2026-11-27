@@ -78,7 +78,7 @@ func newOperatorEngine(a *app.App) *operator.Engine {
 	return &operator.Engine{
 		DB: a.DB, IDs: a.IDs, Clock: a.Clock, LLM: a.LLM, Prices: a.AI.Prices, Publisher: a.Broadcast,
 		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads, Catalog: newOperatorCatalog(a),
-		AppURL: a.Application.Config.App.URL,
+		AppURL: a.Application.Config.App.URL, Telemetry: a.Telemetry,
 		Addresses: helpcenters.Addresses{
 			BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,
 		},

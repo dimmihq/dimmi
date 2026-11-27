@@ -32,6 +32,7 @@
     "@internationalized/date": "^3.12.4",
     "@phosphor-icons/react": "2.1.10",
     "@remixicon/react": "^4.9.0",
+    "@sentry/browser": "^10.78.0",
     "@sentry/react": "^10.78.0",
     "@simplewebauthn/browser": "^14.0.0",
     "@tanstack/react-query": "^5.105.1",

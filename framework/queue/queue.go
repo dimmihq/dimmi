@@ -65,6 +65,7 @@ type Config struct {
 	NoLeader     bool           `koanf:"-"`
 	Clock        clock.Clock    `koanf:"-"`
 	Report       Reporter       `koanf:"-"`
+	CheckIn      CheckIn        `koanf:"-"`
 }
 
 /*
@@ -88,6 +89,7 @@ type Queue struct {
 	noLeader bool
 	clock    clock.Clock
 	running  atomic.Bool
+	monitors monitors
 }
 
 /*
@@ -122,6 +124,7 @@ func New(ctx context.Context, db database.Config, cfg Config) (*Queue, error) {
 		txMode:   execMode(db.PoolMode),
 		noLeader: cfg.NoLeader,
 		clock:    cfg.Clock,
+		monitors: monitors{checkIn: cfg.CheckIn, byKind: map[string]Monitor{}},
 	}
 
 	q.client, err = river.NewClient(riverpgxv5.New(pool), q.riverConfig(ctx, cfg))

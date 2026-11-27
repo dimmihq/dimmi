@@ -1,8 +1,8 @@
 # The production load balancer forwards ports 80 and 443 to these node
 # ports, which are its own: staging's edge holds 30080 and 30443.
 #
-# This edge runs the image with the Vercel DNS module (deploy/k8s/edge) for
-# the wildcard certificate of dimmi.help (help.caddy). Secret edge-dns holds
+# This edge uses the image's Vercel DNS module (deploy/k8s/edge) for the
+# wildcard certificate of dimmi.help (help.caddy). Secret edge-dns holds
 # VERCEL_API_TOKEN, a Vercel token that may edit the domain's DNS. It is
 # made by hand from .env.production and never committed.
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -10,10 +10,6 @@ kind: Kustomization
 namespace: dimmi-production
 resources:
   - ../../base/edge
-images:
-  - name: caddy
-    newName: ghcr.io/dimmihq/dimmi
-    newTag: edge-2.10.2-vercel.1
 configMapGenerator:
   - name: caddy
     behavior: merge

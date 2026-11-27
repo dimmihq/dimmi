@@ -1,6 +1,6 @@
-# Builds the edge image, Caddy with the Vercel DNS module, and pushes it to
-# GHCR under the tag the production edge names
-# (deploy/k8s/apps/production/edge/kustomization.yaml). A tag that exists is
+# Builds the edge image, Caddy with the edge's modules, and pushes it to
+# GHCR under the tag the base edge names
+# (deploy/k8s/apps/base/edge/kustomization.yaml). A tag that exists is
 # never built again, so a change to the image needs a new tag there.
 
 name: edge image
@@ -10,7 +10,7 @@ on:
     branches: [main]
     paths:
       - deploy/k8s/edge/**
-      - deploy/k8s/apps/production/edge/kustomization.yaml
+      - deploy/k8s/apps/base/edge/kustomization.yaml
       - .github/workflows/edge-image.yml
   workflow_dispatch:
 
@@ -24,10 +24,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-      - name: Read the tag the production edge names
+      - name: Read the tag the base edge names
         run: |
-          tag="$(sed -n 's/^ *newTag: \(edge-[0-9A-Za-z.-]*\)$/\1/p' deploy/k8s/apps/production/edge/kustomization.yaml)"
-          [ -n "$tag" ] || { echo "the production edge names no edge tag"; exit 1; }
+          tag="$(sed -n 's/^ *newTag: \(edge-[0-9A-Za-z.-]*\)$/\1/p' deploy/k8s/apps/base/edge/kustomization.yaml)"
+          [ -n "$tag" ] || { echo "the base edge names no edge tag"; exit 1; }
           echo "TAG=$tag" >> "$GITHUB_ENV"
       - uses: docker/login-action@v3
         with:
