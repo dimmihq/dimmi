@@ -32,12 +32,14 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/feedback"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/identity"
+	"github.com/dimmihq/dimmi/app/actions/importedteammates"
 	"github.com/dimmihq/dimmi/app/actions/invitations"
 	"github.com/dimmihq/dimmi/app/actions/issues"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/actions/knowledgesources"
 	"github.com/dimmihq/dimmi/app/actions/memberimports"
 	"github.com/dimmihq/dimmi/app/actions/members"
+	"github.com/dimmihq/dimmi/app/actions/migrations"
 	"github.com/dimmihq/dimmi/app/actions/notifications"
 	"github.com/dimmihq/dimmi/app/actions/procedures"
 	"github.com/dimmihq/dimmi/app/actions/ratings"
@@ -114,6 +116,7 @@ type Actions struct {
 	ListMembers             *members.ListMembers
 	ShowMember              *members.ShowMember
 	UpdateMember            *members.UpdateMember
+	CreateImportedTeammate  *importedteammates.CreateImportedTeammate
 	ListAccessTeams         *members.ListAccessTeams
 	StartTwoFactorReset     *members.StartTwoFactorReset
 	CompleteTwoFactorReset  *members.CompleteTwoFactorReset
@@ -145,12 +148,14 @@ type Actions struct {
 	HelpCenters                *helpcenters.HelpCenters
 	Collections                *helpcenters.Collections
 	Articles                   *helpcenters.Articles
+	Translations               *helpcenters.Translations
 	KnowledgeSettings          *knowledge.Settings
 	KnowledgeSources           *knowledgesources.Engine
 	Webhooks                   *webhooks.Webhooks
 	HelpImages                 *helpcenters.Images
 	HelpCenterAddresses        helpcenters.Addresses
 	HelpPublic                 *helpcenters.Public
+	HelpThemes                 *helpcenters.Themes
 	HelpReaders                *helpcenters.Readers
 	HelpRatings                *helpcenters.Ratings
 	HelpDomains                *helpcenters.Domains
@@ -166,6 +171,7 @@ type Actions struct {
 	TicketReports              *ticketreports.Reports
 	TicketIssues               *issues.Issues
 	TicketImports              *ticketimports.Importer
+	Migrations                 *migrations.Migrations
 	SLA                        *sla.SLA
 	Workflows                  *workflows.Workflows
 	Schedules                  *schedules.Schedules

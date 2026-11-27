@@ -170,7 +170,7 @@ func (c *ConversationController) Store(
 		Membership: membership(ctx), ByContact: b.Author != nil && *b.Author == "contact", Subject: b.Subject,
 		Body: b.Body, AssignSet: requests.Sent(in.RawBody)["assignee_id"],
 		Contact:    contacts.Ref{ExternalID: b.Contact.ExternalID, Email: b.Contact.Email, Name: b.Contact.Name},
-		MutationID: mutationID(ctx),
+		MutationID: mutationID(ctx), Attributes: b.Attributes,
 	}
 
 	var err error
@@ -274,6 +274,11 @@ func (c *ConversationController) changes(
 
 	ch.AddTags, ch.RemoveTags = tagRefs(c.IDs, b.AddTags), decodeTagIDs(c.IDs, b.RemoveTags)
 	ch.Attributes.InboxID, err = decodeField(c.IDs, models.PrefixInbox, b.InboxID, exceptions.ErrInboxNotFound)
+	if err != nil {
+		return ch, err
+	}
+
+	ch.Attributes.CompanyID, err = decodeField(c.IDs, models.PrefixCompany, b.CompanyID, exceptions.ErrCompanyNotLinked)
 
 	return ch, err
 }

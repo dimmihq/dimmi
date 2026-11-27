@@ -1,0 +1,182 @@
+{
+  "admin_assignee_id": 0,
+  "category": "Customer",
+  "channel": "sms",
+  "company_id": "\u003cstring\u003e",
+  "contacts": {
+    "contacts": [
+      {
+        "email": "\u003cstring\u003e",
+        "external_id": "\u003cstring\u003e",
+        "id": "\u003cstring\u003e",
+        "type": "contact"
+      }
+    ],
+    "type": "contact.list"
+  },
+  "created_at": 0,
+  "id": "\u003cstring\u003e",
+  "is_shared": true,
+  "linked_objects": {
+    "data": [],
+    "has_more": false,
+    "total_count": 0,
+    "type": "list"
+  },
+  "open": true,
+  "previous_ticket_state_id": "\u003cstring\u003e",
+  "team_assignee_id": 0,
+  "ticket_attributes": {
+    "Platforms": null,
+    "Root cause": null,
+    "_default_description_": "\u003cstring\u003e",
+    "_default_title_": "\u003cstring\u003e"
+  },
+  "ticket_id": "\u003cstring\u003e",
+  "ticket_parts": {
+    "ticket_parts": [
+      {
+        "attachments": [],
+        "author": {
+          "email": "\u003cstring\u003e",
+          "id": "\u003cstring\u003e",
+          "name": "\u003cstring\u003e",
+          "type": "bot"
+        },
+        "created_at": 0,
+        "id": "\u003cstring\u003e",
+        "part_type": "company_updated",
+        "redacted": false,
+        "type": "ticket_part",
+        "updated_at": 0
+      },
+      {
+        "assigned_to": {
+          "id": null,
+          "type": "nobody_admin"
+        },
+        "attachments": [],
+        "author": {
+          "email": "\u003cstring\u003e",
+          "id": "\u003cstring\u003e",
+          "name": "\u003cstring\u003e",
+          "type": "admin"
+        },
+        "created_at": 0,
+        "id": "\u003cstring\u003e",
+        "part_type": "assignment",
+        "redacted": false,
+        "type": "ticket_part",
+        "updated_at": 0
+      },
+      {
+        "attachments": [],
+        "author": {
+          "email": "\u003cstring\u003e",
+          "id": "\u003cstring\u003e",
+          "name": "\u003cstring\u003e",
+          "type": "user"
+        },
+        "body": "\u003chtml\u003e",
+        "created_at": 0,
+        "id": "\u003cstring\u003e",
+        "part_type": "comment",
+        "redacted": false,
+        "type": "ticket_part",
+        "updated_at": 0
+      }
+    ],
+    "total_count": 0,
+    "type": "ticket_part.list"
+  },
+  "ticket_state": {
+    "category": "in_progress",
+    "external_label": "\u003cstring\u003e",
+    "id": "\u003cstring\u003e",
+    "internal_label": "\u003cstring\u003e",
+    "type": "ticket_state"
+  },
+  "ticket_type": {
+    "archived": false,
+    "category": "Customer",
+    "created_at": 0,
+    "description": "\u003cstring\u003e",
+    "icon": "\u003cstring\u003e",
+    "id": "\u003cstring\u003e",
+    "is_internal": false,
+    "name": "\u003cstring\u003e",
+    "ticket_type_attributes": {
+      "data": [
+        {
+          "archived": false,
+          "created_at": 0,
+          "data_type": "string",
+          "default": true,
+          "description": "\u003cstring\u003e",
+          "id": "\u003cstring\u003e",
+          "input_options": {
+            "multiline": false
+          },
+          "name": "\u003cstring\u003e",
+          "order": 0,
+          "required_to_create": false,
+          "required_to_create_for_contacts": false,
+          "ticket_type_id": 0,
+          "type": "ticket_type_attribute",
+          "updated_at": 0,
+          "visible_on_create": true,
+          "visible_to_contacts": true,
+          "workspace_id": "\u003cstring\u003e"
+        },
+        {
+          "archived": false,
+          "created_at": 0,
+          "data_type": "string",
+          "default": true,
+          "description": "\u003cstring\u003e",
+          "id": "\u003cstring\u003e",
+          "input_options": {
+            "multiline": true
+          },
+          "name": "\u003cstring\u003e",
+          "order": 0,
+          "required_to_create": false,
+          "required_to_create_for_contacts": false,
+          "ticket_type_id": 0,
+          "type": "ticket_type_attribute",
+          "updated_at": 0,
+          "visible_on_create": true,
+          "visible_to_contacts": true,
+          "workspace_id": "\u003cstring\u003e"
+        },
+        {
+          "archived": false,
+          "created_at": 0,
+          "data_type": "string",
+          "default": false,
+          "description": "\u003cstring\u003e",
+          "id": "\u003cstring\u003e",
+          "input_options": {
+            "multiline": false
+          },
+          "name": "\u003cstring\u003e",
+          "order": 0,
+          "required_to_create": false,
+          "required_to_create_for_contacts": false,
+          "ticket_type_id": 0,
+          "type": "ticket_type_attribute",
+          "updated_at": 0,
+          "visible_on_create": true,
+          "visible_to_contacts": true,
+          "workspace_id": "\u003cstring\u003e"
+        }
+      ],
+      "type": "list"
+    },
+    "type": "ticket_type",
+    "updated_at": 0,
+    "workspace_id": "\u003cstring\u003e"
+  },
+  "type": "ticket",
+  "updated_at": 0
+}

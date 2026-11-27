@@ -26,6 +26,7 @@ func otherTexts() map[string]map[string]string {
 		otherTextsFromUpdateInboxPreferences(),
 		otherTextsFromUpdateNotificationSettings(),
 		otherTextsFromUpdateWidgetSettings(),
+		helpCenterThemeTexts(),
 	} {
 		mergeTexts(out, part)
 	}
@@ -172,6 +173,20 @@ func otherTextsFromCreateWidgetSettings() map[string]map[string]string {
 		"list_conversations_behind_report_number": {
 			"report": "The key of the report the number is on: overview, responsiveness, resolution, team, " +
 				"live, satisfaction, ai or help_center. Such as overview.",
+		},
+		"get_migration_by_id": {
+			"migration": "The migration's id (mig_...), as starting or listing migrations returns it. Such " +
+				"as mig_01jc8q3x7m2n4p5r6s7t8v9w0y.",
+		},
+		"look_up_migration_records": {
+			"migration": "The migration (mig_...) the records belong to. Such as mig_01jc8q3x7m2n4p5r6s7t8v9w0y.",
+			"kind": "The kind of the records, as the import format names it: contact, conversation, article and " +
+				"so on. Such as contact.",
+			"source_ids": "Up to 100 ids the records had in the other tool. Such as [\"6512ab\",\"6512ac\"].",
+		},
+		"roll_back_migration": {
+			"migration": "The migration (mig_...) to undo, as starting or listing migrations returns it. Such " +
+				"as mig_01jc8q3x7m2n4p5r6s7t8v9w0y.",
 		},
 		"list_imports": {
 			"kind": "Which imports to list: contacts (imports of customers) or companies. Required. Such as " +

@@ -118,7 +118,7 @@ func (c PortalController) Tickets(w fhttp.ResponseWriter, r *fhttp.Request) {
 		out.Items = append(out.Items, requestRow(t, req.who.ContactID, c.Requests.Clock.Now()))
 	}
 
-	c.respond(w, r, fhttp.StatusOK, helpcenter.RequestsPage(req.site.center, out, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.RequestsPage(req.site.center, out))
 }
 
 /*
@@ -153,7 +153,7 @@ func (c PortalController) NewTicket(w fhttp.ResponseWriter, r *fhttp.Request) {
 		return
 	}
 
-	c.respond(w, r, fhttp.StatusOK, helpcenter.NewRequestPage(req.site.center, form, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.NewRequestPage(req.site.center, form))
 }
 
 /*
@@ -198,7 +198,7 @@ func (c PortalController) SubmitTicket(w fhttp.ResponseWriter, r *fhttp.Request)
 			Title: r.PostFormValue("title"), Description: r.PostFormValue("description"), Error: why,
 			Key: r.PostFormValue("key"),
 		}
-		c.respond(w, r, fhttp.StatusUnprocessableEntity, helpcenter.NewRequestPage(req.site.center, form, c.styles()))
+		c.respond(w, r, fhttp.StatusUnprocessableEntity, helpcenter.NewRequestPage(req.site.center, form))
 
 		return
 	}
@@ -247,7 +247,7 @@ func (c PortalController) Ticket(w fhttp.ResponseWriter, r *fhttp.Request) {
 		page.Error = "Write something before sending."
 	}
 
-	c.respond(w, r, fhttp.StatusOK, helpcenter.RequestShowPage(req.site.center, page, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.RequestShowPage(req.site.center, page))
 }
 
 /*

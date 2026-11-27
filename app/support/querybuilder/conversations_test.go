@@ -50,7 +50,7 @@ func TestConversations(t *testing.T) {
 		sql, args := list.IDs()
 		for _, part := range []string{
 			"c.status = ANY", "c.assignee_member_id IS NULL", "c.assignee_team_id IS NULL", "c.inbox_id =",
-			"c.contact_id =", "ct.company_id =", "c.channel_connection_id = ANY", "cc.type = ANY",
+			"c.contact_id =", "lnk.company_id =", "c.channel_connection_id = ANY", "cc.type = ANY",
 			"c.priority = ANY", "c.priority >=", "c.number =", "c.waiting_since IS NOT NULL", "c.created_at >=",
 			"c.created_at <", "ct.tag_id = ANY", "m.undone_at IS NULL", "mm.workspace_member_id =",
 			"to_tsquery('dimmi_search'", "c.subject = $", "LIMIT $", "c.spam = false",

@@ -31,7 +31,7 @@ func (c *HelpCenterController) Rate(w fhttp.ResponseWriter, r *fhttp.Request) {
 	if r.FormValue("helpful") == "no" {
 		answer = "no"
 	}
-	to := strings.TrimSuffix(r.URL.Path, "/feedback") + "?helpful=" + answer
+	to := strings.TrimSuffix(arrivedPath(r), "/feedback") + "?helpful=" + answer
 	err := c.rating(w, r, func(in helpcenters.Rating) error {
 		in.Helpful = answer == "yes"
 		return c.Ratings.Rate(r.Context(), in)
@@ -44,7 +44,7 @@ Comment keeps what a reader who said no was looking for, and thanks
 them. A comment with no words leaves them where they were.
 */
 func (c *HelpCenterController) Comment(w fhttp.ResponseWriter, r *fhttp.Request) {
-	to := strings.TrimSuffix(r.URL.Path, "/feedback/comment") + "?helpful=no"
+	to := strings.TrimSuffix(arrivedPath(r), "/feedback/comment") + "?helpful=no"
 	err := c.rating(w, r, func(in helpcenters.Rating) error {
 		in.Comment = r.FormValue("comment")
 		return c.Ratings.Comment(r.Context(), in)
@@ -85,7 +85,9 @@ func (c *HelpCenterController) rating(w fhttp.ResponseWriter, r *fhttp.Request,
 	if s.reader != nil {
 		rater = "contact:" + s.reader.String()
 	}
-	return keep(helpcenters.Rating{Center: s.help, Slug: r.PathValue("slug"), Rater: rater, Contact: s.reader})
+	return keep(helpcenters.Rating{
+		Center: s.help, Locale: readingLocale(r.Context()), Slug: r.PathValue("slug"), Rater: rater, Contact: s.reader,
+	})
 }
 
 /*

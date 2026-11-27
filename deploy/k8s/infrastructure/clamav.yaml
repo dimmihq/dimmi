@@ -12,8 +12,11 @@
 # The app releases a file as not scanned when the scanner stays down, so
 # a restart never hides customers' files.
 #
-# clamd takes streams up to 32M, a little over the largest email file the
-# app keeps (25 MB); anything bigger is reported unscanned.
+# clamd takes streams up to 110M, a little over the largest file a
+# teammate or a migration uploads (100 MB); anything bigger is reported
+# unscanned. A stream is held in memory while it is scanned, so a few
+# large files at once raise the pod's memory for that moment; the limit
+# leaves room for two of them on top of a signature reload.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -49,9 +52,9 @@ spec:
           image: clamav/clamav:1.4
           env:
             - name: CLAMD_CONF_StreamMaxLength
-              value: 32M
+              value: 110M
             - name: CLAMD_CONF_MaxFileSize
-              value: 32M
+              value: 110M
           ports:
             - name: clamd
               containerPort: 3310
@@ -80,7 +83,7 @@ spec:
               memory: 1Gi
             limits:
               cpu: "1"
-              memory: 2Gi
+              memory: 2560Mi
           volumeMounts:
             - name: signatures
               mountPath: /var/lib/clamav

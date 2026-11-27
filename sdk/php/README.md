@@ -107,6 +107,7 @@ echo Dimmi\Messenger::snippet('wgt_...', 'https://dimmi.acme.com', $token);
 - `expiresIn` is 1 to 3600 seconds, 600 by default. `audience:` and `nonce:` are optional.
 - `email_verified` is set only when `emailVerified` is `true`. Empty fields are left out.
 - Attributes are at most 100 snake_case keys with flat values.
+- `companies` lists up to 50 more companies, shaped like `company`.
 - A bad user throws `Dimmi\IdentityException` with a stable `errorCode` and the fix in the message, such as `[dimmi] user_field_unknown: put plan under attributes.`
 
 For long sessions, serve `{"token": "..."}` (with `Cache-Control: no-store, private`) from a route and let the messenger fetch it:

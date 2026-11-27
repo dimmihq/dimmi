@@ -48,30 +48,30 @@ func TestSourceAdministration(t *testing.T) {
 		t.Parallel()
 
 		x := newSources(t)
-		serveIntercom(t, x)
-		source := addIntercom(t, x)
+		serveGitHub(t, x)
+		source := addGitHub(t, x, "sync")
 
 		shown := x.owner.GetJSON("/api/v1/knowledge/sources/" + source).AssertOK()
 		assert.Contains(t, shown.String("data.settings.installation"), "itg_")
-		assert.NotContains(t, string(shown.Body), fakeKey())
+		assert.NotContains(t, string(shown.Body), githubToken())
 		assert.Zero(t, x.count(t, "SELECT count(*) FROM knowledge_sources WHERE config::text LIKE '%kkkk%'"))
 		assert.Zero(t, x.count(t, "SELECT count(*) FROM knowledge_sources WHERE credentials_encrypted IS NOT NULL"))
 
-		x.owner.PatchJSON("/api/v1/knowledge/sources/"+source, testkit.JSON{"name": "Old help center"}).
-			AssertOK().AssertJSONPath("data.name", "Old help center")
+		x.owner.PatchJSON("/api/v1/knowledge/sources/"+source, testkit.JSON{"name": "Old docs"}).
+			AssertOK().AssertJSONPath("data.name", "Old docs")
 	})
 
 	t.Run("a refused key fails the sync and tells the admins once", func(t *testing.T) {
 		t.Parallel()
 
 		x := newSources(t)
-		fake := serveIntercom(t, x)
-		source := addIntercom(t, x)
+		fake := serveGitHub(t, x)
+		source := addGitHub(t, x, "sync")
 		settle(t, x, source)
 		x.tc.DrainLater()
 
 		mail := x.tc.Mail()
-		fake.Stub("GET "+intercomAPI+"/articles?page=1&per_page=50", httpclient.Response{Status: 401})
+		fake.Stub("GET "+githubAPI+"/repos/acme/docs/git/trees/main?recursive=1", httpclient.Response{Status: 401})
 
 		for range 2 {
 			x.owner.PostJSON("/api/v1/knowledge/sources/"+source+"/syncs", nil).AssertStatus(202)
@@ -81,7 +81,7 @@ func TestSourceAdministration(t *testing.T) {
 
 		sent, _ := tests.Sent[appmail.KnowledgeSourceFailingMail](x.tc, mail)
 		require.Len(t, sent, 1, "admins hear once until the source works again")
-		assert.Equal(t, "Intercom", sent[0].Source)
+		assert.Equal(t, "Docs", sent[0].Source)
 		assert.True(t, strings.HasSuffix(sent[0].SettingsURL, "/settings/knowledge/"+source))
 	})
 

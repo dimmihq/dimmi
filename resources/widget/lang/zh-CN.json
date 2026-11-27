@@ -44,6 +44,8 @@
   "office_hours_text": "",
   "offline_message": "我们暂时不在线。留言后我们会通过邮件回复你。",
   "open_in_help_center": "在帮助中心打开",
+  "written_by": "作者：{name}",
+  "updated_ago": "{time}更新",
   "popular": "热门文章",
   "privacy_notice": "我们会按照隐私政策处理你的数据。",
   "rated_thanks": "感谢你的反馈！",

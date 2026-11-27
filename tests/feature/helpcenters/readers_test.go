@@ -49,7 +49,7 @@ signIn posts a token to the help center's sign-in, as its page does.
 func (c center) signIn(token, next string) *testkit.Response {
 	form := url.Values{"token": {token}, "next": {next}}
 
-	return c.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
+	return c.forms(c.d.TC.Client()).WithHeader("Content-Type", "application/x-www-form-urlencoded").
 		Send("POST", c.address("/sso"), form.Encode())
 }
 

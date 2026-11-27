@@ -20,7 +20,7 @@ func schemaTextParts() []map[string]map[string]string {
 		schemaTextPartsFromConversationRating(),
 		schemaTextPartsFromMessageAIConfirmation(),
 		schemaTextPartsFromSeriesTrace(),
-		[]map[string]map[string]string{agentStudioSchemaTexts()},
+		[]map[string]map[string]string{agentStudioSchemaTexts(), schemaTextsFromMigration()},
 	)
 }
 
@@ -66,6 +66,7 @@ func schemaTextPartsFromAIAction() []map[string]map[string]string {
 		schemaTextsFromConfigHomeLink(),
 		schemaTextsFromConnectedApp(),
 		schemaTextsFromContact(),
+		schemaTextsFromContactCompany(),
 		schemaTextsFromContactIdentity(),
 		schemaTextsFromContextCompany(),
 		schemaTextsFromConversation(),
@@ -88,6 +89,9 @@ func schemaTextPartsFromConversationRating() []map[string]map[string]string {
 		schemaTextsFromEmailAddress(),
 		schemaTextsFromEmailAddressTest(),
 		schemaTextsFromEmailDomain(),
+		schemaTextsFromTranslation(),
+		schemaTextsFromHelpCenterLanguages(),
+		schemaTextsFromHelpCenterTheme(),
 		schemaTextsFromEmailSending(),
 		schemaTextsFromEmailSignatureRendering(),
 		schemaTextsFromEventDefinition(),
@@ -102,6 +106,7 @@ func schemaTextPartsFromConversationRating() []map[string]map[string]string {
 		schemaTextsFromIdentityValidation(),
 		schemaTextsFromImport(),
 		schemaTextsFromImportSummary(),
+		schemaTextsFromImportedTeammate(),
 		schemaTextsFromInboundEmail(),
 		schemaTextsFromInboxAssignment(),
 		schemaTextsFromIntegration(),

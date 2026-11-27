@@ -2,6 +2,7 @@ package helpcenters_test
 
 import (
 	"cmp"
+	"html"
 	"strings"
 	"testing"
 
@@ -68,6 +69,13 @@ func (c center) local(path string) string {
 /*
 address is where a reader's browser asks for a page of the help center:
 its own host when it has one, else the application's /hc path.
+*/
+func (c center) forms(client *testkit.Client) *testkit.Client {
+	return tests.HelpForms(c.d.TC.T, client, c.address(""))
+}
+
+/*
+address is the full address of a path of the help center.
 */
 func (c center) address(path string) string {
 	if c.d.TC.App.Config.HelpCenters.BaseDomain != "" {
@@ -140,6 +148,9 @@ func TestHelpCenters(t *testing.T) {
 		page := c.page("/articles/invite-your-team").AssertOK()
 		assert.Contains(t, string(page.Body), "Send invitations")
 		assert.Contains(t, string(page.Body), "<strong>Settings</strong>")
+		assert.Contains(t, string(page.Body), "Written by "+html.EscapeString(c.d.TC.Owner.Name))
+		assert.Contains(t, string(page.Body), ">today</time>")
+		assert.Contains(t, page.Header.Get("Content-Security-Policy"), "https://www.youtube-nocookie.com")
 		md := c.page("/articles/invite-your-team.md").AssertOK()
 		assert.True(t, strings.HasPrefix(string(md.Body), "# Invite your team"))
 		assert.Contains(t, string(c.page("/search?q=invitations").AssertOK().Body), "Invite your team")
@@ -206,7 +217,9 @@ func TestHelpCenters(t *testing.T) {
 			AssertJSONPath("data.articles.0.body.0.kind", "h2").
 			AssertJSONPath("data.articles.0.body.1.kind", "steps").
 			AssertJSONPath("data.articles.0.body.1.items.0", "Open Billing").
-			AssertJSONPath("data.articles.0.body.2.kind", "note")
+			AssertJSONPath("data.articles.0.body.2.kind", "note").
+			AssertJSONPath("data.articles.0.author.name", c.d.TC.Owner.Name).
+			AssertJSONPath("data.articles.0.author.avatar_url", nil)
 		assert.NotContains(t, string(res.Body), "<strong>")
 	})
 

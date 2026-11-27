@@ -6,9 +6,11 @@
 | GET /contacts lists the customers of the workspace in play a page at a
 | time, GET /contacts/{contact} shows one, POST /contacts adds one, or
 | finds it with upsert=true, PATCH /contacts/{contact} changes or blocks
-| one and DELETE removes one without history. Blocked customers stay out
-| of the list unless asked for. Ids of other workspaces' contacts are
-| simply not found.
+| one and DELETE removes one without history. POST and DELETE on
+| /contacts/{contact}/companies add a company to a contact and take one
+| off, and POST .../companies/{company}/default makes one their default.
+| Blocked customers stay out of the list unless asked for. Ids of other
+| workspaces' contacts are simply not found.
 |
 */
 
@@ -73,6 +75,7 @@ type ContactController struct {
 	Create        *contacts.CreateContact
 	Upsert        *contacts.UpsertIdentifiedContact
 	Change        *contacts.UpdateContact
+	Companies     *contacts.ChangeCompany
 	Conversations *conversations.ListRecordConversations
 	IDs           *ids.Registry
 	Cursors       *pagination.Cursors
@@ -352,15 +355,26 @@ func (c *ContactController) Store(ctx context.Context, in *requests.StoreContact
 		return c.upsert(ctx, in)
 	}
 
+	company, err := decodeField(c.IDs, models.PrefixCompany, in.Body.CompanyID, exceptions.ErrCompanyNotFound)
+	if err != nil {
+		return nil, err
+	}
+
+	companyIDs, err := decodeCompanyIDs(c.IDs, in.Body.CompanyIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	contact, err := c.Create.Handle(ctx, contacts.CreateContactInput{
 		Membership: membership(ctx), Fields: contactFields(in.Body.ContactBody),
+		CompanyID: company, CompanyIDs: companyIDs,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	out := &ContactStoreOutput{Status: fhttp.StatusCreated}
-	out.Body.Data = resources.NewContact(contact)
+	out.Body.Data = resources.NewContactDetail(contact)
 
 	return out, nil
 }
@@ -376,6 +390,13 @@ func (c *ContactController) upsert(ctx context.Context, in *requests.StoreContac
 	if in.Body.Company != nil {
 		input.Company = new(companyFields(*in.Body.Company))
 	}
+
+	companyIDs, err := decodeCompanyIDs(c.IDs, in.Body.CompanyIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	input.CompanyIDs = companyIDs
 
 	upserted, err := c.Upsert.Handle(ctx, input)
 	if err != nil {
@@ -413,11 +434,17 @@ func (c *ContactController) Update(ctx context.Context, in *requests.UpdateConta
 		return nil, err
 	}
 
+	companyIDs, err := decodeCompanyIDs(c.IDs, in.Body.CompanyIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	d, err := c.Change.Handle(ctx, contacts.UpdateContactInput{
 		Membership: membership(ctx), ContactID: id, Fields: contactFields(in.Body.ContactBody),
 		ClearExternalID: nulls["external_id"], ClearEmail: nulls["email"], ClearName: nulls["name"],
 		ClearPhone: nulls["phone"], Notes: in.Body.Notes, ClearNotes: nulls["notes"], CompanySet: sent["company_id"],
-		CompanyID: company, AddTags: tagRefs(c.IDs, in.Body.AddTags),
+		CompanyID: company, CompaniesSet: sent["company_ids"], CompanyIDs: companyIDs,
+		AddTags:    tagRefs(c.IDs, in.Body.AddTags),
 		RemoveTags: decodeTagIDs(c.IDs, in.Body.RemoveTags), Blocked: in.Body.Blocked,
 	})
 	if err != nil {
@@ -425,6 +452,85 @@ func (c *ContactController) Update(ctx context.Context, in *requests.UpdateConta
 	}
 
 	return &ContactOutput{Body: fhttp.NewResource(resources.NewContactDetail(d))}, nil
+}
+
+/*
+StoreCompany adds a company to the contact, made their default when
+asked, and answers with the contact as it now is.
+*/
+func (c *ContactController) StoreCompany(
+	ctx context.Context, in *requests.StoreContactCompanyRequest,
+) (*ContactOutput, error) {
+	return c.changeCompany(ctx, in.Contact, in.Body.CompanyID, contacts.ChangeCompanyInput{
+		Op: contacts.CompanyAdd, MakeDefault: in.Body.Default,
+	})
+}
+
+/*
+DestroyCompany takes a company off the contact and answers with the
+contact as it now is. Taking off the default makes the oldest remaining
+company the default.
+*/
+func (c *ContactController) DestroyCompany(
+	ctx context.Context, in *requests.ContactCompanyRequest,
+) (*ContactOutput, error) {
+	return c.changeCompany(ctx, in.Contact, in.Company, contacts.ChangeCompanyInput{Op: contacts.CompanyRemove})
+}
+
+/*
+StoreDefaultCompany makes a company the contact's default, adding it
+when they do not belong to it yet.
+*/
+func (c *ContactController) StoreDefaultCompany(
+	ctx context.Context, in *requests.ContactCompanyRequest,
+) (*ContactOutput, error) {
+	return c.changeCompany(ctx, in.Contact, in.Company, contacts.ChangeCompanyInput{Op: contacts.CompanyDefault})
+}
+
+/*
+changeCompany runs one change to the contact's companies: the change
+names its operation, the contact and company come from the request.
+*/
+func (c *ContactController) changeCompany(
+	ctx context.Context, contact, company string, change contacts.ChangeCompanyInput,
+) (*ContactOutput, error) {
+	contactID, err := c.IDs.Decode(string(models.PrefixContact), contact)
+	if err != nil {
+		return nil, exceptions.ErrNotFound
+	}
+
+	companyID, err := c.IDs.Decode(string(models.PrefixCompany), company)
+	if err != nil {
+		return nil, exceptions.ErrCompanyNotFound
+	}
+
+	change.Membership, change.ContactID, change.CompanyID = membership(ctx), contactID, companyID
+
+	d, err := c.Companies.Handle(ctx, change)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ContactOutput{Body: fhttp.NewResource(resources.NewContactDetail(d))}, nil
+}
+
+/*
+decodeCompanyIDs reads a list of company ids, refusing any that is not
+one.
+*/
+func decodeCompanyIDs(registry *ids.Registry, named []string) ([]ids.UUID, error) {
+	out := make([]ids.UUID, 0, len(named))
+
+	for _, value := range named {
+		id, err := registry.Decode(string(models.PrefixCompany), value)
+		if err != nil {
+			return nil, exceptions.ErrCompanyNotFound.OnField("company_ids")
+		}
+
+		out = append(out, id)
+	}
+
+	return out, nil
 }
 
 /*

@@ -73,10 +73,16 @@ DELETE FROM attachments WHERE workspace_id = @workspace_id AND id = @id AND mess
 -- name: ListUnattachedAttachments :many
 -- ListUnattachedAttachments returns uploads of the workspace no message
 -- used, created before the cutoff, oldest first, so a purge can remove
--- their files and then their rows. Files a draft still holds are kept.
+-- their files and then their rows. Files a draft or a conversation
+-- attribute still holds are kept, and so are files a migration uploaded,
+-- which its records attach later.
 SELECT * FROM attachments AS a
 WHERE a.workspace_id = @workspace_id AND a.message_id IS NULL AND a.created_at < @before
   AND NOT EXISTS (SELECT 1 FROM conversation_drafts d WHERE d.attachment_ids @> ARRAY[a.id])
+  AND NOT EXISTS (SELECT 1 FROM conversation_ai_values v WHERE v.attachment_ids @> ARRAY[a.id])
+  AND NOT EXISTS (
+    SELECT 1 FROM migration_records r WHERE r.workspace_id = a.workspace_id AND r.kind = 'file' AND r.record_id = a.id
+  )
 ORDER BY a.created_at, a.id
 LIMIT @row_limit;
 

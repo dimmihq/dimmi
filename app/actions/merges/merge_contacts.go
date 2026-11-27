@@ -6,8 +6,9 @@
 | The same person often shows up twice: a lead who typed their address in
 | the widget and the user the host app later identified. Merging keeps
 | the target and folds the source into it. Conversations, identities,
-| tags and event counts move over; the target's details win and the
-| source only fills what the target lacks. The source stays as a
+| tags, companies and event counts move over; the target's details win
+| and the source only fills what the target lacks, so the target keeps
+| its default company and gains the source's other companies. The source stays as a
 | tombstone pointing at the target, so old links still resolve, and the
 | audit log keeps who merged whom. Two users the host app knows by
 | different ids are never merged, since each would keep signing in as
@@ -55,8 +56,9 @@ Rules:
   - Two users with different external ids are refused.
   - The target's details win; the source fills blanks. Custom
     attributes merge key by key the same way.
-  - Conversations, places in conversations, identities, tags and event
-    summaries move to the target; event counts add up.
+  - Conversations, places in conversations, identities, tags, companies
+    and event summaries move to the target; event counts add up. The
+    target keeps its default company, else takes the source's.
   - The source points at the target and keeps no external id.
 
 Events: [appevents.ContactMerged].
@@ -332,7 +334,8 @@ type belongings struct {
 
 /*
 moveBelongings moves the source's conversations, places in other
-conversations, identities, tags and event summaries to the target.
+conversations, identities, tags, companies and event summaries to the
+target.
 */
 func moveBelongings(ctx context.Context, q *models.Queries, mv move) (belongings, error) {
 	var out belongings
@@ -383,6 +386,11 @@ func belongingSteps(ctx context.Context, q *models.Queries, mv move, out *belong
 		func() error {
 			return q.MoveContactTags(ctx, models.MoveContactTagsParams{
 				WorkspaceID: ws, SourceID: source, TargetID: target,
+			})
+		},
+		func() error {
+			return q.CopyContactCompanies(ctx, models.CopyContactCompaniesParams{
+				WorkspaceID: ws, MergedID: source, SurvivorID: target,
 			})
 		},
 		func() error {

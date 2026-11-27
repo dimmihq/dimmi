@@ -1,0 +1,35 @@
+{
+  "type": "office_hours_exception.list",
+  "data": [
+    {
+      "type": "office_hours_exception",
+      "id": "457",
+      "office_hours_schedule_id": "123",
+      "exception_date": "2026-12-24",
+      "exception_type": "custom_hours",
+      "name": "Christmas Eve",
+      "time_intervals": [
+        {
+          "start_minute": 540,
+          "end_minute": 780,
+          "day_of_week": 3
+        }
+      ],
+      "recurring_annually": true,
+      "created_at": 1717200000,
+      "updated_at": 1717200000
+    },
+    {
+      "type": "office_hours_exception",
+      "id": "456",
+      "office_hours_schedule_id": "123",
+      "exception_date": "2026-12-25",
+      "exception_type": "closed",
+      "name": "Christmas Day",
+      "time_intervals": null,
+      "recurring_annually": true,
+      "created_at": 1717200000,
+      "updated_at": 1717200000
+    }
+  ]
+}

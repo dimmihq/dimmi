@@ -239,7 +239,7 @@ func TestAuthPages(t *testing.T) {
 		tc := tests.New(t, withBuild())
 
 		for _, path := range []string{
-			"/login", "/login/magic", "/signup", "/forgot-password", "/reset-password", "/verify-email",
+			"/login", "/login/magic", "/signup", "/forgot-password", "/reset-password", "/verify-email", "/waiting",
 		} {
 			res := tc.Client().Send(fhttp.MethodGet, path, nil).AssertOK()
 

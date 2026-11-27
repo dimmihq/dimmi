@@ -123,6 +123,7 @@ func featureRoutes(workspace *routing.Router, a *app.App) {
 	procedureRoutes(workspace, a)
 	audienceRoutes(workspace, a)
 	importRoutes(workspace, a)
+	migrationRoutes(workspace, a)
 	broadcastRoutes(workspace, a)
 	seriesRoutes(workspace, a)
 	simulationRoutes(workspace, a)

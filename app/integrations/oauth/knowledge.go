@@ -3,16 +3,12 @@
 | Knowledge Services
 |--------------------------------------------------------------------------
 |
-| Notion, Intercom, Zendesk and GitHub are connected so knowledge
-| sources can read pages, help center articles and repositories with
-| the access the person
-| granted, never with a key pasted into a form. Each connected account
-| is its own installation, so a workspace can read two Notion
-| workspaces or two help desks. Notion, Intercom and GitHub name the
-| account when asked with the token; a Zendesk account is the
-| subdomain the person typed, so its token is checked when a source
-| reads it. GitHub asks for repo, the only scope that reaches private
-| repositories, and dimmi only ever reads with it.
+| Notion and GitHub are connected so knowledge sources can read pages
+| and repositories with the access the person granted, never with a key
+| pasted into a form. Each connected account is its own installation,
+| so a workspace can read two Notion workspaces. Both name the account
+| when asked with the token. GitHub asks for repo, the only scope that
+| reaches private repositories, and dimmi only ever reads with it.
 |
 */
 
@@ -36,20 +32,15 @@ RegisterKnowledgeServices registers the services knowledge sources read.
 */
 func RegisterKnowledgeServices(r *Registry, client *httpclient.Client) {
 	notion := func(ctx context.Context, token string) (Health, error) { return notionHealth(ctx, client, token) }
-	intercom := func(ctx context.Context, token string) (Health, error) { return intercomHealth(ctx, client, token) }
 	github := func(ctx context.Context, token string) (Health, error) { return githubHealth(ctx, client, token) }
 
 	r.Register(Provider{
 		Name: "notion", Label: "Notion", Check: notion, Identify: notion, Separate: true,
 		AuthParams: map[string]string{"owner": "user"},
 	})
-	r.Register(Provider{Name: "intercom", Label: "Intercom", Check: intercom, Identify: intercom, Separate: true})
-	r.Register(Provider{Name: "zendesk", Label: "Zendesk", Check: zendeskHealth, Separate: true})
 	r.Register(Provider{Name: "github", Label: "GitHub", Check: github, Identify: github, Separate: true})
 
-	for _, name := range []string{"notion", "intercom", "zendesk"} {
-		r.RegisterScopes(name, KnowledgeFeature, Scopes{})
-	}
+	r.RegisterScopes("notion", KnowledgeFeature, Scopes{})
 
 	r.RegisterScopes("github", KnowledgeFeature, Scopes{Bot: []string{"repo", "read:user"}})
 }
@@ -74,25 +65,6 @@ func notionHealth(ctx context.Context, client *httpclient.Client, token string) 
 }
 
 /*
-intercomHealth asks Intercom which workspace the token belongs to.
-*/
-func intercomHealth(ctx context.Context, client *httpclient.Client, token string) (Health, error) {
-	var me struct {
-		App struct {
-			IDCode string `json:"id_code"`
-			Name   string `json:"name"`
-		} `json:"app"`
-	}
-
-	req := client.New().WithToken(token).WithHeader("Intercom-Version", "2.11").Accept("application/json")
-	if err := ask(ctx, req, "https://api.intercom.io/me", &me); err != nil {
-		return Health{}, err
-	}
-
-	return Health{Account: me.App.IDCode, AccountName: me.App.Name}, nil
-}
-
-/*
 githubHealth asks GitHub which account the token belongs to.
 */
 func githubHealth(ctx context.Context, client *httpclient.Client, token string) (Health, error) {
@@ -108,15 +80,6 @@ func githubHealth(ctx context.Context, client *httpclient.Client, token string) 
 	}
 
 	return Health{Account: strconv.FormatInt(me.ID, 10), AccountName: me.Login}, nil
-}
-
-/*
-zendeskHealth trusts a Zendesk token: its account lives on a subdomain
-the token alone cannot name, so a failing token shows on the source
-that reads with it.
-*/
-func zendeskHealth(context.Context, string) (Health, error) {
-	return Health{}, nil
 }
 
 /*

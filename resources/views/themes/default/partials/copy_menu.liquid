@@ -1,0 +1,18 @@
+{%- comment -%}
+  Copies the article's Markdown, for pasting into an AI chat or an
+  editor, and opens a menu to view the Markdown or ask ChatGPT or Claude
+  about the page. Copying needs the script; the menu does not.
+{%- endcomment -%}
+<div class="flex shrink-0 rounded-xl border border-border-button-default bg-background-primary-default shadow-xs">
+<button type="button" data-copy="{{ article.markdown_path }}" data-copied="{{ 'copied' | t }}" data-copy-failed="{{ 'copy_failed' | t }}" class="inline-flex h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-s-xl px-2.5 text-body-2-medium text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'copy' | icon: 'size-3.5' }}<span data-copy-label>{{ 'copy_page' | t }}</span></button>
+<details data-menu class="group relative border-s border-border-button-default">
+<summary aria-label="{{ 'more_ways' | t }}" class="grid h-8 w-8 cursor-pointer list-none place-items-center rounded-e-xl text-foreground-icon-secondary transition-colors hover:bg-background-secondary-hover">{{ 'chevron-down' | icon: 'size-4 transition group-open:rotate-180' }}</summary>
+<div class="absolute end-0 top-10 z-20 w-64 rounded-xl border border-border-button-default bg-background-primary-default p-1 shadow-lg">
+{% render 'menu_item', url: article.markdown_url, icon: 'markdown', title: 'view_markdown', detail: 'view_markdown_detail' %}
+{%- assign chatgpt = 'open_in' | t: app: 'ChatGPT' %}
+{%- assign claude = 'open_in' | t: app: 'Claude' %}
+{% render 'menu_item', url: article.chatgpt_url, icon: 'openai', label: chatgpt, detail: 'ask_about_page' %}
+{% render 'menu_item', url: article.claude_url, icon: 'claude', label: claude, detail: 'ask_about_page' %}
+</div>
+</details>
+</div>

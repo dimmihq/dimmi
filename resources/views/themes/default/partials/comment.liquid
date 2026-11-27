@@ -1,0 +1,16 @@
+{%- comment -%}A reply under a request, with the replies to it. The team's own carry HTML; a reader's are plain words.{%- endcomment -%}
+<li class="flex flex-col gap-1.5">
+<p class="flex items-center gap-2 text-body-2-medium">{{ comment.author }}{% if comment.from_team %}<span class="rounded-full bg-tint px-2 py-0.5 text-caption-2-medium text-link">{{ 'team' | t }}</span>{% endif %}<span class="text-caption-1-regular text-text-tertiary">{{ comment.at }}</span></p>
+{%- if comment.html != "" %}
+<div class="prose text-body-regular text-text-secondary">{{ comment.html }}</div>
+{%- else %}
+<p class="whitespace-pre-line text-body-regular text-text-secondary">{{ comment.body }}</p>
+{%- endif %}
+{%- if comment.replies.size > 0 %}
+<ol class="mt-2 flex flex-col gap-4 border-s border-separator-border ps-4">
+{%- for reply in comment.replies %}
+{% render 'comment', comment: reply %}
+{%- endfor %}
+</ol>
+{%- endif %}
+</li>

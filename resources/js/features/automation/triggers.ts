@@ -42,6 +42,7 @@ export type TriggerKind =
   | "message.customer"
   | "conversation.customer_quiet"
   | "conversation.rated"
+  | "conversation.attribute_changed"
   | "conversation.ai_attribute_changed"
   | "message.teammate"
   | "note.created"
@@ -146,9 +147,17 @@ export const triggers: Record<TriggerKind, Trigger> = {
     runs: false,
     talks: ["message"],
   },
+  "conversation.attribute_changed": {
+    group: "during",
+    name: "Conversation attribute changes",
+    detail: "Act when a teammate, the AI or a workflow sets one, like the issue type.",
+    icon: RiScan2Line,
+    runs: true,
+    talks: [],
+  },
   "conversation.ai_attribute_changed": {
     group: "during",
-    name: "AI attribute changes",
+    name: "AI sets a conversation attribute",
     detail: "Route by what the AI found, like the customer's intent.",
     icon: RiScan2Line,
     runs: true,

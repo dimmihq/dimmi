@@ -44,6 +44,8 @@
   "office_hours_text": "",
   "offline_message": "אנחנו לא זמינים. השאירו הודעה ונחזור אליכם במייל.",
   "open_in_help_center": "פתיחה במרכז העזרה",
+  "written_by": "נכתב על ידי {name}",
+  "updated_ago": "עודכן {time}",
   "popular": "מאמרים פופולריים",
   "privacy_notice": "אנו מטפלים במידע שלך כמתואר במדיניות הפרטיות שלנו.",
   "rated_thanks": "תודה על המשוב!",

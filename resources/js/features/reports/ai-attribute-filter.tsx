@@ -10,7 +10,7 @@ import { useState } from "react";
 
 import { Popover, PopoverTrigger } from "@/components/base/popover/popover";
 import { aiFilterSummary, aiValueOptions } from "@/lib/ai-values";
-import type { AIAttribute } from "@/lib/api/ai-attributes";
+import type { ConversationAttribute } from "@/lib/api/conversation-attributes";
 import { cx } from "@/utils/cx";
 
 import type { ReportSearch } from "./search";
@@ -53,7 +53,7 @@ export function AIAttributePanel({
   onDone,
   onBack,
 }: {
-  attributes: AIAttribute[];
+  attributes: ConversationAttribute[];
   search: ReportSearch;
   onChange: Change;
   onDone: () => void;
@@ -65,7 +65,7 @@ export function AIAttributePanel({
   if (!attribute) {
     return (
       <div className={cx("flex flex-col gap-1", slide)}>
-        <BackHeader label="AI attribute" onBack={onBack} />
+        <BackHeader label="Conversation attribute" onBack={onBack} />
         <div className="-mx-1 flex max-h-72 flex-col overflow-y-auto px-1">
           {attributes.map((a) => (
             <button key={a.key} type="button" onClick={() => setPicked(a.key)} className={row}>
@@ -125,7 +125,7 @@ export function AIAttributeChip({
   search,
   onChange,
 }: {
-  attributes: AIAttribute[];
+  attributes: ConversationAttribute[];
   search: ReportSearch;
   onChange: Change;
 }) {
@@ -148,7 +148,7 @@ export function AIAttributeChip({
           <RiListCheck3 aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
           <span className="truncate">{text}</span>
         </button>
-        <Popover aria-label="AI attribute" placement="bottom start" className="w-64">
+        <Popover aria-label="Conversation attribute" placement="bottom start" className="w-64">
           <AIAttributePanel attributes={attributes} search={search} onChange={onChange} onDone={() => setOpen(false)} />
         </Popover>
       </PopoverTrigger>

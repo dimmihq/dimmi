@@ -1,0 +1,35 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "note",
+      "id": "26",
+      "created_at": 1733932587,
+      "company": {
+        "type": "company",
+        "id": "5f4d3c1c-7b1b-4d7d-a97e-6095715c6632"
+      },
+      "author": {
+        "type": "admin",
+        "id": "991267581",
+        "name": "Ciaran122 Lee",
+        "email": "admin122@email.com",
+        "away_mode_enabled": false,
+        "away_mode_reassign": false,
+        "away_status_reason_id": null,
+        "has_inbox_seat": true,
+        "team_ids": [],
+        "team_priority_level": {}
+      },
+      "body": "<p>This is a note.</p>"
+    }
+  ],
+  "total_count": 1,
+  "pages": {
+    "type": "pages",
+    "next": null,
+    "page": 1,
+    "per_page": 50,
+    "total_pages": 1
+  }
+}

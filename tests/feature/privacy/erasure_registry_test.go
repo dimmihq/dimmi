@@ -20,6 +20,7 @@ func erasedBy() map[string]string {
 		"conversations":               "handed to the placeholder, messages and files wiped",
 		"contact_identities":          "freed on request, deleted with the contact",
 		"conversation_participants":   "deleted with the contact",
+		"contact_companies":           "deleted with the contact, the companies they belonged to kept",
 		"contact_tag":                 "deleted with the contact",
 		"contact_event_summaries":     "deleted with the contact, details included",
 		"widget_sessions":             "deleted with the contact",

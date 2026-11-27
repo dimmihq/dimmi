@@ -17,19 +17,22 @@ package tickets
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	appevents "github.com/dimmihq/dimmi/app/events"
+	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
 Change is a change to a ticket; nil leaves a field. Version, when set,
 must be the ticket's current one. ClearAssignee and ClearTeam unassign.
-Accept lists suggested field keys to keep as values.
+Accept lists suggested field keys to keep as values. CompanyID moves
+the ticket to another company, one its contact belongs to.
 */
 type Change struct {
 	Version       *int32
@@ -44,6 +47,7 @@ type Change struct {
 	Team          *ids.UUID
 	ClearTeam     bool
 	SLAPolicyID   *ids.UUID
+	CompanyID     *ids.UUID
 	Accept        []string
 }
 
@@ -167,6 +171,10 @@ func (w *Writer) edit(ctx context.Context, t models.Ticket, c Change) (models.Ti
 
 	editSettings(&t, c, changes)
 
+	if err := w.editCompany(ctx, &t, c, changes); err != nil {
+		return t, err
+	}
+
 	if len(changes) == 0 && slices.Equal(before.Suggestions, t.Suggestions) {
 		return t, nil
 	}
@@ -263,6 +271,60 @@ func editSettings(t *models.Ticket, c Change, changes map[string]appevents.Ticke
 		changes["sla_policy_id"] = change(t.SlaPolicyID, *c.SLAPolicyID)
 		t.SlaPolicyID = c.SLAPolicyID
 	}
+}
+
+/*
+editCompany moves the ticket to another company: one its contact
+belongs to, or any live company of the workspace for a ticket without
+a contact.
+*/
+func (w *Writer) editCompany(
+	ctx context.Context, t *models.Ticket, c Change, changes map[string]appevents.TicketChange,
+) error {
+	if c.CompanyID == nil || samePtr(t.CompanyID, c.CompanyID) {
+		return nil
+	}
+
+	if err := companyAllowed(ctx, w.Q, *t, *c.CompanyID); err != nil {
+		return err
+	}
+
+	changes["company_id"] = change(t.CompanyID, *c.CompanyID)
+	t.CompanyID = c.CompanyID
+
+	return nil
+}
+
+/*
+companyAllowed refuses a company the ticket's contact does not belong
+to, or, without a contact, one that is not a live company of the
+workspace.
+*/
+func companyAllowed(ctx context.Context, q *models.Queries, t models.Ticket, company ids.UUID) error {
+	ws, contact := t.WorkspaceID, t.ContactID
+	if contact == nil {
+		found, err := q.CompaniesByIDs(ctx, models.CompaniesByIDsParams{WorkspaceID: ws, Ids: []ids.UUID{company}})
+		if err != nil {
+			return fmt.Errorf("find company: %w", err)
+		}
+
+		if len(found) == 0 {
+			return exceptions.ErrCompanyNotFound
+		}
+
+		return nil
+	}
+
+	linked, err := q.ContactCompanyIDs(ctx, models.ContactCompanyIDsParams{WorkspaceID: ws, ContactID: *contact})
+	if err != nil {
+		return fmt.Errorf("read contact companies: %w", err)
+	}
+
+	if !slices.Contains(linked, company) {
+		return exceptions.ErrCompanyNotLinked
+	}
+
+	return nil
 }
 
 /*

@@ -1,0 +1,8 @@
+<form method="post" action="{{ action }}" class="mt-10 overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default shadow-sm transition focus-within:border-border-button-hover focus-within:ring-4 focus-within:ring-tint">
+{{ form_token_field }}
+{%- if error and error != "" %}
+<p role="alert" class="bg-tint px-4 py-2 text-body-2-medium text-link">{{ error }}</p>
+{%- endif %}
+<label><span class="sr-only">Reply</span><textarea name="body" rows="3" required placeholder="Write a reply…" class="block w-full resize-none bg-transparent px-4 py-3 text-body-regular outline-none placeholder:text-text-placeholder"></textarea></label>
+<div class="flex justify-end border-t border-separator-border bg-background-secondary-default px-2.5 py-2"><button type="submit" class="button-brand inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-body-2-medium">{{ 'send' | icon: 'size-3.5' }}Send</button></div>
+</form>

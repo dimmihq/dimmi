@@ -83,6 +83,16 @@
       "Block": {
         "additionalProperties": false,
         "properties": {
+          "blocks": {
+            "description": "The blocks a details block holds, in order. Absent on every other kind of block.",
+            "items": {
+              "$ref": "#/components/schemas/Block"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "items": {
             "description": "The entries of a list or steps block as plain text, one per item. Absent on every other kind of block.",
             "items": {
@@ -94,11 +104,11 @@
             ]
           },
           "kind": {
-            "description": "What the block is: h2 (heading), p (paragraph), list (bulleted), steps (numbered), code, note (quote or callout) or image.",
+            "description": "What the block is: h2 (heading), p (paragraph), list (bulleted), steps (numbered), code, note (quote or callout), image, embed (a video or demo to open), button (a link drawn as a button) or details (a collapsible section).",
             "type": "string"
           },
           "text": {
-            "description": "The block's plain text: the heading, paragraph or note wording, the source of a code block, or the alt text of an image. Absent on list and steps blocks.",
+            "description": "The block's plain text: the heading, paragraph or note wording, the source of a code block, the alt text of an image, the label of an embed or a button, or the summary of a details block. Absent on list and steps blocks.",
             "type": "string"
           },
           "tokens": {
@@ -110,6 +120,10 @@
               "array",
               "null"
             ]
+          },
+          "url": {
+            "description": "Where an embed or a button goes: the video or demo page, or the button's link. Absent on every other kind of block.",
+            "type": "string"
           }
         },
         "required": [
@@ -974,6 +988,9 @@
       "HelpArticle": {
         "additionalProperties": false,
         "properties": {
+          "author": {
+            "$ref": "#/components/schemas/HelpAuthor"
+          },
           "body": {
             "description": "The article's content as blocks to draw in order, so the messenger can open it without another request.",
             "items": {
@@ -1007,7 +1024,29 @@
           "title",
           "summary",
           "updated",
+          "author",
           "body"
+        ],
+        "type": "object"
+      },
+      "HelpAuthor": {
+        "additionalProperties": false,
+        "properties": {
+          "avatar_url": {
+            "description": "A short-lived address of the author's photo, valid for an hour. Null when they have none; show their initials instead.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "The author's name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "avatar_url"
         ],
         "type": "object"
       },
@@ -1067,6 +1106,10 @@
               "array",
               "null"
             ]
+          },
+          "locale": {
+            "description": "The language the articles are in, as a code such as fr, when the help center offers more than one. Ask for another with the locale parameter.",
+            "type": "string"
           },
           "popular": {
             "description": "The slugs of up to five articles to feature first, taken from the start of the articles list.",
@@ -3622,6 +3665,27 @@
       "get": {
         "description": "Returns the collections and published articles anyone may read in the help center this messenger links to, so help shows before the visitor says anything. Needs no session, only the app id in the path. Everything is empty when the messenger links to no help center. Returns the help center's address, its collections, up to 200 articles with body blocks, and up to 5 popular article slugs.",
         "operationId": "widget.apps.help.show",
+        "parameters": [
+          {
+            "description": "A language code, such as en or pt-BR.",
+            "explode": false,
+            "in": "query",
+            "name": "locale",
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Accept-Language: text of at most 512 characters.",
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "maxLength": 512,
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -4527,6 +4591,27 @@
       "get": {
         "description": "Returns the help center's collections and articles as this visitor may read them: what their audiences open when the messenger knows them (signed in, or with a proven email), and what anyone may read otherwise. Needs a messenger session. Everything is empty when the messenger links to no help center. Returns the help center's address, its collections, up to 200 articles with body blocks, and up to 5 popular article slugs.",
         "operationId": "widget.help.show",
+        "parameters": [
+          {
+            "description": "A language code, such as en or pt-BR.",
+            "explode": false,
+            "in": "query",
+            "name": "locale",
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Accept-Language: text of at most 512 characters.",
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "maxLength": 512,
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {

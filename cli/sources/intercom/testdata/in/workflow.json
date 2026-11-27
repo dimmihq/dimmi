@@ -1,0 +1,2 @@
+{"export_version": "1.0", "exported_at": "2026-01-26T12:00:00Z", "app_id": 12345, "workflow": {"id": "67890", "title": "Route billing", "description": "Sends billing to finance", "trigger_type": "inbound_conversation", "state": "live", "target_channels": ["chat"],
+  "snapshot": {"steps": [{"type": "chat_message"}, {"type": "reply_buttons"}, {"type": "assign_conversation"}, {"type": "fin_answer"}, {"type": "custom_action"}]}}}

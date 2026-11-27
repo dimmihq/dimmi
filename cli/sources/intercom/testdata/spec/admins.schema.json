@@ -1,0 +1,36 @@
+{
+  "type": "text type",
+  "admins": [
+    {
+      "type": "text type",
+      "id": "1",
+      "name": "text name",
+      "email": "text email",
+      "job_title": "text job_title",
+      "away_mode_enabled": true,
+      "away_mode_reassign": true,
+      "away_status_reason_id": 1700000002,
+      "has_inbox_seat": true,
+      "team_ids": [
+        1700000003
+      ],
+      "avatar": {
+        "type": "text type",
+        "image_url": "https://example.com/x"
+      },
+      "team_priority_level": {
+        "primary_team_ids": [
+          1700000004
+        ],
+        "secondary_team_ids": [
+          1700000005
+        ]
+      },
+      "role": {
+        "type": "text type",
+        "id": "6",
+        "name": "text name"
+      }
+    }
+  ]
+}

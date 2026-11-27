@@ -49,18 +49,19 @@ StoreConversationRequest is the input of POST /conversations.
 */
 type StoreConversationRequest struct {
 	Body struct {
-		InboxID             *string    `json:"inbox_id,omitempty"`
-		ChannelConnectionID *string    `json:"channel_connection_id,omitempty"`
-		Contact             ContactRef `json:"contact"`
-		Author              *string    `json:"author,omitempty"      validate:"omitempty,oneof=contact member"`
-		Subject             *string    `json:"subject,omitempty"     validate:"omitempty,min=1,max=255"`
-		Body                string     `json:"body"                  validate:"required,max=65536"`
-		AssigneeID          *string    `json:"assignee_id,omitempty"`
-		CreatedAt           *time.Time `json:"created_at,omitempty"`
-		ExternalID          *string    `json:"external_id,omitempty" validate:"omitempty,min=1,max=255"`
-		Status              *string    `json:"status,omitempty"      validate:"omitempty,oneof=open closed"`
-		ClosedAt            *time.Time `json:"closed_at,omitempty"`
-		AuthorID            *string    `json:"author_id,omitempty"`
+		InboxID             *string        `json:"inbox_id,omitempty"`
+		ChannelConnectionID *string        `json:"channel_connection_id,omitempty"`
+		Contact             ContactRef     `json:"contact"`
+		Author              *string        `json:"author,omitempty"      validate:"omitempty,oneof=contact member"`
+		Subject             *string        `json:"subject,omitempty"     validate:"omitempty,min=1,max=255"`
+		Body                string         `json:"body"                  validate:"required,max=65536"`
+		AssigneeID          *string        `json:"assignee_id,omitempty"`
+		CreatedAt           *time.Time     `json:"created_at,omitempty"`
+		ExternalID          *string        `json:"external_id,omitempty" validate:"omitempty,min=1,max=255"`
+		Status              *string        `json:"status,omitempty"      validate:"omitempty,oneof=open closed"`
+		ClosedAt            *time.Time     `json:"closed_at,omitempty"`
+		AuthorID            *string        `json:"author_id,omitempty"`
+		Attributes          map[string]any `json:"attributes,omitempty" maxProperties:"100"`
 	}
 	RawBody []byte
 }

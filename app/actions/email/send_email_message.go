@@ -67,6 +67,7 @@ type SendEmailMessage struct {
 	Stamps    inbound.Stamps
 	Transport string
 	Senders   *Domains
+	Links     FileLinks
 
 	Reputation *Reputation
 }

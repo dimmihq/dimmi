@@ -118,6 +118,10 @@ func peopleTables() []ArchiveTable {
 		{Name: "contacts", About: "Customers.", Key: byID()},
 		{Name: "contact_identities", About: "Customers' addresses and handles per channel.", Key: byID()},
 		{Name: "companies", About: "Companies.", Key: byID()},
+		{
+			Name: "contact_companies", About: "The companies each customer belongs to, and their default.",
+			Key: []string{"contact_id", "company_id"},
+		},
 		{Name: "contact_tag", About: "Tags on customers.", Key: []string{"contact_id", "tag_id"}},
 		{Name: "company_tag", About: "Tags on companies.", Key: []string{"company_id", "tag_id"}},
 		{Name: "customer_notes", About: "The team's notes on customers and companies.", Key: byID()},
@@ -201,6 +205,9 @@ func helpCenterTables() []ArchiveTable {
 		},
 		{Name: "help_center_redirects", About: "Redirects of help centers.", Key: byID()},
 		{
+			Name: "help_center_themes", About: "Theme versions of help centers and their settings.", Key: byID(),
+		},
+		{
 			Name: "help_center_images", About: "Pictures in articles; archive_path is the file in this archive.",
 			Key: byID(),
 		},
@@ -210,6 +217,8 @@ func helpCenterTables() []ArchiveTable {
 			Omit: []string{"title_trgm"},
 		},
 		{Name: "article_versions", About: "Every stored version of each article.", Key: byID()},
+		{Name: "article_translations", About: "Articles' translations into other languages.", Key: byID()},
+		{Name: "collection_translations", About: "Collections' names in other languages.", Key: byID()},
 		{Name: "article_ratings", About: "Readers' ratings of articles.", Key: byID()},
 		{Name: "changelog_entries", About: "Changelog entries.", Key: byID()},
 		{Name: "changelog_labels", About: "Changelog labels.", Key: byID()},

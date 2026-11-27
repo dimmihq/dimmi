@@ -1,0 +1,399 @@
+{
+  "type": "conversation.list",
+  "conversations": [
+    {
+      "type": "text type",
+      "id": "598",
+      "title": "text title",
+      "created_at": 1700000599,
+      "updated_at": 1700000600,
+      "waiting_since": 1700000601,
+      "snoozed_until": 1700000602,
+      "open": true,
+      "state": "open",
+      "read": true,
+      "priority": "none",
+      "admin_assignee_id": 1700000603,
+      "team_assignee_id": 1700000604,
+      "company": {
+        "type": "company",
+        "id": "605",
+        "name": "text name",
+        "app_id": "606",
+        "plan": {
+          "type": "text type",
+          "id": "607",
+          "name": "text name"
+        },
+        "company_id": "608",
+        "remote_created_at": 1700000609,
+        "created_at": 1700000610,
+        "updated_at": 1700000611,
+        "last_request_at": 1700000612,
+        "size": 1700000613,
+        "website": "text website",
+        "industry": "text industry",
+        "monthly_spend": 1700000614,
+        "session_count": 1700000615,
+        "user_count": 1700000616,
+        "custom_attributes": {},
+        "tags": {
+          "type": "tag.list",
+          "tags": [
+            {
+              "type": "text type",
+              "id": "617",
+              "name": "text name"
+            }
+          ]
+        },
+        "segments": {
+          "type": "segment.list",
+          "segments": [
+            {
+              "type": "segment",
+              "id": "618",
+              "name": "text name",
+              "created_at": 1700000619,
+              "updated_at": 1700000620,
+              "person_type": "contact",
+              "count": 1700000621
+            }
+          ]
+        },
+        "notes": {
+          "type": "note.list",
+          "data": [
+            {
+              "type": "text type",
+              "id": "622",
+              "url": "text url",
+              "body": "text body"
+            }
+          ],
+          "url": "text url",
+          "total_count": 1700000623,
+          "has_more": true
+        }
+      },
+      "tags": {
+        "type": "tag.list",
+        "tags": [
+          {
+            "type": "text type",
+            "id": "624",
+            "name": "text name",
+            "applied_at": 1700000625,
+            "applied_by": {
+              "type": "text type",
+              "id": "626"
+            }
+          }
+        ]
+      },
+      "conversation_rating": {
+        "rating": 1700000627,
+        "remark": "text remark",
+        "created_at": 1700000628,
+        "updated_at": 1700000629,
+        "contact": {
+          "type": "contact",
+          "id": "630",
+          "external_id": "631",
+          "email": "text email"
+        },
+        "teammate": {
+          "type": "admin",
+          "id": "632"
+        }
+      },
+      "source": {
+        "type": "text type",
+        "id": "633",
+        "delivered_as": "text delivered_as",
+        "user_ip": "text user_ip",
+        "recipients": [
+          {
+            "type": "text type",
+            "email": "text email",
+            "drop_reason": "text drop_reason"
+          }
+        ],
+        "reply_to": [
+          {
+            "email": "text email",
+            "name": "text name"
+          }
+        ],
+        "subject": "text subject",
+        "body": "text body",
+        "author": {
+          "type": "text type",
+          "id": "634",
+          "name": "text name",
+          "email": "text email"
+        },
+        "attachments": [
+          {
+            "type": "text type",
+            "name": "text name",
+            "url": "text url",
+            "content_type": "text content_type",
+            "filesize": 1700000635,
+            "width": 1700000636,
+            "height": 1700000637
+          }
+        ],
+        "url": "text url",
+        "redacted": true,
+        "email_message_metadata": {
+          "message_id": "638",
+          "subject": "text subject",
+          "email_address_headers": [
+            {
+              "type": "text type",
+              "email_address": "text email_address",
+              "name": "text name"
+            }
+          ],
+          "history": "text history"
+        }
+      },
+      "contacts": {
+        "type": "contact.list",
+        "contacts": [
+          {
+            "type": "contact",
+            "id": "639",
+            "external_id": "640",
+            "email": "text email"
+          }
+        ]
+      },
+      "teammates": {
+        "type": "text type",
+        "admins": [
+          {
+            "type": "text type",
+            "id": "641"
+          }
+        ]
+      },
+      "custom_attributes": {
+        "AI Topic and Subtopic": [
+          {
+            "topic_name": "text topic_name",
+            "subtopic_name": "text subtopic_name",
+            "id": 1700000642
+          }
+        ],
+        "CX Score reasons": [
+          {
+            "name": "text name",
+            "value": "text value"
+          }
+        ]
+      },
+      "first_contact_reply": {
+        "created_at": 1700000643,
+        "type": "text type",
+        "url": "text url"
+      },
+      "sla_applied": {
+        "type": "text type",
+        "sla_name": "text sla_name",
+        "sla_status": "hit"
+      },
+      "statistics": {
+        "type": "text type",
+        "time_to_assignment": 1700000644,
+        "time_to_admin_reply": 1700000645,
+        "time_to_first_close": 1700000646,
+        "time_to_last_close": 1700000647,
+        "median_time_to_reply": 1700000648,
+        "first_contact_reply_at": 1700000649,
+        "first_assignment_at": 1700000650,
+        "first_admin_reply_at": 1700000651,
+        "first_close_at": 1700000652,
+        "last_assignment_at": 1700000653,
+        "last_assignment_admin_reply_at": 1700000654,
+        "last_contact_reply_at": 1700000655,
+        "last_admin_reply_at": 1700000656,
+        "last_close_at": 1700000657,
+        "last_closed_by_id": "658",
+        "count_reopens": 1700000659,
+        "count_assignments": 1700000660,
+        "count_conversation_parts": 1700000661,
+        "assigned_team_first_response_time": [
+          {
+            "team_id": 1700000662,
+            "team_name": "text team_name",
+            "response_time": 1700000663
+          }
+        ],
+        "assigned_team_first_response_time_in_office_hours": [
+          {
+            "team_id": 1700000664,
+            "team_name": "text team_name",
+            "response_time": 1700000665
+          }
+        ],
+        "handling_time": 1700000666,
+        "adjusted_handling_time": 1700000667
+      },
+      "linked_objects": {
+        "type": "list",
+        "total_count": 1700000668,
+        "has_more": true,
+        "data": [
+          {
+            "type": "ticket",
+            "id": "669",
+            "category": "Customer"
+          }
+        ]
+      },
+      "ai_agent_participated": true,
+      "ai_agent": {
+        "source_type": "essentials_plan_setup",
+        "source_title": "text source_title",
+        "last_answer_type": "ai_answer",
+        "resolution_state": "assumed_resolution",
+        "rating": 1700000670,
+        "rating_remark": "text rating_remark",
+        "created_at": 1700000671,
+        "updated_at": 1700000672,
+        "content_sources": {
+          "type": "content_source.list",
+          "total_count": 1700000673,
+          "content_sources": [
+            {
+              "content_type": "file",
+              "url": "text url",
+              "title": "text title",
+              "locale": "text locale"
+            }
+          ]
+        }
+      },
+      "sales_agent_participated": true,
+      "sales_agent": {
+        "outcome": "qualified",
+        "routing_outcome": "text routing_outcome",
+        "collected_data": {}
+      },
+      "channel": {
+        "initial": "text initial",
+        "current": "text current"
+      },
+      "topics": {
+        "type": "text type",
+        "topics": [
+          {
+            "type": "text type",
+            "id": 1700000674,
+            "name": "text name"
+          }
+        ],
+        "total_count": 1700000675
+      },
+      "ticket": {
+        "type": "text type",
+        "id": 1700000676,
+        "url": "text url",
+        "custom_attributes": {},
+        "state": "text state",
+        "ticket_type": "text ticket_type",
+        "ticket_type_description": "text ticket_type_description",
+        "ticket_type_emoji": "text ticket_type_emoji",
+        "ticket_custom_state_admin_label": "text ticket_custom_state_admin_label",
+        "ticket_custom_state_user_label": "text ticket_custom_state_user_label"
+      },
+      "external_references": [
+        {
+          "type": "text type",
+          "id": "677"
+        }
+      ],
+      "monitor_evaluations": [
+        {
+          "monitor_id": "678",
+          "monitor_name": "text monitor_name",
+          "monitor_type": "text monitor_type",
+          "result": "text result",
+          "explanation": "text explanation",
+          "evaluated_at": 1700000679
+        }
+      ],
+      "scorecards": [
+        {
+          "scorecard_id": "680",
+          "name": "text name",
+          "scorecard_type": "text scorecard_type",
+          "passed": true,
+          "score": 1.5,
+          "ai_score": 1.5,
+          "evaluated_at": 1700000681,
+          "reviewed_teammate": {
+            "type": "ai",
+            "admin_id": "682"
+          },
+          "reviewer": {
+            "type": "ai",
+            "admin_id": "683"
+          },
+          "review_status": "unreviewed",
+          "submitted_by": {
+            "type": "ai",
+            "admin_id": "684"
+          },
+          "revised_by": {
+            "type": "ai",
+            "admin_id": "685"
+          },
+          "notes": [
+            {
+              "id": "686",
+              "created_at": 1700000687,
+              "updated_at": 1700000688,
+              "author": {
+                "type": "ai",
+                "admin_id": "689"
+              },
+              "body": "text body"
+            }
+          ],
+          "evaluators": [
+            {
+              "evaluator_id": "690",
+              "name": "text name",
+              "result": {
+                "value": "text value",
+                "value_label": "text value_label",
+                "source": "text source",
+                "reasoning": "text reasoning",
+                "reasons": [
+                  {
+                    "name": null
+                  }
+                ],
+                "other_text": "text other_text"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "total_count": 1700000691,
+  "pages": {
+    "type": "pages",
+    "page": 1700000692,
+    "next": {
+      "page": 1700000693,
+      "starting_after": "text starting_after"
+    },
+    "per_page": 1700000694,
+    "total_pages": 1700000695
+  }
+}

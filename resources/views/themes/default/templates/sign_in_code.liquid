@@ -1,0 +1,28 @@
+{%- comment -%}Takes the code mailed to the reader, with a way to send another and a way back to type a different address.{%- endcomment -%}
+<div class="stagger mx-auto w-full max-w-[26rem] px-5 pt-16 pb-24 md:pt-24">
+<span class="button-brand grid size-11 place-items-center rounded-2xl">{{ 'mail' | icon: 'size-5' }}</span>
+<h1 class="mt-6 text-title-1-medium tracking-tight">{{ 'check_email' | t }}</h1>
+{%- capture masked %}<bdi dir="ltr">{{ sign_in.masked }}</bdi>{% endcapture %}
+<p class="mt-2 text-body-regular text-text-secondary">{{ 'code_sent' | t: email: masked }}</p>
+<form method="post" action="{{ sign_in.check_url }}" class="mt-8 flex flex-col gap-4">
+{{ form_token_field }}
+<input type="hidden" name="next" value="{{ sign_in.next }}">
+<input type="hidden" name="email" value="{{ sign_in.email }}">
+<label class="flex flex-col gap-1.5">
+<span class="text-body-medium">{{ 'code' | t }}</span>
+<input type="text" name="code" required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="123456" autofocus dir="ltr"{% if sign_in.error != "" %} aria-invalid="true"{% endif %} aria-describedby="reader-error" class="h-10 rounded-xl border border-border-button-default bg-background-primary-default px-3 text-body-regular tracking-[0.3em] shadow-xs outline-none transition placeholder:text-text-placeholder placeholder:tracking-normal hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint">
+</label>
+{% render 'reader_error', message: sign_in.error %}
+<button type="submit" class="button-brand inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'sign_in' | t }}</button>
+</form>
+<div class="mt-6 flex flex-wrap items-center justify-between gap-3 text-body-2-regular">
+<form method="post" action="{{ sign_in.resend_url }}" data-turbo="false">
+{{ form_token_field }}
+<input type="hidden" name="next" value="{{ sign_in.next }}">
+<input type="hidden" name="email" value="{{ sign_in.email }}">
+<input type="hidden" name="resend" value="1">
+<button type="submit" class="cursor-pointer rounded-md text-text-secondary underline-offset-4 outline-none hover:text-text-primary hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'resend_code' | t }}</button>
+</form>
+<a href="{{ sign_in.restart_url }}" class="rounded-md text-text-secondary underline-offset-4 outline-none hover:text-text-primary hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'use_another_email' | t }}</a>
+</div>
+</div>

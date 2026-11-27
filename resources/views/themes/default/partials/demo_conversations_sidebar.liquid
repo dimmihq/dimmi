@@ -1,0 +1,10 @@
+<nav aria-label="Conversations" class="flex flex-col gap-0.5">
+{% render 'sidebar_heading', title: 'Support' %}
+{% render 'sidebar_link', url: help_center.conversations_url, title: 'Your conversations', icon: 'inbox', count: conversations.size, current: false %}
+{% render 'sidebar_link', url: help_center.new_conversation_url, title: 'New conversation', icon: 'edit', count: 0, current: false %}
+{%- if reader %}
+{% render 'sidebar_heading', title: 'Account' %}
+<p class="flex items-center gap-2.5 px-2.5 py-1.5 text-body-medium text-text-secondary">{% render 'avatar', person: reader, size: 'size-5 text-caption-2-semibold' %}<span class="truncate">{{ reader.name }}</span></p>
+<form method="post" action="{{ help_center.demo_sign_out_url }}">{{ form_token_field }}<button type="submit" class="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-medium text-text-secondary transition-colors hover:bg-background-secondary-hover hover:text-text-primary">{{ 'logout' | icon: 'size-4 opacity-80' }}Sign out</button></form>
+{%- endif %}
+</nav>

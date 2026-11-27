@@ -79,11 +79,13 @@ LIMIT @row_limit::bigint
 ) AS counted;
 
 -- name: CountCompanyPeople :many
--- CountCompanyPeople counts the live contacts of each company given.
-SELECT company_id::uuid AS company_id, count(*) AS people FROM contacts
-WHERE workspace_id = @workspace_id AND company_id = ANY (@company_ids::uuid[])
-  AND deleted_at IS NULL AND merged_into_id IS NULL
-GROUP BY company_id;
+-- CountCompanyPeople counts the live contacts that belong to each company
+-- given, whether it is their default company or not.
+SELECT cc.company_id::uuid AS company_id, count(*) AS people FROM contact_companies AS cc
+JOIN contacts AS c ON c.id = cc.contact_id AND c.workspace_id = cc.workspace_id
+WHERE cc.workspace_id = @workspace_id AND cc.company_id = ANY (@company_ids::uuid[])
+  AND c.deleted_at IS NULL AND c.merged_into_id IS NULL
+GROUP BY cc.company_id;
 
 -- name: UpdateCompany :one
 -- UpdateCompany replaces a live company's attributes. A deleted company
@@ -107,19 +109,21 @@ UPDATE contacts SET company_id = NULL, updated_at = @now
 WHERE workspace_id = @workspace_id AND company_id = @company_id::uuid;
 
 -- name: ListCompanyContacts :many
--- ListCompanyContacts returns a page of the live contacts that work for
--- the company, newest first. A page after the first passes the
--- created_at and id of the last contact it saw.
-SELECT * FROM contacts
-WHERE workspace_id = @workspace_id
-  AND company_id = @company_id::uuid
-  AND deleted_at IS NULL
-  AND merged_into_id IS NULL
+-- ListCompanyContacts returns a page of the live contacts that belong to
+-- the company, as their default company or not, newest first. A page
+-- after the first passes the created_at and id of the last contact it
+-- saw.
+SELECT c.* FROM contacts AS c
+JOIN contact_companies AS cc ON cc.contact_id = c.id AND cc.workspace_id = c.workspace_id
+WHERE c.workspace_id = @workspace_id
+  AND cc.company_id = @company_id::uuid
+  AND c.deleted_at IS NULL
+  AND c.merged_into_id IS NULL
   AND (
       sqlc.narg(before_id)::uuid IS NULL
-      OR (created_at, id) < (sqlc.narg(before_created_at)::timestamptz, sqlc.narg(before_id)::uuid)
+      OR (c.created_at, c.id) < (sqlc.narg(before_created_at)::timestamptz, sqlc.narg(before_id)::uuid)
   )
-ORDER BY created_at DESC, id DESC
+ORDER BY c.created_at DESC, c.id DESC
 LIMIT @row_limit::bigint;
 
 -- name: CompaniesByIDs :many

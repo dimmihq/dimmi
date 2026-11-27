@@ -349,13 +349,15 @@ gate:
 api:
   version: "2026-11-01"  # DIMMI_API__VERSION
   # APILimitsConfig holds requests a minute per token, per signed-in person,
-  # per workspace's tokens together, and per address that keeps sending bad
-  # credentials.
+  # per workspace's tokens together, per address that keeps sending bad
+  # credentials, and per workspace for migrations from other tools, which
+  # have a minute of their own.
   limits:
     token_per_minute: 600  # DIMMI_API__LIMITS__TOKEN_PER_MINUTE
     user_per_minute: 1200  # DIMMI_API__LIMITS__USER_PER_MINUTE
     workspace_per_minute: 6000  # DIMMI_API__LIMITS__WORKSPACE_PER_MINUTE
     bad_credential_per_minute: 60  # DIMMI_API__LIMITS__BAD_CREDENTIAL_PER_MINUTE
+    migration_per_minute: 1200  # DIMMI_API__LIMITS__MIGRATION_PER_MINUTE
 
 # AuthConfig groups the authentication settings. DisposableEmail is off,
 # flag or block: how a signup from a throwaway mailbox is treated. Terms
@@ -1038,9 +1040,8 @@ ai:
 # ServicesConfig holds the credentials of the apps dimmi has registered at
 # other services. Slack is the shared Slack app, WhatsApp the Meta app
 # WhatsApp numbers connect through, Meta the same app for Messenger and
-# Instagram with each one's login; Notion, Intercom,
-# Zendesk and GitHub are the OAuth clients knowledge sources connect
-# through.
+# Instagram with each one's login; Notion and GitHub are the OAuth
+# clients knowledge sources connect through.
 services:
   # SlackServiceConfig is the shared Slack app: its OAuth client id and
   # secret, the signing secret its events are signed with and its app id.
@@ -1086,16 +1087,6 @@ services:
     client_secret: ""  # DIMMI_SERVICES__NOTION__CLIENT_SECRET (secret; or DIMMI_SERVICES__NOTION__CLIENT_SECRET_FILE naming a file)
   # OAuthServiceConfig is an OAuth client registered at a service: its id
   # and secret. Empty means the service cannot be connected.
-  intercom:
-    client_id: ""  # DIMMI_SERVICES__INTERCOM__CLIENT_ID
-    client_secret: ""  # DIMMI_SERVICES__INTERCOM__CLIENT_SECRET (secret; or DIMMI_SERVICES__INTERCOM__CLIENT_SECRET_FILE naming a file)
-  # OAuthServiceConfig is an OAuth client registered at a service: its id
-  # and secret. Empty means the service cannot be connected.
-  zendesk:
-    client_id: ""  # DIMMI_SERVICES__ZENDESK__CLIENT_ID
-    client_secret: ""  # DIMMI_SERVICES__ZENDESK__CLIENT_SECRET (secret; or DIMMI_SERVICES__ZENDESK__CLIENT_SECRET_FILE naming a file)
-  # OAuthServiceConfig is an OAuth client registered at a service: its id
-  # and secret. Empty means the service cannot be connected.
   github:
     client_id: ""  # DIMMI_SERVICES__GITHUB__CLIENT_ID
     client_secret: ""  # DIMMI_SERVICES__GITHUB__CLIENT_SECRET (secret; or DIMMI_SERVICES__GITHUB__CLIENT_SECRET_FILE naming a file)
@@ -1124,6 +1115,6 @@ services:
 # token is renewed, and HealthInterval how often each installation is
 # checked.
 integrations:
-  enabled: [slack, notion, intercom, zendesk, github, linear, jira, incident_io, rootly, pagerduty]  # DIMMI_INTEGRATIONS__ENABLED
+  enabled: [slack, notion, github, linear, jira, incident_io, rootly, pagerduty]  # DIMMI_INTEGRATIONS__ENABLED
   refresh_skew: 5m  # DIMMI_INTEGRATIONS__REFRESH_SKEW
   health_interval: 24h  # DIMMI_INTEGRATIONS__HEALTH_INTERVAL

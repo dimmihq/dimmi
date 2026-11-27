@@ -24,7 +24,9 @@ func knowledgeDocs() map[string]Doc {
 		articleChangeDocs(),
 		articleFeedbackDocs(),
 		helpCenterSiteDocs(),
+		translationDocs(),
 		helpCenterDomainDocs(),
+		helpCenterThemeDocs(),
 	} {
 		maps.Copy(out, part)
 	}
@@ -63,9 +65,14 @@ func helpCenterDocs() map[string]Doc {
 				"subdomain": "3 to 40 lowercase letters, digits and dashes, unique across the install. Changing " +
 					"it moves the public address.",
 				"status": "active serves the help center to readers; disabled takes it offline.",
+				"default_locale": "The language articles are written in, as a code such as en; it must be " +
+					"one of locales. A language with translations cannot become the default.",
+				"locales": "Every language the help center is read in, as codes such as [\"en\", \"fr\"], at " +
+					"most 30; the default is always kept. Readers of another language read it under /<code>/.",
 				"settings": "Only the settings named change; an empty text clears one. feedback_board turns on the " +
 					"feature request board, feedback_approval holds customers' requests until the team approves " +
-					"them, primary_color is a hex color like #2563eb, appearance is auto, light or dark.",
+					"them, primary_color is a hex color like #2563eb, appearance is auto, light or dark, " +
+					"untranslated_articles is original or hide.",
 			},
 			Hint: "subdomain_taken or subdomain_reserved means that address is not free: pick another subdomain.",
 		},

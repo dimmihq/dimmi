@@ -168,3 +168,34 @@ describe("eventText", () => {
     ).toBe("Wen Zhao turned the conversation into ticket T-321");
   });
 });
+
+describe("attribute changes in the timeline", () => {
+  const actor = { type: "member", id: "mem_1", name: "Ada" };
+  const attribute = { key: "issue_type", label: "Issue type" };
+
+  it("says who set or cleared an attribute", () => {
+    expect(
+      eventText({ name: "conversation.attribute_changed", actor, attribute, by: "member", to: "Billing" } as never),
+    ).toBe("Issue type set to Billing by Ada");
+    expect(
+      eventText({
+        name: "conversation.attribute_changed",
+        actor: { type: "system", id: "", name: "AI" },
+        attribute,
+        by: "ai",
+        to: "Bug",
+      } as never),
+    ).toBe("Issue type set to Bug by the AI");
+    expect(
+      eventText({ name: "conversation.attribute_changed", actor, attribute, by: "member", to: null } as never),
+    ).toBe("Issue type cleared by Ada");
+  });
+
+  it("words lists, yes or no and files", () => {
+    const text = (to: unknown) =>
+      eventText({ name: "conversation.attribute_changed", actor, attribute, by: "member", to } as never);
+    expect(text(["API", "Inbox"])).toBe("Issue type set to API, Inbox by Ada");
+    expect(text(true)).toBe("Issue type set to Yes by Ada");
+    expect(text(["att_01m8bqk3nxfnv9zndqpwr8b478"])).toBe("Issue type set to 1 file by Ada");
+  });
+});

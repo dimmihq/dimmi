@@ -1,0 +1,156 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "text type",
+      "id": "74",
+      "external_id": "75",
+      "workspace_id": "76",
+      "role": "text role",
+      "email": "text email",
+      "email_domain": "text email_domain",
+      "email_verified": true,
+      "phone": "text phone",
+      "whatsapp_number": "text whatsapp_number",
+      "name": "text name",
+      "owner_id": "77",
+      "has_hard_bounced": true,
+      "marked_email_as_spam": true,
+      "unsubscribed_from_emails": true,
+      "created_at": 1700000078,
+      "updated_at": 1700000079,
+      "signed_up_at": 1700000080,
+      "last_seen_at": 1700000081,
+      "last_replied_at": 1700000082,
+      "last_contacted_at": 1700000083,
+      "last_email_opened_at": 1700000084,
+      "last_email_clicked_at": 1700000085,
+      "language_override": "text language_override",
+      "browser": "text browser",
+      "browser_version": "text browser_version",
+      "browser_language": "text browser_language",
+      "os": "text os",
+      "android_app_name": "text android_app_name",
+      "android_app_version": "text android_app_version",
+      "android_device": "text android_device",
+      "android_os_version": "text android_os_version",
+      "android_sdk_version": "text android_sdk_version",
+      "android_last_seen_at": 1700000086,
+      "ios_app_name": "text ios_app_name",
+      "ios_app_version": "text ios_app_version",
+      "ios_device": "text ios_device",
+      "ios_os_version": "text ios_os_version",
+      "ios_sdk_version": "text ios_sdk_version",
+      "ios_last_seen_at": 1700000087,
+      "custom_attributes": {},
+      "avatar": "https://example.com/x",
+      "tags": {
+        "data": [
+          {
+            "type": "https://example.com/x",
+            "id": "88",
+            "url": "https://example.com/x"
+          }
+        ],
+        "url": "https://example.com/x",
+        "total_count": 1700000089,
+        "has_more": true
+      },
+      "notes": {
+        "data": [
+          {
+            "type": "https://example.com/x",
+            "id": "90",
+            "url": "https://example.com/x"
+          }
+        ],
+        "url": "https://example.com/x",
+        "total_count": 1700000091,
+        "has_more": true
+      },
+      "companies": {
+        "data": [
+          {
+            "id": "92",
+            "type": "company",
+            "url": "https://example.com/x"
+          }
+        ],
+        "url": "https://example.com/x",
+        "total_count": 1700000093,
+        "has_more": true
+      },
+      "location": {
+        "type": "text type",
+        "country": "text country",
+        "region": "text region",
+        "city": "text city",
+        "country_code": "text country_code",
+        "continent_code": "text continent_code"
+      },
+      "social_profiles": {
+        "data": [
+          {
+            "type": "text type",
+            "name": "text name",
+            "url": "https://example.com/x"
+          }
+        ]
+      },
+      "opted_out_subscription_types": {
+        "type": "list",
+        "data": [
+          {
+            "type": "https://example.com/x",
+            "id": "94",
+            "url": "https://example.com/x"
+          }
+        ],
+        "url": "https://example.com/x",
+        "total_count": 1700000095,
+        "has_more": true
+      },
+      "opted_in_subscription_types": {
+        "type": "list",
+        "data": [
+          {
+            "type": "https://example.com/x",
+            "id": "96",
+            "url": "https://example.com/x"
+          }
+        ],
+        "url": "https://example.com/x",
+        "total_count": 1700000097,
+        "has_more": true
+      },
+      "utm_campaign": "text utm_campaign",
+      "utm_content": "text utm_content",
+      "utm_medium": "text utm_medium",
+      "utm_source": "text utm_source",
+      "utm_term": "text utm_term",
+      "referrer": "text referrer",
+      "sms_consent": true,
+      "unsubscribed_from_sms": true,
+      "enabled_push_messaging": true,
+      "merge_history": [
+        {
+          "type": "text type",
+          "source_contact_id": "98",
+          "source_contact_role": "lead",
+          "merged_at": 1700000099
+        }
+      ]
+    }
+  ],
+  "total_count": 1700000100,
+  "pages": {
+    "type": "pages",
+    "page": 1700000101,
+    "next": {
+      "page": 1700000102,
+      "starting_after": "text starting_after"
+    },
+    "per_page": 1700000103,
+    "total_pages": 1700000104
+  }
+}

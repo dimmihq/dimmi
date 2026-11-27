@@ -1,0 +1,147 @@
+---
+title: "Migrations API"
+description: "Bring a workspace's history in from another help desk as quiet, repeatable history, then keep it in sync until you switch over."
+---
+
+Moving help desks means bringing years of conversations, customers, articles and tickets with you. The **migrations API** takes that history in dimmi's own [import format](/developers/migrations/import-format/) and writes it as if it happened at its own time, by the people who wrote it.
+
+Nothing imported sets anything off. dimmi sends no email, runs no workflow, starts no SLA clock, fires no webhook and asks the dimmi agent for no reply.
+
+The API never learns which tool the data came from. A client reads the other tool with your own credentials and translates each record into the import format. The [dimmi CLI](#access) does this on your computer, with `dimmi migrate`, so dimmi never holds the other tool's keys.
+
+## A migration from start to finish
+
+Start a migration for one account of the other tool. The `source` is a short name of your choosing and `source_account` is the account's id there:
+
+```bash
+curl https://trydimmi.com/api/v1/migrations \
+  -H "Authorization: Bearer $DIMMI_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"source": "intercom", "source_account": "abc123", "name": "Intercom move"}'
+```
+
+The answer is `201` with the migration (`mig_...`). Starting again for the same source and account answers `200` with the same migration, so a client that lost its place picks it up.
+
+Send records in batches of one kind, oldest kinds first:
+
+```bash
+curl https://trydimmi.com/api/v1/migrations/mig_01jc8q3x7m2n4p5r6s7t8v9w0y/records \
+  -H "Authorization: Bearer $DIMMI_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "kind": "contact",
+    "records": [
+      {"source_id": "6512ab", "kind": "user", "external_id": "cus_1042", "email": "ada@example.com", "name": "Ada Lovelace"}
+    ]
+  }'
+```
+
+Every record gets its own result, in the order sent:
+
+```json
+{
+  "data": {
+    "object": "migration_batch",
+    "kind": "contact",
+    "results": [
+      {"kind": "contact", "source_id": "6512ab", "status": "created", "id": "ctc_01jc8q...", "warnings": [], "conflicts": [], "error": null, "waiting_for": []}
+    ],
+    "resolved": []
+  }
+}
+```
+
+Follow progress with `GET /api/v1/migrations/{migration}`. It counts each kind's records by status and lists the latest problems with why.
+
+To check a sample after a run, look records up by their `source_id`:
+
+```bash
+curl https://trydimmi.com/api/v1/migrations/mig_01jc8q.../lookups \
+  -H "Authorization: Bearer $DIMMI_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"kind": "contact", "source_ids": ["6512ab", "6512ac"]}'
+```
+
+Each one comes back `applied` with the dimmi `id` it became, `deferred`, `failed`, `unsupported`, or `missing` when the migration never received it.
+
+## Sending order
+
+Records name each other by `source_id`. Send kinds in this order so most of what a record names is already there:
+
+1. `teammate`, `team`, `tag`, `attribute_definition`
+2. `company`, `contact`, `contact_note`
+3. `ticket_type`, `help_center`, `collection`, `article`, `snippet`, `saved_reply`, `schedule`, `workflow`
+4. `conversation`, `ticket`
+
+A record that names something not sent yet is **deferred**. Its result says `deferred` and lists what it is `waiting_for`. dimmi keeps it and applies it as soon as a later batch brings what it named; those records come back under `resolved`.
+
+## Files and pictures
+
+Upload each attachment or picture first, as the raw request body, then name it by the file id you get back:
+
+```bash
+curl "https://trydimmi.com/api/v1/migrations/mig_01jc8q.../files?filename=invoice.pdf&source_id=att-991" \
+  -H "Authorization: Bearer $DIMMI_TOKEN" \
+  -H "Content-Type: application/pdf" \
+  --data-binary @invoice.pdf
+```
+
+- **Attachments** go in an entry's `attachments` list, such as `["att_01jc8q..."]`.
+- **Pictures** in an article body are written as `![Chart](dimmi-file:att_01jc8q...)`. dimmi copies them into the help center.
+- **Uploading again** with the same `source_id` answers `200` with the first copy, so a rerun never uploads twice.
+
+## Running it again
+
+A migration can run as many times as you like. Each record is kept under its `source_id`:
+
+- **Unchanged records** are skipped and answer `unchanged`.
+- **Changed records** update what they became and answer `updated`.
+- **Conversations** append the entries that are new, in order, and never write an entry twice.
+
+That makes a final sync before switching over cheap: send everything again, and only what changed is written.
+
+## Changes your team made in dimmi
+
+Once a conversation is here, your team may work on it before you switch over. A sync never overwrites a field a teammate changed in dimmi after the migration wrote it.
+
+If the other tool says the conversation is snoozed but a teammate closed it here, it stays closed. The result lists a conflict instead:
+
+```json
+{"field": "status", "dimmi": "closed", "source": "snoozed"}
+```
+
+The fields compared are `status`, `priority`, `assignee_ref`, `team_ref` and `tag_refs`. New entries are still appended.
+
+## Undo
+
+`POST /api/v1/migrations/{migration}/rollbacks` undoes everything the migration created, in the background, and answers `202`. Follow the migration until its status is `rolled_back`.
+
+- **Trashed:** conversations, tickets, articles, collections, contacts, companies, teams and schedules.
+- **Deleted:** notes, saved replies, tags and files no message uses.
+- **Archived:** ticket types and custom fields.
+- **Kept:** what the migration only found, and what others now use, such as a contact with conversations of their own or a tag still on records.
+
+An undone migration takes no more records. Starting a migration for the same account again makes a new one, and it brings back the contacts and companies the undo trashed instead of making copies.
+
+## Access
+
+Every endpoint needs the **imports:manage** permission, which a token reaches through the `settings:write` ability. Undo also needs **imports:rollback**. Workspace owners and admins hold both.
+
+The records are written with your role's permissions, so a token granted only `settings:write` can still bring in conversations, contacts and articles your role allows.
+
+The dimmi CLI signs in with `dimmi login` as a registered app with client id `dimmi-cli`. It asks only for `settings:write` and `offline_access`, and its grant belongs to the one workspace you pick.
+
+## Rules and limits
+
+| What | Limit |
+| --- | --- |
+| Records per batch | 1 to 100, of one kind |
+| Source ids per lookup | 1 to 100, of one kind |
+| Batch body | 5 MB |
+| Entries per conversation | 5,000 |
+| File size | 100 MB |
+| Rate limit | 1,200 requests a minute per workspace, scope `migration` |
+
+Migrations have a [rate limit](/developers/api/rate-limits/) of their own, so a migration never uses up the requests of your other integrations.
+
+A few fields are accepted but not applied yet, and come back as warnings with code `not_supported_yet`: conversation custom attributes, help center locales beyond the default, article and collection translations, and companies past a contact's default one. Teammates with no member in the workspace come back `unsupported`; their history still shows their name. Workflows always come back `unsupported`: dimmi keeps them so you can see what to set up again, and never turns them on.

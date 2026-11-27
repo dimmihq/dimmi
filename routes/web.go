@@ -65,9 +65,9 @@ func Web(a *app.App) {
 		}
 
 		pages.Handle(fhttp.MethodGet, middleware.GatePath, "gate", fhttp.HandlerFunc(spa.ShowAuth))
-
-		helpCenter(pages, a)
 	})
+
+	a.Router.Group("", func(pages *routing.Router) { helpCenter(pages, a) })
 
 	a.Router.Handle(fhttp.MethodGet, "/build/*", "build",
 		static.Handler(a.Frontend, static.Options{Immutable: true, Prefix: "/build"}))
@@ -89,14 +89,16 @@ func Web(a *app.App) {
 
 /*
 browserFiles declares the files browsers load outside the app's build:
-the messenger's, the dashboard's service worker and llms.txt, and the
-probe help centers' custom domains are checked with.
+the messenger's, the dashboard's service worker and llms.txt, the
+probe help centers' custom domains are checked with, and the download
+links of files too large to email.
 */
 func browserFiles(a *app.App) {
 	widgetAssets(a)
 	a.Router.Handle(fhttp.MethodGet, "/sw.js", "service-worker", fhttp.HandlerFunc(web.ServiceWorker))
 	a.Router.Handle(fhttp.MethodGet, "/llms.txt", "llms", fhttp.HandlerFunc(web.LLMs))
 	helpDomainProbe(a)
+	fileLinks(a)
 }
 
 /*
@@ -139,16 +141,20 @@ func ssoPages(a *app.App) {
 /*
 helpCenter declares the public portal under the app's /hc/{center}
 path: the help center, its changelog, feature requests, the visitor's
-conversations, and the files their pages show.
+conversations, and the files their pages show. Its pages may frame the
+video and demo players articles embed.
 */
 func helpCenter(pages *routing.Router, a *app.App) {
+	pages.Middleware("csp:embeds")
+
 	hc := &web.HelpCenterController{
 		Library: a.HelpSample, Public: a.Actions.HelpPublic, Readers: a.Actions.HelpReaders, Errors: a.Errors,
 		Changelog: a.Actions.ChangelogPublic, Subscribers: a.Actions.ChangelogSubscribers, Board: a.Actions.Feedback,
 		Assets: static.Handler(helpsample.Assets(), static.Options{}),
 		Vite:   vite.New(vite.Options{Build: a.Frontend, Base: "/build", HotFile: a.Config.Frontend.HotPath}),
 		AppURL: a.Application.Config.App.URL, Ratings: a.Actions.HelpRatings, Passes: a.Actions.IdentityPasses,
-		Analytics: a.Actions.HelpAnalytics, Addresses: a.Actions.HelpCenterAddresses,
+		Analytics: a.Actions.HelpAnalytics, Addresses: a.Actions.HelpCenterAddresses, Lang: a.Lang,
+		Clock: a.Clock, Themes: a.Actions.HelpThemes, IDs: a.IDs, FormKey: a.DerivedKey("help.forms"),
 	}
 	cl := web.ChangelogController{HelpCenterController: hc}
 	images := &web.HelpImageController{Disks: a.Storage, Dir: helpcenters.ImageDir}
@@ -156,7 +162,7 @@ func helpCenter(pages *routing.Router, a *app.App) {
 		pages.Handle(fhttp.MethodGet, "/hc/{center}"+path, name, h)
 	}
 	post := func(path, name string, h fhttp.HandlerFunc) {
-		pages.Handle(fhttp.MethodPost, "/hc/{center}"+path, name, h)
+		pages.Handle(fhttp.MethodPost, "/hc/{center}"+path, name, hc.GuardForm(h))
 	}
 
 	get("", "hc.home", hc.Home)
@@ -176,11 +182,20 @@ func helpCenter(pages *routing.Router, a *app.App) {
 	get("/help-images/{file}", "hc.help-images.show", images.Show)
 	portalPages(get, post, web.PortalController{HelpCenterController: hc, Requests: a.Actions.Tickets})
 	get("/assets/{file}", "hc.assets", hc.Asset)
+	get("/theme-assets/*", "hc.theme-assets", hc.ThemeAsset)
+	siteFiles(get, hc)
+	get("/*", "hc.missing", hc.NotFound)
+}
+
+/*
+siteFiles declares the files a help center keeps for crawlers and
+agents: its sitemap, robots rules and llms.txt.
+*/
+func siteFiles(get func(path, name string, h fhttp.HandlerFunc), hc *web.HelpCenterController) {
 	get("/sitemap.xml", "hc.sitemap", hc.Sitemap)
 	get("/robots.txt", "hc.robots", hc.Robots)
 	get("/llms.txt", "hc.llms", hc.LLMs)
 	get("/llms-full.txt", "hc.llms-full", hc.LLMsFull)
-	get("/*", "hc.missing", hc.NotFound)
 }
 
 /*
@@ -234,6 +249,7 @@ func authPages() map[string]string {
 		"two-factor-reset":    "/two-factor-reset",
 		"invitation":          "/invitation",
 		"onboarding":          "/onboarding",
+		"waiting":             "/waiting",
 		"oauth.authorize":     "/oauth/authorize",
 		"email.preferences":   "/email-preferences",
 		"conversation.rating": "/rate",

@@ -1,0 +1,20 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "id": "227",
+      "workspace_id": "228",
+      "created_at": 1700000229,
+      "updated_at": 1700000230,
+      "identifier": "text identifier",
+      "website_turned_on": true,
+      "display_name": "text display_name",
+      "url": "text url",
+      "custom_domain": "text custom_domain",
+      "default": true,
+      "locales": [
+        "text locales"
+      ]
+    }
+  ]
+}

@@ -22,6 +22,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/routing"
 
 	"github.com/dimmihq/dimmi/app"
+	contactactions "github.com/dimmihq/dimmi/app/actions/contacts"
 	v1 "github.com/dimmihq/dimmi/app/http/controllers/api/v1"
 )
 
@@ -172,6 +173,7 @@ func companyRoutes(r *routing.Router, a *app.App) {
 	c := &v1.CompanyController{
 		List: acts.ListCompanies, Show: acts.ShowCompany, Create: acts.CreateCompany, Identify: acts.IdentifyCompany,
 		Change: acts.UpdateCompany, Remove: acts.DeleteCompany, People: acts.ListCompanyContacts,
+		Describe:      &contactactions.DescribeContacts{DB: a.DB},
 		Conversations: acts.ListRecordConversations, IDs: a.IDs,
 		Cursors: pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose)),
 	}

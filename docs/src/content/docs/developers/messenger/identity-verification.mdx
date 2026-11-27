@@ -104,7 +104,7 @@ app.listen(3000);
 </TabItem>
 </Tabs>
 
-The user object accepts `id` (required), `email`, `emailVerified`, `name`, `phone`, `avatarUrl`, `locale`, `timezone`, `signedUpAt`, `company`, and `attributes`.
+The user object accepts `id` (required), `email`, `emailVerified`, `name`, `phone`, `avatarUrl`, `locale`, `timezone`, `signedUpAt`, `company`, `companies`, and `attributes`.
 
 Our [Go](/developers/sdks/go/), [PHP](/developers/sdks/php/), [Laravel](/developers/sdks/laravel/), and [Python](/developers/sdks/python/) SDKs also include token helpers. If you use a generic JWT library, pass the full `dmi_idsec_` string as the HMAC key without base64-decoding it, and include the key ID in the `kid` header.
 
@@ -134,6 +134,7 @@ The messenger fetches a token on page load. In single-page apps, call `identify(
 | `avatar_url` | `https` URL, up to 2,048 characters. |
 | `locale`, `timezone` | Language tag (like `en-US`) and IANA time zone (like `Europe/Paris`). |
 | `company` | Object with `id` (required), `name`, `domain`, and `custom_attributes`. |
+| `companies` | Up to 50 more company objects, shaped like `company`. `company` stays the default. |
 | `custom_attributes` | Up to 100 keys (lowercase letters, digits, underscores, starting with a letter). Values can be numbers, booleans, strings up to 1,024 characters, or `null` to clear. |
 
 Only verified token attributes (or API/import attributes) can be bound into [dimmi agent actions](/ai/actions/).

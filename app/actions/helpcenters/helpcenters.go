@@ -85,6 +85,26 @@ type HelpCenterSettings struct {
 	ChangelogSubscriptions *bool  `json:"changelog_subscriptions,omitempty"`
 	ChangelogEmail         string `json:"changelog_email,omitempty"`
 	ChangelogUndoMinutes   *int   `json:"changelog_undo_minutes,omitempty"`
+
+	UntranslatedArticles string `json:"untranslated_articles,omitempty"`
+}
+
+/*
+Untranslated values: what readers of another language see of an article
+not translated into it. Readers get the original, with a notice, unless
+the team chose to hide it.
+*/
+const (
+	UntranslatedOriginal = "original"
+	UntranslatedHide     = "hide"
+)
+
+/*
+ShowsOriginals reports whether readers of another language see articles
+not translated into it in the default language.
+*/
+func (s HelpCenterSettings) ShowsOriginals() bool {
+	return s.UntranslatedArticles != UntranslatedHide
 }
 
 /*
@@ -243,6 +263,7 @@ type HelpCenterChange struct {
 	Name       *string
 	Subdomain  *string
 	Locale     *string
+	Locales    *[]string
 	Status     *string
 	Indexing   *bool
 	AskAI      *bool
@@ -271,7 +292,11 @@ func (h *HelpCenters) Update(ctx context.Context, in HelpCenterChange) (models.H
 		if err != nil {
 			return fmt.Errorf("update help center: %w", err)
 		}
-		return nil
+		if in.Locale == nil && in.Locales == nil {
+			return nil
+		}
+		out, err = setLanguages(ctx, q, out, LanguagesChange{Default: in.Locale, Locales: in.Locales, now: h.Clock.Now})
+		return err
 	})
 	return out, err
 }
@@ -318,12 +343,10 @@ func (h *HelpCenters) apply(ctx context.Context, q *models.Queries, c models.Hel
 }
 
 /*
-applyFlags writes the change's language, status and switches.
+applyFlags writes the change's status and switches; languages are
+written apart, by setLanguages.
 */
 func applyFlags(p *models.UpdateHelpCenterParams, in HelpCenterChange) error {
-	if in.Locale != nil {
-		p.Locale = *in.Locale
-	}
 	if in.Status != nil {
 		if *in.Status != "active" && *in.Status != "disabled" {
 			return fault.New(fault.Invalid, "status_invalid", "The status is active or disabled.").OnField("status")

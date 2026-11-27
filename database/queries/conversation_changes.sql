@@ -32,10 +32,11 @@ WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 
 -- name: SetConversationAttributes :one
--- SetConversationAttributes writes the conversation's subject, priority
--- and inbox as given.
+-- SetConversationAttributes writes the conversation's subject, priority,
+-- inbox and company as given.
 UPDATE conversations
-SET subject = sqlc.narg(subject), priority = @priority, inbox_id = @inbox_id, updated_at = @now
+SET subject = sqlc.narg(subject), priority = @priority, inbox_id = @inbox_id, company_id = sqlc.narg(company_id),
+    updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 

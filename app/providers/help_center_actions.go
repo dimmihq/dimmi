@@ -35,8 +35,10 @@ func bootHelpCenters(a *app.App) {
 	acts.HelpCenters = &helpcenters.HelpCenters{DB: a.DB, Clock: a.Clock}
 	acts.Collections = &helpcenters.Collections{DB: a.DB, Clock: a.Clock}
 	acts.Articles = helpcenters.NewArticles(a.DB, a.Clock)
+	acts.Translations = helpcenters.NewTranslations(a.DB, a.Clock)
 	acts.HelpImages = &helpcenters.Images{Disks: a.Storage, DB: a.DB, Clock: a.Clock}
 	acts.HelpPublic = helpcenters.NewPublic(a.DB, a.Clock)
+	acts.HelpThemes = helpcenters.NewThemes(a.DB, a.Clock)
 	acts.HelpReaders = &helpcenters.Readers{
 		DB: a.DB, Clock: a.Clock, Verifier: bootIdentityVerifier(a), Events: a.Events,
 		Cache: a.Cache, Limiter: a.Limiter, Mail: a.Mail, Key: a.DerivedKey("help.readers"),

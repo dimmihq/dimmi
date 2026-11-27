@@ -21,7 +21,7 @@ import os
 import re
 import time
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, Mapping, Optional, Sequence, Tuple, Union
 
 import jwt
 
@@ -76,6 +76,8 @@ class IdentityUser:
     signed_up_at: Union[_dt.datetime, _dt.date, int, float, str, None] = None
     company: Union[IdentityCompany, Mapping[str, Any], None] = None
     attributes: Dict[str, AttributeValue] = field(default_factory=dict)
+    # Further companies the user belongs to, 50 at most; company stays the default.
+    companies: Optional[Sequence[Union[IdentityCompany, Mapping[str, Any]]]] = None
 
 
 # snake_case is the Python spelling; the camelCase names of the other
@@ -98,8 +100,10 @@ _KNOWN = {
     "timezone",
     "signed_up_at",
     "company",
+    "companies",
     "attributes",
 }
+_MAX_COMPANIES = 50
 
 
 def _user_dict(user: Union[IdentityUser, Mapping[str, Any]]) -> Dict[str, Any]:
@@ -153,6 +157,13 @@ def to_claims(user: Union[IdentityUser, Mapping[str, Any]]) -> Dict[str, Any]:
     company = data.get("company")
     if company is not None:
         claims["company"] = _company_claims(company)
+    companies = data.get("companies")
+    if companies:
+        if isinstance(companies, (str, bytes, Mapping)) or not isinstance(companies, Sequence):
+            raise IdentityError("identify_user_invalid", "companies must be a list of companies.")
+        if len(companies) > _MAX_COMPANIES:
+            raise IdentityError("company_limit", f"send at most {_MAX_COMPANIES} companies; add others through the API.")
+        claims["companies"] = [_company_claims(item) for item in companies]
     return claims
 
 

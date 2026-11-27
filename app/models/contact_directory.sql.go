@@ -97,7 +97,10 @@ WHERE c.workspace_id = $1
   AND ($3::citext IS NULL OR c.email = $3::citext)
   AND ($4::text IS NULL OR c.external_id = $4::text)
   AND ($5::boolean IS NULL OR (c.blocked_at IS NOT NULL) = $5::boolean)
-  AND ($6::uuid IS NULL OR c.company_id = $6::uuid)
+  AND ($6::uuid IS NULL OR c.id IN (
+      SELECT cc.contact_id FROM contact_companies AS cc
+      WHERE cc.workspace_id = $1 AND cc.company_id = $6::uuid
+  ))
   AND ($7::timestamptz IS NULL OR c.last_seen_at >= $7::timestamptz)
   AND ($8::timestamptz IS NULL OR c.last_seen_at < $8::timestamptz)
   AND ($9::timestamptz IS NULL OR c.created_at >= $9::timestamptz)
@@ -396,7 +399,10 @@ WHERE c.workspace_id = $1
   AND ($3::citext IS NULL OR c.email = $3::citext)
   AND ($4::text IS NULL OR c.external_id = $4::text)
   AND ($5::boolean IS NULL OR (c.blocked_at IS NOT NULL) = $5::boolean)
-  AND ($6::uuid IS NULL OR c.company_id = $6::uuid)
+  AND ($6::uuid IS NULL OR c.id IN (
+      SELECT cc.contact_id FROM contact_companies AS cc
+      WHERE cc.workspace_id = $1 AND cc.company_id = $6::uuid
+  ))
   AND ($7::timestamptz IS NULL OR c.last_seen_at >= $7::timestamptz)
   AND ($8::timestamptz IS NULL OR c.last_seen_at < $8::timestamptz)
   AND ($9::timestamptz IS NULL OR c.created_at >= $9::timestamptz)

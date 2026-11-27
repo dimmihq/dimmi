@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
@@ -36,7 +37,8 @@ maxHelpArticles caps the articles the Help tab carries at once.
 const maxHelpArticles = 200
 
 /*
-HelpController serves the messenger's Help tab. Readers knows who a
+HelpController serves the messenger's Help tab. Disk gives article
+authors' photos an address the messenger can load. Readers knows who a
 visitor reads as and issues passes; Addresses builds the help center's
 address; Ratings keeps what visitors say about articles, and Analytics
 counts the articles they open.
@@ -48,16 +50,19 @@ type HelpController struct {
 	Addresses helpcenters.Addresses
 	Clock     clock.Clock
 	Analytics *helpcenters.Analytics
+	Disk      filesystem.Filesystem
 }
 
 /*
-HelpArticle is an article as the messenger shows it.
+HelpArticle is an article as the messenger shows it, with the teammate
+who wrote it, nil when none did.
 */
 type HelpArticle struct {
 	Slug    string              `json:"slug"`
 	Title   string              `json:"title"`
 	Summary string              `json:"summary"`
 	Updated time.Time           `json:"updated"`
+	Author  *HelpAuthor         `json:"author"`
 	Body    []helpcenters.Block `json:"body"`
 }
 
@@ -74,10 +79,12 @@ type HelpCollection struct {
 
 /*
 HelpIndex is everything the Help tab draws, and the address the help
-center's pages start at, empty without one.
+center's pages start at in the language it is read in, empty without
+one. Locale is that language.
 */
 type HelpIndex struct {
 	URL         string           `json:"url"`
+	Locale      string           `json:"locale,omitempty"`
 	Collections []HelpCollection `json:"collections"`
 	Articles    []HelpArticle    `json:"articles"`
 	Popular     []string         `json:"popular"`
@@ -96,17 +103,17 @@ type HelpOutput struct {
 Show answers the Help tab of the messenger the request names: empty
 when it links to no help center.
 */
-func (c *HelpController) Show(ctx context.Context, _ *requests.NoInput) (*HelpOutput, error) {
+func (c *HelpController) Show(ctx context.Context, in *requests.ShowWidgetHelpRequest) (*HelpOutput, error) {
 	resolved, _ := actions.CurrentResolved(ctx)
 
-	return c.answer(ctx, resolved, nil)
+	return c.answer(ctx, resolved, in, nil)
 }
 
 /*
 Mine answers the Help tab as the visitor reads it: what their audiences
 open when the messenger knows them, what anyone may read otherwise.
 */
-func (c *HelpController) Mine(ctx context.Context, _ *requests.NoInput) (*HelpOutput, error) {
+func (c *HelpController) Mine(ctx context.Context, in *requests.ShowWidgetHelpRequest) (*HelpOutput, error) {
 	auth := authenticated(ctx)
 	var contact *ids.UUID
 	if r, ok := c.known(auth); ok {
@@ -116,13 +123,16 @@ func (c *HelpController) Mine(ctx context.Context, _ *requests.NoInput) (*HelpOu
 		}
 	}
 
-	return c.answer(ctx, auth.Resolved, contact)
+	return c.answer(ctx, auth.Resolved, in, contact)
 }
 
 /*
-answer reads the messenger's help center for the reader, nil for anyone.
+answer reads the messenger's help center for the reader, nil for anyone,
+in the language they asked for or their browser prefers, when the help
+center offers it.
 */
-func (c *HelpController) answer(ctx context.Context, resolved actions.Resolved, contact *ids.UUID,
+func (c *HelpController) answer(ctx context.Context, resolved actions.Resolved, in *requests.ShowWidgetHelpRequest,
+	contact *ids.UUID,
 ) (*HelpOutput, error) {
 	out := &HelpOutput{}
 	out.Body.Data = HelpIndex{Collections: []HelpCollection{}, Articles: []HelpArticle{}, Popular: []string{}}
@@ -132,8 +142,12 @@ func (c *HelpController) answer(ctx context.Context, resolved actions.Resolved, 
 
 	ws, id := resolved.Workspace.ID, *resolved.Widget.HelpCenterID
 	snap, err := c.Public.LoadByID(ctx, ws, id)
+	if locale := helpLocale(snap.HelpCenter, in); err == nil && locale != snap.Locale {
+		snap, err = c.Public.LoadByIDIn(ctx, ws, id, locale)
+	}
 	if err == nil && contact != nil {
-		snap, err = c.Public.LoadByIDFor(ctx, ws, id, *contact)
+		find := models.FindHelpCenterParams{WorkspaceID: ws, ID: id}
+		snap, err = c.Public.LoadByIDForIn(ctx, find, snap.Locale, *contact)
 	}
 
 	if errors.Is(err, helpcenters.ErrNoHelpCenter) {
@@ -144,10 +158,43 @@ func (c *HelpController) answer(ctx context.Context, resolved actions.Resolved, 
 		return nil, err
 	}
 
-	out.Body.Data = indexOf(snap)
-	out.Body.Data.URL = c.Addresses.Root(snap.HelpCenter)
+	root := c.Addresses.Root(snap.HelpCenter)
+	if snap.Locale != snap.HelpCenter.Locale {
+		root += "/" + snap.Locale
+	}
+	out.Body.Data = indexOf(snap, root, func(path string) *string {
+		if c.Disk == nil {
+			return nil
+		}
+		address, err := c.Disk.TemporaryURL(ctx, path, authorPhotoTTL)
+		if err != nil {
+			return nil
+		}
+		return &address
+	})
+	out.Body.Data.URL = root
+	if len(helpcenters.LocalesOf(snap.HelpCenter)) > 1 {
+		out.Body.Data.Locale = snap.Locale
+	}
 
 	return out, nil
+}
+
+/*
+helpLocale is the language the Help tab is read in: the one asked for
+when the help center offers it, else the first of the browser's.
+*/
+func helpLocale(h models.HelpCenter, in *requests.ShowWidgetHelpRequest) string {
+	if in == nil {
+		return h.Locale
+	}
+	if l, ok := helpcenters.NormalizeLocale(in.Locale); ok && helpcenters.OffersLocale(h, l) {
+		return l
+	}
+	if in.Locale != "" {
+		return helpcenters.PickLocale(in.Locale, helpcenters.LocalesOf(h))
+	}
+	return helpcenters.PickLocale(in.AcceptLanguage, helpcenters.LocalesOf(h))
 }
 
 /*
@@ -181,9 +228,16 @@ func (c *HelpController) readsAs(ctx context.Context, auth actions.Authenticated
 }
 
 /*
-indexOf shapes a help center for the Help tab.
+authorPhotoTTL is how long an article author's photo address works.
 */
-func indexOf(snap helpcenters.Snapshot) HelpIndex {
+const authorPhotoTTL = time.Hour
+
+/*
+indexOf shapes a help center for the Help tab, its articles' links on
+the help center's own pages resolved against its root address, and
+photo the address of an author's photo, nil when it has none.
+*/
+func indexOf(snap helpcenters.Snapshot, root string, photo func(path string) *string) HelpIndex {
 	out := HelpIndex{Collections: []HelpCollection{}, Articles: []HelpArticle{}, Popular: []string{}}
 	slugs := map[string][]string{}
 	for i, a := range snap.Articles {
@@ -192,7 +246,7 @@ func indexOf(snap helpcenters.Snapshot) HelpIndex {
 		}
 		out.Articles = append(out.Articles, HelpArticle{
 			Slug: a.Slug, Title: a.Title, Summary: deref(a.Description), Updated: a.VersionCreatedAt,
-			Body: helpcenters.Blocks(a.BodyMarkdown),
+			Author: authorOf(a, photo), Body: helpcenters.ArticleBlocks(a.BodyMarkdown, root),
 		})
 		if len(out.Popular) < 5 {
 			out.Popular = append(out.Popular, a.Slug)

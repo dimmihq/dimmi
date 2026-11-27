@@ -1,0 +1,10 @@
+{
+  "type": "article", "id": "7001", "title": "Reset your password", "description": "Two steps", "body": "<p class=\"intercom-align-center\">Hello</p><p>Go to <b>Settings</b>.</p><div class=\"intercom-container\"><img src=\"https://downloads.intercomcdn.com/i/o/1/abc/settings.png?expires=1\" alt=\"Settings page\"></div><div class=\"intercom-align-center\"><a href=\"https://app.example.com/reset\" class=\"intercom-h2b-button\">Reset</a></div><iframe src=\"https://www.youtube.com/embed/abc\"></iframe>",
+  "body_markdown": "Hello\n\nGo to **Settings**.", "author_id": 501, "state": "published", "created_at": 1763000000, "updated_at": 1763100000,
+  "url": "https://help.example.com/en/articles/7001-reset-your-password", "parent_id": 81, "parent_ids": [81], "parent_type": "collection", "default_locale": "en", "help_center_audience": "everyone",
+  "translated_content": {"type": "article_translated_content",
+    "en": {"type": "article_content", "title": "Reset your password", "body": "<p>Go</p>", "state": "published"},
+    "fr": {"type": "article_content", "title": "Réinitialiser le mot de passe", "description": "Deux étapes", "body": "<p>Allez dans <b>Réglages</b>.</p>", "author_id": 502, "state": "draft", "created_at": 1763050000, "updated_at": 1763150000, "url": "https://help.example.com/fr/articles/7001-reinitialiser"}
+  },
+  "tags": {"type": "tag.list", "tags": []}
+}

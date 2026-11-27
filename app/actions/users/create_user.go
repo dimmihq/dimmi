@@ -10,12 +10,19 @@
 | cleaned of invisible characters, so two names that look alike are
 | alike.
 |
+| A teammate brought over from another tool already has a placeholder
+| account at their address, which nobody can sign in to. Signing up with
+| a password at that address makes the placeholder the person's own
+| instead of failing: the account, and the history it authors, simply
+| become theirs. Their imported membership stays disabled.
+|
 */
 
 package users
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/netip"
 	"time"
@@ -63,9 +70,12 @@ Rules:
   - The name is cleaned of control and invisible characters.
   - An acceptance of the terms is stored with the version in force, the
     time, and the address and browser it came from.
+  - A password at the address of an import's placeholder account, which
+    nobody claimed yet, adopts that account: it takes the name, the
+    password, the proof of the address and the acceptance given.
 
-Errors: [exceptions.ErrEmailTaken] when a live account has the address,
-or a wrapped database error.
+Errors: [exceptions.ErrEmailTaken] when a live account other than an
+unclaimed placeholder has the address, or a wrapped database error.
 */
 type CreateUser struct {
 	DB           *database.DB
@@ -102,11 +112,48 @@ func (a *CreateUser) Handle(ctx context.Context, in CreateUserInput) (models.Use
 		return err
 	})
 	if database.IsUniqueViolation(err, "users_email_key") {
-		return models.User{}, exceptions.ErrEmailTaken
+		return a.adopt(ctx, in, verifiedAt)
 	}
 
 	if err != nil {
 		return models.User{}, fmt.Errorf("create user: %w", err)
+	}
+
+	return user, nil
+}
+
+/*
+adopt hands the import's unclaimed placeholder account at the address to
+the person creating an account with a password, and refuses the address
+as taken when there is no such placeholder.
+*/
+func (a *CreateUser) adopt(ctx context.Context, in CreateUserInput, verifiedAt *time.Time) (models.User, error) {
+	if in.PasswordHash == nil {
+		return models.User{}, exceptions.ErrEmailTaken
+	}
+
+	var user models.User
+
+	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		account := a.accepted(in.Terms, models.CreateUserParams{Now: a.Clock.Now()})
+
+		var err error
+
+		user, err = models.New(tx).AdoptPlaceholderUser(ctx, models.AdoptPlaceholderUserParams{
+			Name: str.Clean(in.Name), Email: mail.CanonicalAddress(in.Email), PasswordHash: in.PasswordHash,
+			EmailVerifiedAt: verifiedAt, TermsVersion: account.TermsVersion, TermsAcceptedAt: account.TermsAcceptedAt,
+			TermsAcceptedIp: account.TermsAcceptedIp, TermsAcceptedUserAgent: account.TermsAcceptedUserAgent,
+			Now: account.Now,
+		})
+
+		return err
+	})
+	if errors.Is(err, database.ErrNotFound) {
+		return models.User{}, exceptions.ErrEmailTaken
+	}
+
+	if err != nil {
+		return models.User{}, fmt.Errorf("adopt placeholder account: %w", err)
 	}
 
 	return user, nil

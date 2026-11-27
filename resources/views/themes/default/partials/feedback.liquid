@@ -1,0 +1,38 @@
+{%- comment -%}
+  Asks whether the article helped. Every step is in the page and the
+  page's script moves between them in place: the question, thanks for a
+  yes, and after a no a box asking what was missing, then thanks for the
+  note. Without scripts the forms post and the page comes back on the
+  step the address names.
+{%- endcomment -%}
+{%- assign f = article.feedback -%}
+<section id="feedback" data-feedback class="mt-14 rounded-2xl border border-border-button-default bg-background-secondary-default px-5 py-4">
+<div data-step="ask"{% if f.answer != "" %} hidden{% endif %} class="flex flex-wrap items-center gap-4">
+<h2 class="text-body-medium">{{ 'helpful_question' | t }}</h2>
+<form method="post" action="{{ f.url }}" data-feedback-answer class="ms-auto flex gap-2">
+{{ form_token_field }}
+{%- assign answers = "yes:thumb-up,no:thumb-down" | split: "," %}
+{%- for answer in answers %}
+{%- assign parts = answer | split: ":" %}
+<button type="submit" name="helpful" value="{{ parts[0] }}" class="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-border-button-default bg-background-primary-default px-3.5 text-body-medium text-text-secondary shadow-xs outline-none transition hover:border-border-button-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring active:scale-[0.98]">{{ parts[1] | icon: 'size-4' }}{{ parts[0] | t }}</button>
+{%- endfor %}
+</form>
+</div>
+<div data-step="yes"{% if f.answer != "yes" %} hidden{% endif %}>{% render 'feedback_thanks', text: 'thanks_yes' %}</div>
+<div data-step="no"{% if f.answer != "no" or f.commented %} hidden{% endif %}>
+<form method="post" action="{{ f.comment_url }}" data-feedback-note class="flex flex-col gap-3">
+{{ form_token_field }}
+<label for="feedback-comment" class="text-body-medium">{{ 'missing_question' | t }}</label>
+<p role="alert" data-limited{% unless f.limited %} hidden{% endunless %} class="text-body-2-regular text-text-error-primary">{{ 'too_much_feedback' | t }}</p>
+<textarea id="feedback-comment" name="comment" rows="3" required maxlength="2000" placeholder="{{ 'missing_placeholder' | t }}" class="rounded-xl border border-border-button-default bg-background-primary-default px-3 py-2.5 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"></textarea>
+<div class="flex flex-wrap items-center gap-3">
+<button type="submit" class="button-brand inline-flex h-9 cursor-pointer items-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:opacity-60">{{ 'send_feedback' | t }}</button>
+{% render 'or_help_button', class: 'ms-auto text-body-medium text-link hover:underline' %}
+</div>
+</form>
+</div>
+<div data-step="done"{% unless f.commented %} hidden{% endunless %} class="flex flex-wrap items-center gap-4">
+{% render 'feedback_thanks', text: 'thanks_note' %}
+{% render 'help_button', class: 'ms-auto text-body-medium text-link hover:underline' %}
+</div>
+</section>

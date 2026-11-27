@@ -1,0 +1,7 @@
+{%- capture sidebar %}{% render 'help_sidebar', current: "", article: "" %}{% endcapture -%}
+<div class="stagger mx-auto w-full max-w-[40rem] px-5 pt-20 text-center">
+<p class="text-body-medium text-link">404</p>
+<h1 class="mt-2 text-display-4-medium tracking-tight">{{ 'not_found_title' | t }}</h1>
+<p class="mt-3 text-title-3-regular text-text-secondary">{{ 'not_found_body' | t }}</p>
+<div class="mt-8 text-start">{% render 'ask_box', query: "", suggestions: popular %}</div>
+</div>

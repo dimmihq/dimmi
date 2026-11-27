@@ -1,0 +1,117 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "ticket_type",
+      "id": "67",
+      "name": "Bug Report",
+      "description": "Bug Report Template",
+      "icon": "🎟️",
+      "workspace_id": "this_is_an_id648_that_should_be_at_least_",
+      "archived": false,
+      "created_at": 1734537866,
+      "updated_at": 1734537866,
+      "is_internal": false,
+      "ticket_type_attributes": {
+        "type": "list",
+        "data": [
+          {
+            "type": "ticket_type_attribute",
+            "id": "165",
+            "workspace_id": "this_is_an_id648_that_should_be_at_least_",
+            "name": "_default_title_",
+            "description": "",
+            "data_type": "string",
+            "input_options": {
+              "multiline": false
+            },
+            "order": 0,
+            "required_to_create": false,
+            "required_to_create_for_contacts": false,
+            "visible_on_create": true,
+            "visible_to_contacts": true,
+            "default": true,
+            "ticket_type_id": 67,
+            "archived": false,
+            "created_at": 1734537866,
+            "updated_at": 1734537866
+          },
+          {
+            "type": "ticket_type_attribute",
+            "id": "167",
+            "workspace_id": "this_is_an_id648_that_should_be_at_least_",
+            "name": "name",
+            "description": "description",
+            "data_type": "string",
+            "input_options": null,
+            "order": 0,
+            "required_to_create": false,
+            "required_to_create_for_contacts": false,
+            "visible_on_create": false,
+            "visible_to_contacts": false,
+            "default": false,
+            "ticket_type_id": 67,
+            "archived": false,
+            "created_at": 1734537866,
+            "updated_at": 1734537866
+          },
+          {
+            "type": "ticket_type_attribute",
+            "id": "166",
+            "workspace_id": "this_is_an_id648_that_should_be_at_least_",
+            "name": "_default_description_",
+            "description": "",
+            "data_type": "string",
+            "input_options": {
+              "multiline": true
+            },
+            "order": 1,
+            "required_to_create": false,
+            "required_to_create_for_contacts": false,
+            "visible_on_create": true,
+            "visible_to_contacts": true,
+            "default": true,
+            "ticket_type_id": 67,
+            "archived": false,
+            "created_at": 1734537866,
+            "updated_at": 1734537866
+          }
+        ]
+      },
+      "category": "Customer",
+      "ticket_states": {
+        "type": "list",
+        "data": [
+          {
+            "type": "ticket_state",
+            "id": "8321",
+            "category": "submitted",
+            "internal_label": "Submitted",
+            "external_label": "Submitted"
+          },
+          {
+            "type": "ticket_state",
+            "id": "8322",
+            "category": "in_progress",
+            "internal_label": "In progress",
+            "external_label": "In progress"
+          },
+          {
+            "type": "ticket_state",
+            "id": "8323",
+            "category": "waiting_on_customer",
+            "internal_label": "Waiting on customer",
+            "external_label": "Waiting on you"
+          },
+          {
+            "type": "ticket_state",
+            "id": "8324",
+            "category": "resolved",
+            "internal_label": "Resolved",
+            "external_label": "Resolved"
+          }
+        ]
+      }
+    }
+  ]
+}

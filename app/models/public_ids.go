@@ -88,6 +88,7 @@ const (
 	PrefixDataExport         Prefix = "dex"
 	PrefixConversationRating Prefix = "crt"
 	PrefixImport             Prefix = "imp"
+	PrefixMigration          Prefix = "mig"
 )
 
 /*
@@ -312,6 +313,7 @@ const (
 	PrefixKnowledgeSource Prefix = "ks"
 	PrefixArticle         Prefix = "art"
 	PrefixArticleVersion  Prefix = "artv"
+	PrefixHelpCenterTheme Prefix = "thm"
 )
 
 /*
@@ -327,6 +329,7 @@ func helpCenterPublicIDs() []PublicIDEntry {
 		{"sug", "article_suggestions"},
 		{"sugb", "article_suggestion_batches"},
 		{"hcd", "help_center_domains"},
+		{PrefixHelpCenterTheme, "help_center_themes"},
 		{"rdr", "help_center_redirects"},
 		{"ast", "help_center_assets"},
 		{PrefixKnowledgeSource, "knowledge_sources"},
@@ -356,6 +359,8 @@ func platformPublicIDs() []PublicIDEntry {
 		{"impr", "import_runs"},
 		{"impm", "import_mappings"},
 		{"impf", "import_files"},
+		{PrefixMigration, "migrations"},
+		{"migr", "migration_records"},
 		{PrefixIntegrationInstallation, "integration_installations"},
 		{PrefixIntegrationMemberGrant, "integration_member_grants"},
 	}

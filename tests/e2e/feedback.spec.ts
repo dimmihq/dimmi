@@ -57,7 +57,7 @@ it.describe("feature requests", () => {
     await guest.getByLabel("Details").fill("For our monthly reports.");
     await guest.getByRole("button", { name: "Submit idea" }).click();
     await expect(guest.getByRole("heading", { name: "Export conversations to CSV" })).toBeVisible();
-    await expect(guest.getByRole("button", { name: /Vote for Export conversations to CSV, 1 votes/ })).toHaveAttribute(
+    await expect(guest.getByRole("button", { name: /Vote for Export conversations to CSV, 1 vote$/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );

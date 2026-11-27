@@ -1,0 +1,23 @@
+{
+  "type": "text type",
+  "data": [
+    {
+      "type": "text type",
+      "id": "591",
+      "office_hours_schedule_id": "592",
+      "exception_date": "text exception_date",
+      "exception_type": "closed",
+      "name": "text name",
+      "time_intervals": [
+        {
+          "start_minute": 1700000593,
+          "end_minute": 1700000594,
+          "day_of_week": 1700000595
+        }
+      ],
+      "recurring_annually": true,
+      "created_at": 1700000596,
+      "updated_at": 1700000597
+    }
+  ]
+}

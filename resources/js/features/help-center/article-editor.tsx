@@ -41,6 +41,7 @@ import { ArticleSettings } from "./article-settings";
 import { type ArticleRequest, useArticleDecision } from "./change-requests";
 import { collectionOptions, type Draft } from "./docs-format";
 import { useHistoryPane } from "./history-pane";
+import { LanguageMenu } from "./language-menu";
 import { RequestNote } from "./request-note";
 
 function draftOf(article: Article): Draft {
@@ -143,6 +144,9 @@ export function ArticleEditor({ id }: { id: string }) {
     workspace,
     id,
     (restored) => {
+      if (restored.object !== "article") {
+        return;
+      }
       settle(restored);
       setDraft(draftOf(restored));
       setRevision((r) => r + 1);
@@ -186,6 +190,9 @@ export function ArticleEditor({ id }: { id: string }) {
         onSave={() => save.mutate(false, { onSuccess: () => toast.success("Draft saved") })}
         onConfirm={setConfirm}
         request={controlsOf(request, decide, edited, () => setConfirm("accept"))}
+        languages={
+          center ? <LanguageMenu workspace={workspace} article={id} center={center} current={center.locale} /> : null
+        }
       />
       <ScrollArea>
         <RequestNote request={request} waiting={waiting} />

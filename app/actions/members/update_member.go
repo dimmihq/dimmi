@@ -36,8 +36,10 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/mail"
 
 	"github.com/dimmihq/dimmi/app/actions/availability"
+	"github.com/dimmihq/dimmi/app/actions/invitations"
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -91,6 +93,9 @@ Rules:
   - Availability follows availability.Plan: members set their own,
     members:manage_availability sets anyone's and every capacity.
   - Values equal to the current ones change nothing.
+  - Activating an imported member who waits to be enabled needs
+    members:write and enables them: see [UpdateMember.enable]. Nothing
+    else in the request applies then.
 
 Events: [appevents.MemberReactivated], [appevents.MemberRoleChanged]
 and [appevents.MemberDeactivated], in that order, for what changed, and
@@ -111,6 +116,9 @@ type UpdateMember struct {
 	Events        *events.Dispatcher
 	Clock         clock.Clock
 	ConfirmWindow time.Duration
+	Mail          *mail.Manager
+	Links         appauth.Links
+	Invite        *invitations.CreateInvitations
 }
 
 /*
@@ -154,6 +162,16 @@ func (a *UpdateMember) Handle(
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		s, err := lock(ctx, models.New(tx), in.Membership.Workspace.ID, in.MemberID)
 		if err != nil {
+			return err
+		}
+
+		if enabling(in, s.target) {
+			if err := a.enable(ctx, tx, s, in); err != nil {
+				return err
+			}
+
+			out, err = findWithUser(ctx, s.q, s.target.WorkspaceID, s.target.ID)
+
 			return err
 		}
 

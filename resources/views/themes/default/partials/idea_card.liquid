@@ -1,0 +1,4 @@
+<li class="flex items-start gap-3 rounded-2xl border border-border-button-default bg-background-primary-default p-3 transition-colors hover:border-border-button-hover">
+{% render 'vote_button', idea: idea %}
+<span class="min-w-0 flex-1 pt-0.5">{% if idea.url != "" %}<a href="{{ idea.url }}" class="line-clamp-2 text-body-2-medium outline-none hover:underline focus-visible:underline">{{ idea.title }}</a>{% else %}<span class="line-clamp-2 text-body-2-medium">{{ idea.title }}</span>{% endif %}{% if idea.comments > 0 %}<span class="mt-1.5 flex items-center gap-1 text-caption-1-medium tabular-nums text-text-tertiary">{{ 'comment' | icon: 'size-3.5' }}{{ idea.comments }}</span>{% endif %}</span>
+</li>

@@ -20,8 +20,9 @@ events, audiences, exports and erasures.
 func peopleDocs() map[string]Doc {
 	out := contactReadDocs()
 	for _, part := range []map[string]Doc{
-		contactWriteDocs(), contactRemovalDocs(), contactInsightDocs(), companyDocs(), companyChangeDocs(),
-		exportErasureAudienceDocs(), attributeEventDocs(), importDocs(), importRollbackDocs(),
+		contactWriteDocs(), contactRemovalDocs(), contactInsightDocs(), contactCompanyDocs(),
+		companyDocs(), companyChangeDocs(),
+		exportErasureAudienceDocs(), attributeEventDocs(), importDocs(), importRollbackDocs(), migrationDocs(),
 	} {
 		maps.Copy(out, part)
 	}
@@ -109,9 +110,11 @@ func contactWriteDocs() map[string]Doc {
 				"custom_attributes": "Values by key, merged into what the contact has. null removes a key.",
 				"blocked":           "true blocks the contact, which also hides them from the list; false unblocks.",
 				"notes":             "Team-only notes, 10,000 characters at most, replacing the current notes.",
-				"company_id":        "Id of the company (cmp_...) to link, or null to unlink.",
-				"add_tags":          "Tag ids or names to add; a new name becomes a tag. 50 at most.",
-				"remove_tags":       "Ids of tags (tag_...) to remove.",
+				"company_id":        "Id of the company (cmp_...) to make the default, or null to unlink it.",
+				"company_ids": "Ids of every company (cmp_...) the contact belongs to, replacing the list. " +
+					"300 at most.",
+				"add_tags":    "Tag ids or names to add; a new name becomes a tag. 50 at most.",
+				"remove_tags": "Ids of tags (tag_...) to remove.",
 			},
 			Hint: "external_id_immutable: the contact already has another external id and keeps it.",
 		},

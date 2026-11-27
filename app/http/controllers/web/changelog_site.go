@@ -38,15 +38,16 @@ const (
 )
 
 /*
-emojiOf returns each reaction's character and name, by its stored name.
+emojiOf returns each reaction's character by its stored name, which the
+page reads its spoken name by.
 */
 func emojiOf() map[string]views.Reaction {
 	return map[string]views.Reaction{
-		"thumbsup": {Emoji: "👍", Name: "Thumbs up"},
-		"heart":    {Emoji: "❤️", Name: "Love"},
-		"tada":     {Emoji: "🎉", Name: "Celebrate"},
-		"rocket":   {Emoji: "🚀", Name: "Rocket"},
-		"eyes":     {Emoji: "👀", Name: "Eyes"},
+		"thumbsup": {Emoji: "👍", Name: "thumbsup"},
+		"heart":    {Emoji: "❤️", Name: "heart"},
+		"tada":     {Emoji: "🎉", Name: "tada"},
+		"rocket":   {Emoji: "🚀", Name: "rocket"},
+		"eyes":     {Emoji: "👀", Name: "eyes"},
 	}
 }
 
@@ -69,7 +70,7 @@ func (c *HelpCenterController) live(w fhttp.ResponseWriter, r *fhttp.Request) (o
 	if c.Public == nil || c.Changelog == nil {
 		return out, false, true
 	}
-	snap, err := c.Public.Load(r.Context(), r.PathValue("center"))
+	snap, err := c.Public.LoadIn(r.Context(), r.PathValue("center"), readingLocale(r.Context()))
 	if errors.Is(err, helpcenters.ErrNoHelpCenter) {
 		return out, false, true
 	}
@@ -81,7 +82,7 @@ func (c *HelpCenterController) live(w fhttp.ResponseWriter, r *fhttp.Request) (o
 	if hostedHere(r.Context()) {
 		base = ""
 	}
-	center, _, shown := c.realSite(w, r, snap, base)
+	center, _, shown := c.publicSite(w, r, snap, base)
 	out = liveSite{center: center, help: snap.HelpCenter}
 	if contact, _, signed := c.readerOf(r, snap.HelpCenter); signed {
 		out.reader = &contact
@@ -175,7 +176,7 @@ func weeksOf(year int, dates []models.ListChangelogPublishDatesRow) []views.Week
 	weeks := make([]views.Week, weeksInStrip)
 	for month := time.January; month <= time.December; month++ {
 		first := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
-		weeks[min((first.YearDay()-1)/7, weeksInStrip-1)].Month = first.Format("Jan")
+		weeks[min((first.YearDay()-1)/7, weeksInStrip-1)].Month = month
 	}
 	for _, d := range dates {
 		w := &weeks[min((d.PublishedAt.UTC().YearDay()-1)/7, weeksInStrip-1)]

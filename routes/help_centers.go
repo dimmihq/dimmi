@@ -67,6 +67,26 @@ func helpCenterRoutes(workspace *routing.Router, a *app.App) {
 		Ability("articles:write").Status(fhttp.StatusOK)
 	routing.Get(workspace, article+"/versions", "articles.versions.index", art.Versions).Ability("articles:read")
 
+	articleExtraRoutes(workspace, a, article)
+
+	portalRoutes(workspace, a)
+
+	themeRoutes(workspace, a)
+
+	translationRoutes(workspace, a)
+
+	aud := &v1.HelpAudienceController{Articles: acts.Articles, Collections: acts.Collections, IDs: a.IDs}
+	routing.Patch(workspace, article+"/audience", "articles.audience.update", aud.Article).Ability("articles:write")
+	routing.Patch(workspace, "/collections/{collection}/audience", "collections.audience.update", aud.Collection).
+		Ability("articles:write")
+}
+
+/*
+articleExtraRoutes declares an article's feedback, its restorations and
+the pictures articles show.
+*/
+func articleExtraRoutes(workspace *routing.Router, a *app.App, article string) {
+	acts := a.Actions
 	extras := &v1.ArticleExtrasController{Articles: acts.Articles, Images: acts.HelpImages, IDs: a.IDs}
 	ratings := &v1.ArticleFeedbackController{Ratings: acts.HelpRatings, IDs: a.IDs}
 	routing.Get(workspace, article+"/feedback", "articles.feedback.show", ratings.Show).Ability("articles:read")
@@ -75,13 +95,66 @@ func helpCenterRoutes(workspace *routing.Router, a *app.App) {
 	routing.Post(workspace, "/help-images", "help-images.store", extras.StoreImage).Internal().
 		Ability("articles:write").Status(fhttp.StatusCreated).
 		Use(middleware.BodyLimit(helpcenters.MaxImageBytes + imageUploadOverhead))
+}
 
-	portalRoutes(workspace, a)
+/*
+themeRoutes declares a help center's themes: each upload a version of
+its own, its settings, its zip, and the version its pages wear.
+*/
+func themeRoutes(workspace *routing.Router, a *app.App) {
+	th := &v1.HelpCenterThemeController{
+		Themes: a.Actions.HelpThemes, Addresses: a.Actions.HelpCenterAddresses, IDs: a.IDs,
+	}
+	themes, one := "/help-centers/{help_center}/themes", "/help-centers/{help_center}/themes/{theme}"
 
-	aud := &v1.HelpAudienceController{Articles: acts.Articles, Collections: acts.Collections, IDs: a.IDs}
-	routing.Patch(workspace, article+"/audience", "articles.audience.update", aud.Article).Ability("articles:write")
-	routing.Patch(workspace, "/collections/{collection}/audience", "collections.audience.update", aud.Collection).
+	routing.Get(workspace, themes, "help-centers.themes.index", th.Index).Ability("settings:write")
+	routing.Post(workspace, themes, "help-centers.themes.store", th.Store).Ability("settings:write").
+		Status(fhttp.StatusCreated).Use(middleware.BodyLimit(helpcenters.MaxThemeArchiveBytes + imageUploadOverhead))
+	routing.Get(workspace, one, "help-centers.themes.show", th.Show).Ability("settings:write")
+	routing.Patch(workspace, one, "help-centers.themes.update", th.Update).Ability("settings:write")
+	routing.Get(workspace, one+"/archive", "help-centers.themes.archive.show", th.Download).Ability("settings:write")
+	routing.Patch(workspace, "/help-centers/{help_center}/live-theme", "help-centers.live-theme.update", th.UpdateLive).
+		Ability("settings:write")
+}
+
+/*
+translationRoutes declares the translations of articles and collections
+into the other languages a help center offers, and where every article
+stands in each.
+*/
+func translationRoutes(workspace *routing.Router, a *app.App) {
+	acts := a.Actions
+	tr := &v1.TranslationController{Translations: acts.Translations, IDs: a.IDs}
+	one := "/articles/{article}/translations/{locale}"
+	col := "/collections/{collection}/translations"
+
+	routing.Get(workspace, "/articles/{article}/translations", "articles.translations.index", tr.Index).
+		Ability("articles:read")
+	routing.Get(workspace, one, "articles.translations.show", tr.Show).Ability("articles:read")
+	routing.Patch(workspace, one, "articles.translations.update", tr.Update).Ability("articles:write")
+	routing.Delete(workspace, one, "articles.translations.destroy", tr.Destroy).
+		Ability("articles:write").Status(fhttp.StatusNoContent)
+	routing.Post(workspace, one+"/publications", "articles.translations.publications.store", tr.Publish).
+		Ability("articles:write").Status(fhttp.StatusOK)
+	routing.Delete(workspace, one+"/publications", "articles.translations.publications.destroy", tr.Unpublish).
+		Ability("articles:write").Status(fhttp.StatusOK)
+	routing.Post(workspace, one+"/reviews", "articles.translations.reviews.store", tr.Review).
+		Ability("articles:write").Status(fhttp.StatusOK)
+	routing.Get(workspace, one+"/versions", "articles.translations.versions.index", tr.Versions).
+		Ability("articles:read")
+	routing.Post(workspace, one+"/restorations", "articles.translations.restorations.store", tr.Restore).
+		Ability("articles:write").Status(fhttp.StatusOK)
+	routing.Get(workspace, "/help-centers/{help_center}/translation-states", "help-centers.translation-states.index",
+		tr.States).Ability("articles:read")
+	routing.Get(workspace, "/help-centers/{help_center}/collection-translations",
+		"help-centers.collection-translations.index", tr.IndexHelpCenterCollections).Ability("articles:read")
+	routing.Get(workspace, col, "collections.translations.index", tr.IndexCollection).Ability("articles:read")
+	routing.Patch(workspace, col+"/{locale}", "collections.translations.update", tr.UpdateCollection).
 		Ability("articles:write")
+	routing.Delete(workspace, col+"/{locale}", "collections.translations.destroy", tr.DestroyCollection).
+		Ability("articles:write").Status(fhttp.StatusNoContent)
+	routing.Get(workspace, "/help-center-languages", "help-center-languages.index", tr.Languages).
+		Ability("articles:read")
 }
 
 /*

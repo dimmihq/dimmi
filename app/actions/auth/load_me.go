@@ -50,7 +50,8 @@ ability groups those permissions reach and AccessTeams the teams their
 conversation access names. Token is the personal access token the
 request came with, nil for other credentials. Workspaces
 lists the user's workspaces for credentials that can switch between
-them, and is nil for tokens.
+them, and Awaiting the workspaces an import brought them into where they
+wait to be enabled; both are nil for tokens.
 */
 type Me struct {
 	Principal   *appauth.Principal
@@ -61,6 +62,7 @@ type Me struct {
 	Abilities   []string
 	AccessTeams []ids.UUID
 	Workspaces  []models.ListUserWorkspacesRow
+	Awaiting    []models.ListUserAwaitingMembershipsRow
 }
 
 /*
@@ -105,6 +107,13 @@ func (a *LoadMe) Handle(ctx context.Context, in LoadMeInput) (Me, error) {
 		}
 
 		me.Workspaces = append([]models.ListUserWorkspacesRow{}, rows...)
+
+		awaiting, err := models.New(a.DB).ListUserAwaitingMemberships(ctx, in.Principal.User.ID)
+		if err != nil {
+			return Me{}, fmt.Errorf("list awaiting workspaces of user: %w", err)
+		}
+
+		me.Awaiting = append([]models.ListUserAwaitingMembershipsRow{}, awaiting...)
 	}
 
 	return me, nil

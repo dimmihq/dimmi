@@ -20,7 +20,9 @@ import (
 )
 
 /*
-HelpCenter is one help center and where readers reach it.
+HelpCenter is one help center and where readers reach it. Locale and
+DefaultLocale both name the language its articles are written in;
+Locales lists every language readers may pick, the default first.
 */
 type HelpCenter struct {
 	ID              string                         `json:"id"`
@@ -30,11 +32,14 @@ type HelpCenter struct {
 	URL             string                         `json:"url"`
 	CustomDomain    *string                        `json:"custom_domain"`
 	Locale          string                         `json:"locale"`
+	DefaultLocale   string                         `json:"default_locale"`
+	Locales         []string                       `json:"locales"`
 	IsDefault       bool                           `json:"is_default"`
 	Status          string                         `json:"status"`
 	IndexingEnabled bool                           `json:"indexing_enabled"`
 	AskAIEnabled    bool                           `json:"ask_ai_enabled"`
 	Settings        helpcenters.HelpCenterSettings `json:"settings"`
+	ThemeID         *string                        `json:"theme_id"`
 	CreatedAt       time.Time                      `json:"created_at"`
 	UpdatedAt       time.Time                      `json:"updated_at"`
 }
@@ -43,9 +48,15 @@ type HelpCenter struct {
 NewHelpCenter shapes a help center reachable at the URL.
 */
 func NewHelpCenter(h models.HelpCenter, url string) HelpCenter {
+	var theme *string
+	if h.ThemeID != nil {
+		theme = new(models.PublicID(models.PrefixHelpCenterTheme, *h.ThemeID))
+	}
 	return HelpCenter{
-		ID: models.PublicID(models.PrefixHelpCenter, h.ID), Object: "help_center", Name: h.Name,
-		Subdomain: h.Subdomain, URL: url, CustomDomain: h.CustomDomain, Locale: h.Locale, IsDefault: h.IsDefault,
+		ThemeID: theme,
+		ID:      models.PublicID(models.PrefixHelpCenter, h.ID), Object: "help_center", Name: h.Name,
+		Subdomain: h.Subdomain, URL: url, CustomDomain: h.CustomDomain, Locale: h.Locale, DefaultLocale: h.Locale,
+		Locales: helpcenters.LocalesOf(h), IsDefault: h.IsDefault,
 		Status: h.Status, IndexingEnabled: h.IndexingEnabled, AskAIEnabled: h.AskAiEnabled,
 		Settings: helpcenters.SettingsOf(h), CreatedAt: h.CreatedAt, UpdatedAt: h.UpdatedAt,
 	}

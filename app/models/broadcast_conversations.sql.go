@@ -22,7 +22,7 @@ WITH scope AS (
             AND l.conversation_id IS NOT NULL
       ))
 )
-SELECT c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.ai_reply_count, c.ai_cost_micros, c.ai_language, c.ai_handed_off_at, c.ai_handoff_reason, c.merged_into_id, c.is_test, c.previous_conversation_id, c.assignment_wait_reason, c.assignment_waiting_since, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority, c.workflow_run_id, c.ai_mode, c.ai_memory, c.ai_agent_id, c.ai_transferred_from_ids, p.id, p.workspace_id, p.kind, p.external_id, p.email, p.email_verified, p.name, p.phone, p.avatar_url, p.company_id, p.custom_attributes, p.trusted_attribute_keys, p.locale, p.timezone, p.location, p.first_seen_at, p.last_seen_at, p.blocked_at, p.merged_into_id, p.search, p.deleted_at, p.created_at, p.updated_at, p.notes, p.placeholder
+SELECT c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.ai_reply_count, c.ai_cost_micros, c.ai_language, c.ai_handed_off_at, c.ai_handoff_reason, c.merged_into_id, c.is_test, c.previous_conversation_id, c.assignment_wait_reason, c.assignment_waiting_since, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority, c.workflow_run_id, c.ai_mode, c.ai_memory, c.ai_agent_id, c.ai_transferred_from_ids, c.company_id, p.id, p.workspace_id, p.kind, p.external_id, p.email, p.email_verified, p.name, p.phone, p.avatar_url, p.company_id, p.custom_attributes, p.trusted_attribute_keys, p.locale, p.timezone, p.location, p.first_seen_at, p.last_seen_at, p.blocked_at, p.merged_into_id, p.search, p.deleted_at, p.created_at, p.updated_at, p.notes, p.placeholder
 FROM scope s
 JOIN conversations c ON c.workspace_id = $1 AND c.id = s.id
 JOIN contacts p ON p.workspace_id = $1 AND p.id = s.contact_id AND p.deleted_at IS NULL
@@ -110,6 +110,7 @@ func (q *Queries) BroadcastConversationPage(ctx context.Context, arg BroadcastCo
 			&i.Conversation.AiMemory,
 			&i.Conversation.AiAgentID,
 			&i.Conversation.AiTransferredFromIds,
+			&i.Conversation.CompanyID,
 			&i.Contact.ID,
 			&i.Contact.WorkspaceID,
 			&i.Contact.Kind,

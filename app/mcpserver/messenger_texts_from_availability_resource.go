@@ -30,12 +30,18 @@ func messengerTextsFromAvailabilityResource() map[string]map[string]string {
 		"Block": {
 			"items": "The entries of a list or steps block as plain text, one per item. Absent on " +
 				"every other kind of block.",
+			"blocks": "The blocks a details block holds, in order. Absent on every other kind of " +
+				"block.",
 			"kind": "What the block is: h2 (heading), p (paragraph), list (bulleted), steps " +
-				"(numbered), code, note (quote or callout) or image.",
+				"(numbered), code, note (quote or callout), image, embed (a video or demo to open), " +
+				"button (a link drawn as a button) or details (a collapsible section).",
 			"text": "The block's plain text: the heading, paragraph or note wording, the source of a " +
-				"code block, or the alt text of an image. Absent on list and steps blocks.",
+				"code block, the alt text of an image, the label of an embed or a button, or the summary " +
+				"of a details block. Absent on list and steps blocks.",
 			"tokens": "A code block's source split into runs for syntax coloring, in order. Absent " +
 				"when the code's language is unknown or the block is not code.",
+			"url": "Where an embed or a button goes: the video or demo page, or the button's link. " +
+				"Absent on every other kind of block.",
 		},
 		"ChangelogEntry": {
 			"body": "The entry's content as blocks to draw in order, as it was last published.",
@@ -112,6 +118,8 @@ func messengerTextsFromEmailCodeSent() map[string]map[string]string {
 				"lasts 24 hours from then.",
 		},
 		"HelpArticle": {
+			"author": "The teammate who wrote the article, shown under its title. Null when no teammate " +
+				"wrote it.",
 			"body": "The article's content as blocks to draw in order, so the messenger can open it " +
 				"without another request.",
 			"slug": "The article's url-safe name, such as getting-started. Use it to report a view or " +
@@ -119,6 +127,11 @@ func messengerTextsFromEmailCodeSent() map[string]map[string]string {
 			"summary": "The article's short description. Empty when it has none.",
 			"title":   "The article's title.",
 			"updated": "When the published version of the article was made, as an RFC 3339 timestamp.",
+		},
+		"HelpAuthor": {
+			"avatar_url": "A short-lived address of the author's photo, valid for an hour. Null when " +
+				"they have none; show their initials instead.",
+			"name": "The author's name.",
 		},
 		"HelpCollection": {
 			"articles": "The slugs of the articles in this collection, matching entries of the " +
@@ -142,6 +155,8 @@ messengerTextsFromHelpIndex returns the texts from HelpIndex on.
 func messengerTextsFromHelpIndex() map[string]map[string]string {
 	return map[string]map[string]string{
 		"HelpIndex": {
+			"locale": "The language the articles are in, as a code such as fr, when the help center offers " +
+				"more than one. Ask for another with the locale parameter.",
 			"popular": "The slugs of up to five articles to feature first, taken from the start of the " +
 				"articles list.",
 			"url": "The address the help center's pages start at. Empty when the messenger links to no " +

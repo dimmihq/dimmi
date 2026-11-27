@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/base/skeleton/skeleton";
 import { useInbox } from "@/features/inbox/conversations";
 import { EmptyState, PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { defaultBreakdown, splitsReports } from "@/lib/ai-values";
-import { aiAttributesQuery } from "@/lib/api/ai-attributes";
+import { conversationAttributesQuery } from "@/lib/api/conversation-attributes";
 import { type Report, type ReportChart, type ReportType, reportQuery, reportTypesQuery } from "@/lib/api/reports";
 import { callerQuery } from "@/lib/api/workspace";
 import { cx } from "@/utils/cx";
@@ -122,7 +122,7 @@ function BreakdownPicker({
   value: string | undefined;
   onChange: (key: string) => void;
 }) {
-  const all = useQuery(aiAttributesQuery(workspace)).data ?? [];
+  const all = useQuery(conversationAttributesQuery(workspace)).data ?? [];
   const choices = all.filter((a) => splitsReports(a) && (a.status === "active" || a.key === value));
   const selected = value ?? defaultBreakdown(all)?.key;
   if (choices.length < 2) {
@@ -131,7 +131,7 @@ function BreakdownPicker({
 
   return (
     <Select
-      aria-label="Split by AI attribute"
+      aria-label="Split by conversation attribute"
       size="sm"
       variant="quiet"
       className="w-40"

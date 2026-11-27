@@ -1,0 +1,23 @@
+{%- comment -%}
+  A reader signs in with their email, or with their account on the
+  team's product when the help center takes that too.
+{%- endcomment -%}
+<div class="stagger mx-auto w-full max-w-[26rem] px-5 pt-16 pb-24 md:pt-24">
+<span class="button-brand grid size-11 place-items-center rounded-2xl">{{ 'login' | icon: 'size-5' }}</span>
+<h1 class="mt-6 text-title-1-medium tracking-tight">{{ 'reader_title' | t }}</h1>
+<p class="mt-2 text-body-regular text-text-secondary">{{ 'reader_body' | t: name: help_center.name }}</p>
+{%- if sign_in.product_url != "" %}
+<a href="{{ sign_in.product_url }}" class="button-brand mt-8 inline-flex h-10 w-full items-center justify-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'continue_with_account' | t }}</a>
+<p class="mt-6 flex items-center gap-3 text-caption-1-regular text-text-tertiary"><span class="h-px flex-1 bg-separator-border"></span>{{ 'or_use_email' | t }}<span class="h-px flex-1 bg-separator-border"></span></p>
+{%- endif %}
+<form method="post" action="{{ sign_in.action }}" data-turbo="false" class="flex flex-col gap-4 {% if sign_in.product_url == "" %}mt-8{% else %}mt-6{% endif %}">
+{{ form_token_field }}
+<input type="hidden" name="next" value="{{ sign_in.next }}">
+<label class="flex flex-col gap-1.5">
+<span class="text-body-medium">{{ 'email' | t }}</span>
+<input type="email" name="email" value="{{ sign_in.email }}" placeholder="you@company.com" required autocomplete="email"{% if sign_in.product_url == "" %} autofocus{% endif %}{% if sign_in.error != "" %} aria-invalid="true"{% endif %} aria-describedby="reader-error" class="h-10 rounded-xl border border-border-button-default bg-background-primary-default px-3 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint">
+</label>
+{% render 'reader_error', message: sign_in.error %}
+<button type="submit" class="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring {% if sign_in.product_url == "" %}button-brand{% else %}border border-border-button-default hover:bg-background-secondary-hover{% endif %}">{{ 'email_me_a_code' | t }}</button>
+</form>
+</div>

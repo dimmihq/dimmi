@@ -3,8 +3,8 @@
 | Connected Accounts
 |--------------------------------------------------------------------------
 |
-| A source of a service connected over OAuth, such as Notion, Intercom
-| or Zendesk, names the workspace's installation of that service in its
+| A source of a service connected over OAuth, such as Notion or GitHub,
+| names the workspace's installation of that service in its
 | "installation" setting. Every time its driver runs, the engine asks
 | the integrations for a working token, renewed when it expired, and
 | hands it to the driver with the account it reaches, so no key is ever

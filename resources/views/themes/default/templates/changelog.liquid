@@ -1,0 +1,46 @@
+{%- comment -%}
+  The changelog: a centered header with the subscribe form, a strip of
+  the year's weeks marking every release, then the entries on a
+  timeline, each dated in a gutter that stays in view while it scrolls.
+{%- endcomment -%}
+<div class="mx-auto w-full max-w-[58rem] px-5">
+<header class="stagger flex flex-col items-center pt-14 text-center md:pt-20">
+<h1 class="text-display-3-medium tracking-tight max-md:text-display-4-medium">{{ changelog.title }}</h1>
+<p class="mt-3 text-title-3-regular text-text-secondary">{{ 'changelog_tagline' | t: product: help_center.product }}</p>
+{%- unless changelog.no_subscribe %}
+<div class="mt-7 w-full max-w-[24rem]">{% render 'subscribe', subscribed: changelog.subscribed %}</div>
+{%- endunless %}
+<a href="{{ changelog.feed_url }}" data-turbo="false" class="mt-3 inline-flex items-center gap-1.5 text-body-2-regular text-text-tertiary transition-colors hover:text-text-primary">{{ 'rss' | icon: 'size-3.5' }}{{ 'subscribe_rss' | t }}</a>
+</header>
+{%- if changelog.weeks.size > 0 %}
+<nav aria-label="{{ 'releases_in' | t: year: changelog.year_text }}" class="mt-14 animate-rise">
+<ol class="flex items-end">
+{%- for w in changelog.weeks %}
+<li class="relative flex h-16 flex-1 items-end justify-center">{% if w.month_name != "" %}<span class="absolute start-0 top-0 font-mono-source text-caption-2-medium text-text-tertiary">{{ w.month_name }}</span>{% endif %}{% if w.url != "" %}<a href="{{ w.url }}" title="{{ w.title }}" aria-label="{{ w.title }}" class="block h-8 w-1 rounded-full bg-brand outline-none transition-[height] hover:h-10 focus-visible:ring-2 focus-visible:ring-border-focus-ring"></a>{% else %}<span class="block h-4 w-px bg-border-button-default" aria-hidden="true"></span>{% endif %}</li>
+{%- endfor %}
+</ol>
+</nav>
+{%- endif %}
+{%- if changelog.labels.size > 0 %}
+<nav aria-label="{{ 'labels' | t }}" class="mt-6 flex flex-wrap items-center justify-center gap-2 animate-rise">
+{%- for chip in changelog.chips %}
+<a href="{{ chip.url }}"{% if chip.current %} aria-current="page"{% endif %} class="inline-flex h-8 items-center gap-2 rounded-full border border-border-button-default px-3 text-body-2-medium text-text-secondary outline-none transition-colors hover:border-border-button-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring aria-[current=page]:border-border-button-hover aria-[current=page]:bg-background-secondary-default aria-[current=page]:text-text-primary">{% if chip.color != "" %}{% render 'dot', color: chip.color %}{% endif %}{{ chip.name }}{% if chip.count > 0 %}<span class="tabular-nums text-text-tertiary">{{ chip.count }}</span>{% endif %}</a>
+{%- endfor %}
+</nav>
+{%- endif %}
+<ol class="mt-14">
+{%- for e in changelog.entries %}
+{% render 'timeline_entry', entry: e %}
+{%- endfor %}
+</ol>
+{%- if changelog.newer_url != "" or changelog.older_url != "" %}
+<nav aria-label="{{ 'pages' | t }}" class="flex gap-3 md:ps-[12.5rem]">
+{%- if changelog.newer_url != "" %}
+<a href="{{ changelog.newer_url }}" class="inline-flex h-10 items-center gap-2 rounded-xl border border-border-button-default bg-background-primary-default px-4 text-body-medium shadow-xs transition hover:border-border-button-hover">{{ 'arrow-left' | icon: 'size-4 rtl:-scale-x-100' }}{{ 'newer_updates' | t }}</a>
+{%- endif %}
+{%- if changelog.older_url != "" %}
+<a href="{{ changelog.older_url }}" class="inline-flex h-10 items-center gap-2 rounded-xl border border-border-button-default bg-background-primary-default px-4 text-body-medium shadow-xs transition hover:border-border-button-hover">{{ 'older_updates' | t }}{{ 'arrow-right' | icon: 'size-4 rtl:-scale-x-100' }}</a>
+{%- endif %}
+</nav>
+{%- endif %}
+</div>

@@ -113,7 +113,7 @@ func (a *SendEmailMessage) dress(ctx context.Context, q *models.Queries, out *ou
 		return err
 	}
 
-	if out.draft.Attachments, err = readFiles(ctx, out.msg.Attachments); err != nil {
+	if err := a.attachFiles(ctx, out); err != nil {
 		return err
 	}
 

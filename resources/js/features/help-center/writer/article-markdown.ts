@@ -1,7 +1,8 @@
 /*
  * An article's document: everything a help center page shows. Headings,
  * paragraphs, bold, italic, strike, code, links, lists, quotes,
- * callouts, rules, images and tables. Articles are stored as Markdown,
+ * callouts, rules, images with captions and links, tables, embeds,
+ * buttons, collapsible sections and centered text. Articles are stored as Markdown,
  * so the writer reads and writes Markdown only. An empty line always
  * follows the last block, so there is somewhere to write after a
  * callout, a table or a picture.
@@ -12,8 +13,11 @@ import { Markdown } from "@tiptap/markdown";
 import type { AnyExtension } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
-import { ArticleImage } from "./article-image";
+import { ArticleButton } from "./article-button";
+import { ArticleImage, LinkedImage } from "./article-image";
 import { Callout } from "./callout";
+import { Center, Details } from "./details";
+import { Embed } from "./embed";
 
 /*
  * placeholderFor is the hint on an empty line: where to start in an
@@ -45,6 +49,11 @@ export function articleExtensions(helpers: AnyExtension[] = []): AnyExtension[] 
       link: { openOnClick: false, autolink: true, protocols: ["http", "https", "mailto"] },
     }),
     ArticleImage,
+    LinkedImage,
+    Embed,
+    ArticleButton,
+    Details,
+    Center,
     TableKit.configure({ table: { resizable: false } }),
     Callout,
     TrailingNode,

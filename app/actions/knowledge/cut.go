@@ -25,6 +25,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/dimmihq/dimmi/framework/markdown"
+
 	"github.com/dimmihq/dimmi/app/contracts"
 )
 
@@ -60,7 +62,7 @@ cutArticle cuts an article into passages. Empty sections are dropped.
 */
 func cutArticle(a Article) []contracts.KnowledgeChunk {
 	var sized []part
-	for _, p := range parts(a.Body) {
+	for _, p := range parts(markdown.FlattenBlocks([]byte(a.Body))) {
 		sized = append(sized, shorten(p)...)
 	}
 	var out []contracts.KnowledgeChunk

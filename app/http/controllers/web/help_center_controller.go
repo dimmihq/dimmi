@@ -23,7 +23,10 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/i18n"
+	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/view"
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
@@ -55,6 +58,10 @@ and API answer, which a help center on its own host loads across.
 Ratings keeps readers' answers about articles, and Passes signs readers
 in to the messenger on the help center's pages. Analytics counts views
 and searches, and Addresses names the help center's canonical address.
+Lang holds the words of the pages in every language.
+Clock says how long ago an article changed. Themes holds the themes
+teams publish, IDs reads their public ids, and FormKey signs the
+anti-forgery tokens of the pages' forms.
 */
 type HelpCenterController struct {
 	Library     *helpsample.Library
@@ -71,6 +78,11 @@ type HelpCenterController struct {
 	Passes      *identity.Passes
 	Analytics   *helpcenters.Analytics
 	Addresses   helpcenters.Addresses
+	Lang        *i18n.Translator
+	Clock       clock.Clock
+	Themes      *helpcenters.Themes
+	IDs         *ids.Registry
+	FormKey     []byte
 }
 
 /*
@@ -94,9 +106,21 @@ func (c *HelpCenterController) Home(w fhttp.ResponseWriter, r *fhttp.Request) {
 	if !ok {
 		return
 	}
+	if s, isSite := lib.(*site); isSite {
+		h := s.snap.HelpCenter
+		if readingLocale(r.Context()) == "" {
+			if wants := preferredLocale(r, h); wants != h.Locale {
+				w.Header().Set("Location", center.Base+"/"+wants)
+				w.Header().Set("Vary", "Accept-Language, Cookie")
+				w.WriteHeader(fhttp.StatusFound)
+				return
+			}
+		}
+		localize(&center, s.snap, s.at, indexed(samePage("/")))
+	}
 
 	c.respond(w, r, fhttp.StatusOK, helpcenter.Home(
-		center, lib.Collections(), lib.Popular(), lib.Updates(3), c.styles(),
+		center, lib.Collections(), lib.Popular(), lib.Updates(3),
 	))
 }
 
@@ -115,8 +139,11 @@ func (c *HelpCenterController) Collection(w fhttp.ResponseWriter, r *fhttp.Reque
 
 		return
 	}
+	if s, isSite := lib.(*site); isSite {
+		localize(&center, s.snap, s.at, indexed(s.collectionIn(r.PathValue("slug"))))
+	}
 
-	c.respond(w, r, fhttp.StatusOK, helpcenter.CollectionPage(center, lib.Collections(), col, trail, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.CollectionPage(center, lib.Collections(), col, trail))
 }
 
 /*
@@ -150,12 +177,18 @@ func (c *HelpCenterController) Article(w fhttp.ResponseWriter, r *fhttp.Request)
 		return
 	}
 
+	if s, isSite := lib.(*site); isSite && !markdown {
+		localize(&center, s.snap, s.at, indexed(s.articleIn(slug)))
+	}
 	query := r.URL.Query()
 	helpful := helpcenter.Helpful{
 		Answer: query.Get("helpful"), Commented: query.Has("commented"), Limited: query.Has("limited"),
 	}
 	c.countView(r, lib, slug)
-	page := helpcenter.ArticlePage(center, lib.Collections(), article, helpful, c.styles())
+	if c.Clock != nil {
+		article.Age = center.Ago(article.Updated, c.Clock.Now())
+	}
+	page := helpcenter.ArticlePage(center, lib.Collections(), article, helpful)
 	c.respond(w, r, fhttp.StatusOK, page)
 }
 
@@ -171,7 +204,7 @@ func (c *HelpCenterController) Search(w fhttp.ResponseWriter, r *fhttp.Request) 
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	results := lib.Search(query)
 	c.countSearch(r, lib, query, len(results))
-	page := helpcenter.SearchPage(center, lib.Collections(), query, results, c.styles())
+	page := helpcenter.SearchPage(center, lib.Collections(), query, results)
 	c.respond(w, r, fhttp.StatusOK, page)
 }
 
@@ -208,14 +241,18 @@ func (c *HelpCenterController) missing(w fhttp.ResponseWriter, r *fhttp.Request,
 	lib HelpLibrary,
 ) {
 	if s, ok := lib.(*site); ok {
-		rest := strings.TrimPrefix(r.URL.Path, "/hc/"+r.PathValue("center"))
-		if to, found := c.Public.Redirect(r.Context(), s.snap.HelpCenter, rest); found {
-			w.Header().Set("Location", redirectTarget(center.Base, to))
+		h := s.snap.HelpCenter
+		rest := prefixOf(h, s.snap.Locale) + strings.TrimPrefix(r.URL.Path, "/hc/"+r.PathValue("center"))
+		if to, found := c.Public.Redirect(r.Context(), h, rest); found {
+			w.Header().Set("Location", redirectTarget(s.at.base, to))
 			w.WriteHeader(fhttp.StatusMovedPermanently)
 			return
 		}
 	}
-	page := helpcenter.NotFoundPage(center, lib.Collections(), lib.Popular(), c.styles())
+	if s, ok := lib.(*site); ok {
+		localize(&center, s.snap, s.at, unindexed(func(string) (string, bool) { return "/", false }))
+	}
+	page := helpcenter.NotFoundPage(center, lib.Collections(), lib.Popular())
 	c.respond(w, r, fhttp.StatusNotFound, page)
 }
 
@@ -230,9 +267,9 @@ func (c *HelpCenterController) site(w fhttp.ResponseWriter, r *fhttp.Request,
 		base = ""
 	}
 	if c.Public != nil {
-		snap, err := c.Public.Load(r.Context(), slug)
+		snap, err := c.Public.LoadIn(r.Context(), slug, readingLocale(r.Context()))
 		if err == nil {
-			return c.realSite(w, r, snap, base)
+			return c.publicSite(w, r, snap, base)
 		}
 		if !errors.Is(err, helpcenters.ErrNoHelpCenter) {
 			c.Errors.Render(w, r, err)
@@ -241,6 +278,20 @@ func (c *HelpCenterController) site(w fhttp.ResponseWriter, r *fhttp.Request,
 	}
 	center, ok := c.center(w, r)
 	return center, c.Library, ok
+}
+
+/*
+publicSite serves a real help center in the language the path names,
+after sending a reader of a language it does not offer elsewhere.
+*/
+func (c *HelpCenterController) publicSite(w fhttp.ResponseWriter, r *fhttp.Request, snap helpcenters.Snapshot,
+	base string,
+) (helpcenter.Center, HelpLibrary, bool) {
+	if c.localeAnswered(w, r, snap.HelpCenter, base) {
+		return helpcenter.Center{}, nil, false
+	}
+	keepLanguage(w, r, snap.HelpCenter, base)
+	return c.realSite(w, r, snap, base)
 }
 
 func origin(r *fhttp.Request) string {
@@ -259,6 +310,7 @@ func (c *HelpCenterController) center(w fhttp.ResponseWriter, r *fhttp.Request) 
 	slug := r.PathValue("center")
 
 	center, ok := c.Library.Center(slug, "/hc/"+slug)
+	center.Lang = c.Lang
 	if !ok {
 		w.WriteHeader(fhttp.StatusNotFound)
 
@@ -270,6 +322,11 @@ func (c *HelpCenterController) center(w fhttp.ResponseWriter, r *fhttp.Request) 
 		center.Origin = "https://" + r.Host
 	}
 
+	center.Theming.FormToken = c.formToken(r)
+	center.Theming.Assets = c.styles()
+	if theme, err := c.Themes.Default(); err == nil {
+		center.Theming.Theme = theme
+	}
 	if cookie, err := r.Cookie(visitorCookie); err == nil && cookie.Value == "1" {
 		visitor := helpsample.Visitor()
 		center.Visitor = &visitor

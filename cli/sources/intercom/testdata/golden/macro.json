@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "saved_reply",
+    "record": {
+      "source_id": "m-1",
+      "source_updated_at": "2025-07-17T15:30:24Z",
+      "title": "Refund",
+      "body": "Hi {{ contact.first_name | default: \"there\" }}, we refunded {{ company.name }}. Your plan: {{user.custom_attributes.plan}}. — {{ sender.first_name }}",
+      "shared": false,
+      "team_refs": [
+        "71"
+      ],
+      "unknown_placeholders": [
+        "user.custom_attributes.plan"
+      ]
+    }
+  }
+]

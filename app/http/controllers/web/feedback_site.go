@@ -112,7 +112,7 @@ func (c PortalController) realBoard(w fhttp.ResponseWriter, r *fhttp.Request, s 
 		s.center.SignInURL = signInFor(s, "/feedback")
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
-	c.respond(w, r, fhttp.StatusOK, helpcenter.FeedbackPage(s.center, out, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.FeedbackPage(s.center, out))
 }
 
 /*
@@ -167,7 +167,7 @@ func (c PortalController) realNewIdea(w fhttp.ResponseWriter, r *fhttp.Request, 
 	}
 	form.Boards = boardTabs(boards)
 	if query.Has("error") {
-		form.Error = "Give your idea a title of up to 150 characters."
+		form.Error = s.center.T("idea_title_invalid")
 	}
 	if query.Has("similar") && form.Title != "" {
 		similar, err := c.Board.Similar(r.Context(), s.help, s.reader, form.Title)
@@ -195,7 +195,7 @@ ideaForm shows the form to post a request.
 */
 func (c PortalController) ideaForm(w fhttp.ResponseWriter, r *fhttp.Request, s liveSite, form helpcenter.IdeaForm) {
 	w.Header().Set("Cache-Control", "private, no-store")
-	c.respond(w, r, fhttp.StatusOK, helpcenter.NewIdeaPage(s.center, form, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.NewIdeaPage(s.center, form))
 }
 
 func (c PortalController) signInFirst(w fhttp.ResponseWriter, s liveSite, path string) {
@@ -284,11 +284,20 @@ func (c PortalController) realVote(w fhttp.ResponseWriter, r *fhttp.Request, s l
 		return
 	}
 	if inPlace(r) {
-		fhttp.WriteJSON(w, fhttp.StatusOK, map[string]any{"voted": ballot.Voted, "votes": ballot.Votes})
+		fhttp.WriteJSON(w, fhttp.StatusOK, map[string]any{
+			"voted": ballot.Voted, "votes": ballot.Votes,
+			"label": s.center.T("vote_for", "title", voteTitle, "count", ballot.Votes),
+		})
 		return
 	}
 	back(w, s.center.Base+from)
 }
+
+/*
+voteTitle stands in for the request's title in the label a vote answers
+with, which the page fills with the title it shows.
+*/
+const voteTitle = "{title}"
 
 /*
 returnPath is the board page a form came from, when the browser says,
@@ -349,7 +358,7 @@ func (c PortalController) ideaPage(w fhttp.ResponseWriter, r *fhttp.Request, s l
 	path := feedback.PostPath(page.FeedbackPost)
 	v := helpcenter.IdeaView{
 		Idea: ideaView(page.Listed), Status: statusView(page.Stage, 0), Details: page.Details, Author: page.Author,
-		Posted: page.CreatedAt.Format("January 2, 2006"), Comments: threads(page.Comments, page.TeamHTML),
+		Posted: s.center.Date(page.CreatedAt), Comments: threads(s.center, page.Comments, page.TeamHTML),
 		Pending: page.Moderation == "pending", CanAct: s.reader != nil, Commented: r.URL.Query().Has("commented"),
 	}
 	if page.Update != "" {
@@ -360,20 +369,21 @@ func (c PortalController) ideaPage(w fhttp.ResponseWriter, r *fhttp.Request, s l
 		s.center.SignInURL = v.SignIn
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
-	c.respond(w, r, fhttp.StatusOK, helpcenter.IdeaPage(s.center, v, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.IdeaPage(s.center, v))
 }
 
 /*
 threads nests replies under the comments they answer, with what the
 team wrote as HTML.
 */
-func threads(rows []models.ListFeedbackCommentsRow, html map[ids.UUID]string) []helpcenter.Comment {
+func threads(center helpcenter.Center, rows []models.ListFeedbackCommentsRow, html map[ids.UUID]string,
+) []helpcenter.Comment {
 	var out []helpcenter.Comment
 	at := map[ids.UUID]int{}
 	for _, row := range rows {
 		cm := helpcenter.Comment{
 			Author: row.AuthorName, FromTeam: row.AuthorMemberID != nil, Body: row.Body, HTML: html[row.ID],
-			At: row.CreatedAt.Format("Jan 2, 2006"),
+			At: center.ShortDate(row.CreatedAt),
 		}
 		if row.ParentID != nil {
 			if i, ok := at[*row.ParentID]; ok {

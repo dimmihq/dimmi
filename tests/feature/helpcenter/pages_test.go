@@ -132,7 +132,7 @@ func TestHelpCenterPages(t *testing.T) {
 	t.Run("thanks a yes and asks what was missing after a no", func(t *testing.T) {
 		t.Parallel()
 
-		res := tc.Client().WithHeader("Accept", "text/html").
+		res := tests.HelpForms(t, tc.Client(), "/hc/dimmi").WithHeader("Accept", "text/html").
 			Send(fhttp.MethodPost, "/hc/dimmi/articles/invite-your-team/feedback?helpful=no", nil)
 
 		assert.Equal(t, fhttp.StatusSeeOther, res.Status)
@@ -175,7 +175,7 @@ func TestHelpCenterPages(t *testing.T) {
 			status, body := get(t, tc, path)
 
 			assert.Equal(t, fhttp.StatusNotFound, status, path)
-			assert.Contains(t, body, "We couldn't find that page", path)
+			assert.Contains(t, body, "We couldn&#39;t find that page", path)
 		}
 	})
 
@@ -279,7 +279,7 @@ func TestChangelogPages(t *testing.T) {
 	t.Run("asks a new subscriber to confirm from their inbox", func(t *testing.T) {
 		t.Parallel()
 
-		res := tc.Client().WithHeader("Accept", "text/html").
+		res := tests.HelpForms(t, tc.Client(), "/hc/dimmi").WithHeader("Accept", "text/html").
 			Send(fhttp.MethodPost, "/hc/dimmi/changelog/subscriptions", nil)
 
 		assert.Equal(t, fhttp.StatusSeeOther, res.Status)
@@ -292,7 +292,8 @@ func TestChangelogPages(t *testing.T) {
 	t.Run("returns to the entry after a reaction", func(t *testing.T) {
 		t.Parallel()
 
-		res := tc.Client().Send(fhttp.MethodPost, "/hc/dimmi/changelog/voice-notes/reactions", nil)
+		res := tests.HelpForms(t, tc.Client(), "/hc/dimmi").
+			Send(fhttp.MethodPost, "/hc/dimmi/changelog/voice-notes/reactions", nil)
 
 		assert.Equal(t, fhttp.StatusSeeOther, res.Status)
 		assert.Equal(t, "/hc/dimmi/changelog/voice-notes", res.Header.Get("Location"))
@@ -319,8 +320,10 @@ func TestPortalPages(t *testing.T) {
 		t.Parallel()
 
 		status, form := get(t, tc, "/hc/dimmi/feedback/new")
-		idea := tc.Client().Send(fhttp.MethodPost, "/hc/dimmi/feedback", nil)
-		vote := tc.Client().Send(fhttp.MethodPost, "/hc/dimmi/feedback/jira/votes", nil)
+		idea := tests.HelpForms(t, tc.Client(), "/hc/dimmi").
+			Send(fhttp.MethodPost, "/hc/dimmi/feedback", nil)
+		vote := tests.HelpForms(t, tc.Client(), "/hc/dimmi").
+			Send(fhttp.MethodPost, "/hc/dimmi/feedback/jira/votes", nil)
 		_, thanked := get(t, tc, "/hc/dimmi/feedback?submitted")
 
 		assert.Equal(t, fhttp.StatusOK, status)
@@ -347,7 +350,8 @@ func TestPortalPages(t *testing.T) {
 	t.Run("signs a visitor in to their conversations and out again", func(t *testing.T) {
 		t.Parallel()
 
-		res := tc.Client().Send(fhttp.MethodPost, "/hc/dimmi/sign-in", nil)
+		res := tests.HelpForms(t, tc.Client(), "/hc/dimmi").
+			Send(fhttp.MethodPost, "/hc/dimmi/sign-in", nil)
 		cookie := res.Header.Get("Set-Cookie")
 		signedIn := tc.Client().WithHeader("Cookie", "dimmi_portal_visitor=1")
 
@@ -356,7 +360,7 @@ func TestPortalPages(t *testing.T) {
 		missing := signedIn.Send(fhttp.MethodGet, "/hc/dimmi/conversations/c-0", nil)
 		again := signedIn.Send(fhttp.MethodGet, "/hc/dimmi/sign-in", nil)
 		ask := signedIn.Send(fhttp.MethodGet, "/hc/dimmi/conversations/new", nil).AssertOK()
-		out := signedIn.Send(fhttp.MethodPost, "/hc/dimmi/sign-out", nil)
+		out := tests.HelpForms(t, signedIn, "/hc/dimmi").Send(fhttp.MethodPost, "/hc/dimmi/sign-out", nil)
 
 		assert.Equal(t, "/hc/dimmi/conversations", res.Header.Get("Location"))
 		assert.Contains(t, cookie, "dimmi_portal_visitor=1; Path=/hc/dimmi; HttpOnly; SameSite=Lax")
@@ -373,8 +377,10 @@ func TestPortalPages(t *testing.T) {
 	t.Run("returns to the conversation after a reply or a new message", func(t *testing.T) {
 		t.Parallel()
 
-		reply := tc.Client().Send(fhttp.MethodPost, "/hc/dimmi/conversations/c-1987/messages", nil)
-		start := tc.Client().Send(fhttp.MethodPost, "/hc/dimmi/conversations", nil)
+		reply := tests.HelpForms(t, tc.Client(), "/hc/dimmi").
+			Send(fhttp.MethodPost, "/hc/dimmi/conversations/c-1987/messages", nil)
+		start := tests.HelpForms(t, tc.Client(), "/hc/dimmi").
+			Send(fhttp.MethodPost, "/hc/dimmi/conversations", nil)
 
 		assert.Equal(t, "/hc/dimmi/conversations/c-1987", reply.Header.Get("Location"))
 		assert.Equal(t, "/hc/dimmi/conversations", start.Header.Get("Location"))

@@ -1,0 +1,6 @@
+{%- comment -%}A person's photo in a circle, or their initials without one, at `size`.{%- endcomment -%}
+{%- if person.photo != "" -%}
+<img src="{{ person.photo }}" alt="" title="{{ person.name }}" loading="lazy" class="shrink-0 rounded-full object-cover ring-2 ring-background-full {{ size }}">
+{%- else -%}
+<span title="{{ person.name }}" class="grid shrink-0 place-items-center rounded-full bg-background-tertiary-default text-text-secondary ring-2 ring-background-full {{ size }}">{{ person.initials }}</span>
+{%- endif -%}

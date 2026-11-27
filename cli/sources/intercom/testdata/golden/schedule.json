@@ -1,0 +1,49 @@
+[
+  {
+    "kind": "schedule",
+    "record": {
+      "source_id": "s-1",
+      "source_updated_at": "2025-11-13T02:13:20Z",
+      "name": "Support hours",
+      "timezone": "Europe/Berlin",
+      "weekly": [
+        {
+          "day": "mon",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "day": "tue",
+          "start": "09:00",
+          "end": "17:00"
+        },
+        {
+          "day": "sat",
+          "start": "15:00",
+          "end": "24:00"
+        },
+        {
+          "day": "sun",
+          "start": "00:00",
+          "end": "01:00"
+        }
+      ],
+      "holidays": [
+        {
+          "date": "2026-12-25",
+          "name": "Christmas",
+          "yearly": true
+        }
+      ],
+      "exceptions": [
+        {
+          "date": "2026-12-24",
+          "name": "Christmas Eve",
+          "start": "09:00",
+          "end": "13:00"
+        }
+      ],
+      "default": true
+    }
+  }
+]

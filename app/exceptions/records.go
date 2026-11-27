@@ -46,8 +46,11 @@ replace a contact's external id. ErrContactHasConversations refuses to
 delete a customer with history outside the erase path. ErrCompanyNotFound
 refuses a company the workspace does not have, ErrCompanyExists an
 external id another company holds, and ErrCompanyNameRequired a new
-company without a name. ErrInvalidUpsertFlag refuses an upsert parameter
-that is neither true nor false.
+company without a name. ErrCompanyLimitReached refuses a contact more
+companies than one may belong to, and ErrCompanyNotLinked a company for
+a conversation or ticket that its contact does not belong to.
+ErrInvalidUpsertFlag refuses an upsert
+parameter that is neither true nor false.
 */
 var (
 	ErrUpsertKeyRequired = fault.New(fault.Invalid, "upsert_key_required",
@@ -62,6 +65,10 @@ var (
 		"Another company already has this external id.").OnField("external_id")
 	ErrCompanyNameRequired = fault.New(fault.Invalid, "company_name_required",
 		"Give the company a name.").OnField("name")
+	ErrCompanyLimitReached = fault.New(fault.Invalid, "company_limit_reached",
+		"A contact belongs to at most 300 companies.").OnField("company_ids")
+	ErrCompanyNotLinked = fault.New(fault.Invalid, "company_not_linked",
+		"The contact does not belong to this company.").OnField("company_id")
 	ErrInvalidUpsertFlag = fault.New(fault.Invalid, "invalid_parameter",
 		"upsert must be true or false.")
 )

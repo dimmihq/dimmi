@@ -81,6 +81,7 @@ export const stepLook: Record<StepKind, KindLook> = {
   create_ticket: { name: "Create a ticket", icon: RiTicket2Line, tint: "cyan" },
   set_ticket_state: { name: "Set ticket state", icon: RiLoopRightLine, tint: "cyan" },
   set_ticket_fields: { name: "Set ticket fields", icon: RiFileList3Line, tint: "cyan" },
+  set_conversation_attributes: { name: "Set conversation attributes", icon: RiFileList3Line, tint: "neutral" },
   escalate: { name: "Escalate to a team", icon: RiShareForwardLine, tint: "cyan" },
   add_to_tracker: { name: "Add to a tracker", icon: RiStackLine, tint: "cyan" },
   extract: { name: "Extract with AI", icon: RiScan2Line, tint: "purple" },

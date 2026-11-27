@@ -1,0 +1,115 @@
+---
+title: "Move from Intercom"
+description: "Bring teammates, customers, conversations, tickets, articles and macros from Intercom into dimmi with the dimmi CLI, then keep both in step until you switch."
+---
+
+import { Callout } from "~docs/components/mdx";
+
+`dimmi migrate` copies your Intercom workspace into dimmi. It runs on your own computer, reads Intercom with a token from an app you create in your own Intercom workspace, and writes into dimmi. Your customers' data goes straight from Intercom to dimmi and stays out of any AI chat.
+
+You can run it yourself in a terminal, or hand the job to an AI coding agent such as Claude Code, Cursor or Codex with the [migration skill](https://raw.githubusercontent.com/dimmihq/dimmi/main/sdk/skills/dimmi-migrate-intercom/SKILL.md). The agent drives the commands; you paste the keys into a page in your browser, never into the chat.
+
+## Move everything in four commands
+
+Download `dimmi-cli_<os>_<arch>` for your system from the [latest release](https://github.com/dimmihq/dimmi/releases/latest), check it against `checksums.txt`, rename it to `dimmi`, and run:
+
+```bash
+./dimmi migrate connect   # sign in to dimmi and paste your Intercom token, in the browser
+./dimmi migrate plan      # see what comes across, and what doesn't
+./dimmi migrate run       # import everything
+./dimmi migrate verify    # compare Intercom and dimmi, kind by kind
+```
+
+`connect` opens a page on your computer. Sign in to dimmi there and pick the workspace to move into; if you already ran `dimmi login`, the page skips that step. The page then shows where to get your Intercom token: in **Settings → Integrations → Developer Hub**, click **New app**, name it and copy the access token it shows. `dimmi migrate` only reads with it. Both keys go into your system keychain (Keychain on macOS, Credential Manager on Windows, the Secret Service on Linux); on a machine without one, into a file only you can read.
+
+`run` can take hours on a big workspace. Stop it whenever you like and run it again: it carries on from where it stopped, and a record never arrives twice.
+
+<Callout type="note">
+Nothing imported sends an email, a notification or a survey, and nothing starts a workflow, an SLA timer or the dimmi agent. History arrives as history.
+</Callout>
+
+## What comes across
+
+| From Intercom | In dimmi |
+| --- | --- |
+| Teammates and teams | Teammates, switched off until an admin enables them, and teams. People removed from Intercom come too, from the conversations they wrote in. |
+| Tags, and contact, company and conversation data attributes | Tags and custom attributes, with their types and list options |
+| Companies and contacts (users and leads) | Companies and customers, with every company a contact belongs to, their tags, custom attributes, location, language and first and last seen times |
+| Notes | Notes on customers and on companies, by their author, at their time |
+| Conversations | Conversations with every message, reply, internal note and attachment, oldest first. Assignments, snoozes, closes, reopens and attribute changes appear in the timeline at their time; anything else Intercom recorded shows as a timeline event with Intercom's name for it. Ratings come with their remark. |
+| Fin and bot replies | Replies by an AI agent, labelled with the name the customer saw |
+| Ticket types and tickets | Ticket types with their fields and states, and tickets with the states they went through |
+| Help center, collections and articles | One help center in every language you publish in, with collections, articles, translations, authors and dates. Old article addresses redirect to the new ones. Internal articles stay visible to teammates only. |
+| Content snippets | Articles only teammates and the dimmi agent see |
+| Macros | Saved replies. Placeholders such as <code>{"{{first_name \u007C fallback: \"there\"}}"}</code> become <code>{"{{ contact.first_name \u007C default: \"there\" }}"}</code>. |
+| Office hours | Office hours schedules, with closed days and days with other hours |
+| Workflows you name | Workflows, switched off, each listing the steps dimmi can't run yet |
+
+## What stays behind
+
+`plan` lists these too:
+
+- Segments. They are rules, so rebuild them as [views](/inbox/views/) or [audiences](/customers/audiences/).
+- Outbound messages, series, banners, tours and news items.
+- Fin and bot settings, and reports, statistics and SLA outcomes. dimmi works out reply and close times from the history.
+- Device, browser and UTM fields, social profiles, subscription types and SMS consent.
+- Ticket parts past the 500 most recent on each ticket, which Intercom's API doesn't return. `plan` and the record say when a ticket hits that limit.
+
+## Leave things out
+
+`plan` shows a count for every kind. Leave any out with `--skip`:
+
+```bash
+./dimmi migrate run --skip contact_note,ticket
+```
+
+Intercom has no way to list workflows, so name each one by the address of its page in Intercom:
+
+```bash
+./dimmi migrate run --workflow https://app.intercom.com/a/apps/abc123/automation/workflows/987654
+```
+
+## Keep dimmi in step until you switch
+
+Your team can keep working in Intercom while you set dimmi up. `sync` brings over what changed since the last run: new conversations, new replies on old ones, edited articles, new contacts.
+
+```bash
+./dimmi migrate sync --watch 15m
+```
+
+It repeats every 15 minutes until you stop it. Changes your team made in dimmi in the meantime stay; a sync adds new entries to a conversation and leaves the rest alone.
+
+## Switch over
+
+1. Enable the teammates who should get access in **Settings → Teammates**. Imported teammates can't sign in until you do.
+2. Swap Intercom's messenger snippet for dimmi's on your site and app. Signed-in users keep their identity, because dimmi matches them by the user id you already send.
+3. Point your support address's forwarding at your dimmi inbox, and add dimmi's records for your sending domain.
+4. Move your help center's custom domain to dimmi.
+5. Stop `sync --watch`, run `./dimmi migrate sync` once more, then `./dimmi migrate verify`.
+6. Delete the app in Intercom's Developer Hub. Its token stops working, and `./dimmi migrate disconnect && ./dimmi logout` forgets the saved keys.
+
+## Undo a migration
+
+```bash
+./dimmi migrate rollback
+```
+
+It asks you to type `yes`, then removes everything the migration created in dimmi. Customers, tags and teammates that were in dimmi before the migration stay as they were. The next `run` starts over.
+
+## Rules and limits
+
+| | |
+| --- | --- |
+| Intercom API use | At most 30% of your workspace's Intercom rate limit, so your other Intercom apps keep working. The CLI waits when Intercom asks it to. |
+| Batches | Up to 100 records per request to dimmi |
+| Files | Attachments up to 100 MB each are downloaded once and uploaded once, however many records share them |
+| Output | Short lines by default; `--json` prints one JSON object a line for AI agents. Neither ever prints customer content or keys. |
+| Progress | Kept in your user config folder, under `dimmi/<profile>/`. `--profile` keeps separate keys and progress, for example per workspace. |
+
+## Anonymous visitors
+
+Intercom gives each anonymous visitor an id, kept in the `intercom-id-<app id>` cookie, and stores it as the lead's external id. `dimmi migrate` brings it across as the contact's external id.
+
+## Moving from another tool
+
+`dimmi migrate import records.jsonl` reads records already in dimmi's import format, one JSON object a line with its `kind` and `record`, and imports them the same way: in order, resumable, and undoable with `rollback`.

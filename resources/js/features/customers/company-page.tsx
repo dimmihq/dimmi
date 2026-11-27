@@ -26,6 +26,7 @@ import { useWide } from "@/features/shell/use-wide";
 import { DetailsColumn, TicketSplit } from "@/features/tickets/ticket-thread";
 import {
   type Company,
+  type Contact,
   companyConversationsQuery,
   companyPeopleQuery,
   companyQuery,
@@ -34,6 +35,7 @@ import {
 import { countOf } from "@/lib/i18n/format";
 
 import { useWorkspace } from "./names";
+import { CompanyName, Muted } from "./people-cells";
 import { usePeopleColumns } from "./people-columns";
 import { peopleWidths } from "./people-params";
 import { RecordConversations } from "./record-conversations";
@@ -55,16 +57,38 @@ function Block({ title, count, children }: { title: string; count?: number; chil
 }
 
 /*
- * People lists who works at the company in the people table itself: the
- * same columns the teammate chose there, drawn the same way, less the
- * company, which is this one. It is searched by name or email, and a row
+ * DefaultCompany says "This one" when the person's default company is
+ * the page's company, and names their default otherwise.
+ */
+function DefaultCompany({ person, here }: { person: Contact; here: string }) {
+  if (!person.company || person.company.id === here) {
+    return <Muted>This one</Muted>;
+  }
+
+  return <CompanyName company={person.company} />;
+}
+
+/*
+ * People lists everyone who belongs to the company in the people table
+ * itself: the same columns the teammate chose there, drawn the same way,
+ * except that the company column says whether this is their default
+ * company or names the one that is. It is searched by name or email, and a row
  * opens the person.
  */
 function People({ workspace, id }: { workspace: string; id: string }) {
   const navigate = useNavigate();
   const { data: people = [], isPending } = useQuery(companyPeopleQuery(workspace, id));
   const { columns: chosen } = usePeopleColumns();
-  const columns = chosen.filter((c) => c.id !== "company").map((c) => ({ ...c, enableSorting: false }));
+  const columns = chosen.map((c) =>
+    c.id === "company"
+      ? {
+          ...c,
+          header: "Default company",
+          enableSorting: false,
+          cell: ({ row }: { row: { original: Contact } }) => <DefaultCompany person={row.original} here={id} />,
+        }
+      : { ...c, enableSorting: false },
+  );
   const [query, setQuery] = useState("");
   const needle = query.trim().toLowerCase();
   const rows = people.filter((p) => needle === "" || `${p.name ?? ""} ${p.email ?? ""}`.toLowerCase().includes(needle));

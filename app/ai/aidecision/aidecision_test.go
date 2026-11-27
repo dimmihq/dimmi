@@ -120,6 +120,40 @@ func TestChoose(t *testing.T) {
 		assert.Equal(t, "p_bugs", got.OptionID)
 	})
 
+	t.Run("keeps how sure the decision model was and the chat model's reasons", func(t *testing.T) {
+		t.Parallel()
+		d := decider(t, fake.Step{Answers: map[string]contracts.DecisionAnswer{
+			"refund": {Choice: "yes", Confidence: 0.95},
+			"reason": {Choice: "damaged", Confidence: 0.9},
+		}})
+		m := &model{answers: []any{map[string]any{
+			"order": "1234", "amount": nil, "when": nil,
+			"_reasons": map[string]any{"order": "The customer names order 1234.", "amount": nil, "when": nil},
+		}}}
+
+		e := extraction()
+		e.Explain = true
+		e.Fields[4].OptionDescriptions = map[string]string{"damaged": "Arrived broken or faulty"}
+
+		got, err := aidecision.New(d, m).Extract(t.Context(), e)
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"order": "The customer names order 1234."}, got.Reasons)
+		assert.InDelta(t, 0.95, got.Sureness["refund"], 0.001)
+		assert.InDelta(t, 0.9, got.Sureness["reason"], 0.001)
+		assert.Contains(t, string(m.asked[0].Schema), `"_reasons"`)
+	})
+
+	t.Run("asks for no reasons unless told to", func(t *testing.T) {
+		t.Parallel()
+		m := &model{answers: []any{map[string]any{
+			"order": "1234", "amount": nil, "when": nil, "refund": nil, "reason": nil,
+		}}}
+
+		_, err := aidecision.New(nil, m).Extract(t.Context(), extraction())
+		require.NoError(t, err)
+		assert.NotContains(t, string(m.asked[0].Schema), `"_reasons"`)
+	})
+
 	t.Run("says no model answered", func(t *testing.T) {
 		t.Parallel()
 		m := &model{answers: []any{errors.New("down")}}
