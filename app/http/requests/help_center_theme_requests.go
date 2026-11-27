@@ -41,7 +41,7 @@ type HelpCenterThemeArchiveRequest struct {
 }
 
 /*
-UpdateLiveThemeRequest is the input of PUT
+UpdateLiveThemeRequest is the input of PATCH
 /help-centers/{help_center}/live-theme: the version the help center's
 pages wear, null for the default theme.
 */

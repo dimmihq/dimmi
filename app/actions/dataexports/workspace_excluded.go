@@ -106,6 +106,7 @@ func bookkeepingTables() map[string]string {
 		"data_exports":                  "bookkeeping: exports themselves",
 		"contact_exports":               "bookkeeping: exports themselves",
 		"imports":                       "bookkeeping: imports and their uploaded files",
+		"help_center_theme_files":       "files: each theme version downloads whole as a zip from the API",
 		"import_changes":                "bookkeeping: what an import can undo",
 		"ticket_imports":                "bookkeeping: ticket imports",
 		"ticket_import_records":         "bookkeeping: what a ticket import can undo",

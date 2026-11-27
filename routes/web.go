@@ -182,11 +182,19 @@ func helpCenter(pages *routing.Router, a *app.App) {
 	portalPages(get, post, web.PortalController{HelpCenterController: hc, Requests: a.Actions.Tickets})
 	get("/assets/{file}", "hc.assets", hc.Asset)
 	get("/theme-assets/*", "hc.theme-assets", hc.ThemeAsset)
+	siteFiles(get, hc)
+	get("/*", "hc.missing", hc.NotFound)
+}
+
+/*
+siteFiles declares the files a help center keeps for crawlers and
+agents: its sitemap, robots rules and llms.txt.
+*/
+func siteFiles(get func(path, name string, h fhttp.HandlerFunc), hc *web.HelpCenterController) {
 	get("/sitemap.xml", "hc.sitemap", hc.Sitemap)
 	get("/robots.txt", "hc.robots", hc.Robots)
 	get("/llms.txt", "hc.llms", hc.LLMs)
 	get("/llms-full.txt", "hc.llms-full", hc.LLMsFull)
-	get("/*", "hc.missing", hc.NotFound)
 }
 
 /*

@@ -20928,6 +20928,7 @@
             "type": "string"
           },
           "theme_id": {
+            "description": "Id of the theme version the help center's pages wear, starting with thm_. Null for the default theme.",
             "type": [
               "string",
               "null"
@@ -21357,10 +21358,12 @@
         "additionalProperties": false,
         "properties": {
           "api_version": {
+            "description": "The theme API the theme is written for, from its theme.json.",
             "format": "int64",
             "type": "integer"
           },
           "content_hash": {
+            "description": "A hash of every file of the theme; two versions with the same hash hold the same files.",
             "type": "string"
           },
           "created_at": {
@@ -21369,10 +21372,12 @@
             "type": "string"
           },
           "file_count": {
+            "description": "How many files the theme holds.",
             "format": "int32",
             "type": "integer"
           },
           "help_center_id": {
+            "description": "Id of the help center the theme belongs to, starting with hc_.",
             "type": "string"
           },
           "id": {
@@ -21380,9 +21385,11 @@
             "type": "string"
           },
           "live": {
+            "description": "Whether this is the version the help center's pages wear now.",
             "type": "boolean"
           },
           "name": {
+            "description": "The theme's name, from its theme.json.",
             "type": "string"
           },
           "object": {
@@ -21390,6 +21397,7 @@
             "type": "string"
           },
           "settings": {
+            "description": "The settings the theme declares in its theme.json, which the team may change without code.",
             "items": {
               "$ref": "#/components/schemas/HelpCenterThemeSetting"
             },
@@ -21399,10 +21407,12 @@
             ]
           },
           "size_bytes": {
+            "description": "The size of all the theme's files together, in bytes.",
             "format": "int32",
             "type": "integer"
           },
           "theme_version": {
+            "description": "The theme author's own version label, such as 1.2.0. Empty when not set.",
             "type": "string"
           },
           "updated_at": {
@@ -21412,9 +21422,11 @@
           },
           "values": {
             "additionalProperties": {},
+            "description": "The team's values for the theme's settings, by setting id. Settings left out use their defaults.",
             "type": "object"
           },
           "version": {
+            "description": "The upload's number within the help center, counting up from 1.",
             "format": "int32",
             "type": "integer"
           }
@@ -21441,18 +21453,23 @@
       "HelpCenterThemeSetting": {
         "additionalProperties": false,
         "properties": {
-          "default": {},
+          "default": {
+            "description": "The value used until the team sets one. Left out when the theme gives none."
+          },
           "id": {
             "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "info": {
+            "description": "More words for the team about the setting. Left out when the theme gives none.",
             "type": "string"
           },
           "label": {
+            "description": "The setting's name as the team reads it.",
             "type": "string"
           },
           "options": {
+            "description": "The values a select setting allows. Left out for other types.",
             "items": {
               "type": "string"
             },
@@ -21462,6 +21479,7 @@
             ]
           },
           "type": {
+            "description": "What the setting holds: text, textarea, color, checkbox, number, url or select.",
             "type": "string"
           }
         },
@@ -66734,7 +66752,8 @@
       }
     },
     "/help-centers/{help_center}/live-theme": {
-      "put": {
+      "patch": {
+        "description": "Makes a theme version the one every page of the help center renders in, or the default theme again with a null theme_id. Readers see the change at once. Returns the help center with its theme_id.",
         "operationId": "help-centers.live-theme.update",
         "parameters": [
           {
@@ -66779,6 +66798,7 @@
             "description": "Error"
           }
         },
+        "summary": "Change the theme a help center wears",
         "x-abilities": [
           "settings:write"
         ]
@@ -66786,6 +66806,7 @@
     },
     "/help-centers/{help_center}/themes": {
       "get": {
+        "description": "Lists every theme version uploaded to a help center, newest first, with the one readers see. Returns the theme versions, live set on the one the help center's pages wear.",
         "operationId": "help-centers.themes.index",
         "parameters": [
           {
@@ -66820,11 +66841,13 @@
             "description": "Error"
           }
         },
+        "summary": "List a help center's themes",
         "x-abilities": [
           "settings:write"
         ]
       },
       "post": {
+        "description": "Uploads a theme's folder as a zip in the file field of a multipart form. dimmi checks every file and parses every template; a theme with problems is refused with each one's file and line, and nothing is kept. A theme that passes is kept as a new version, not yet live. Returns the new theme version.",
         "operationId": "help-centers.themes.store",
         "parameters": [
           {
@@ -66881,6 +66904,7 @@
             "description": "Error"
           }
         },
+        "summary": "Upload a help center theme",
         "x-abilities": [
           "settings:write"
         ]
@@ -66888,6 +66912,7 @@
     },
     "/help-centers/{help_center}/themes/{theme}": {
       "get": {
+        "description": "Reads one theme version of a help center: its name, settings and the team's values. Returns the theme version.",
         "operationId": "help-centers.themes.show",
         "parameters": [
           {
@@ -66900,7 +66925,7 @@
             }
           },
           {
-            "description": "Theme: text.",
+            "description": "Id of the theme version, starting with thm_. Find it with GET /help-centers/{help_center}/themes.",
             "in": "path",
             "name": "theme",
             "required": true,
@@ -66931,11 +66956,13 @@
             "description": "Error"
           }
         },
+        "summary": "Get a help center theme",
         "x-abilities": [
           "settings:write"
         ]
       },
       "patch": {
+        "description": "Sets the team's values for the settings a theme version declares in its theme.json. A value that does not fit its setting is refused. Returns the theme version with its new values.",
         "operationId": "help-centers.themes.update",
         "parameters": [
           {
@@ -66948,7 +66975,7 @@
             }
           },
           {
-            "description": "Theme: text.",
+            "description": "Id of the theme version, starting with thm_. Find it with GET /help-centers/{help_center}/themes.",
             "in": "path",
             "name": "theme",
             "required": true,
@@ -66989,6 +67016,7 @@
             "description": "Error"
           }
         },
+        "summary": "Change a theme's settings",
         "x-abilities": [
           "settings:write"
         ]
@@ -66996,7 +67024,8 @@
     },
     "/help-centers/{help_center}/themes/{theme}/archive": {
       "get": {
-        "operationId": "help-centers.themes.archive",
+        "description": "Downloads a theme version's files as a zip, or the default theme's with default as the id. Returns the theme's folder as a zip file.",
+        "operationId": "help-centers.themes.archive.show",
         "parameters": [
           {
             "description": "Id of the help center, starting with hc_, such as hc_01jx2m8k4t. Find it with GET /help-centers.",
@@ -67058,6 +67087,7 @@
             "description": "Error"
           }
         },
+        "summary": "Download a help center theme",
         "x-abilities": [
           "settings:write"
         ]

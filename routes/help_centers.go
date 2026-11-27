@@ -67,14 +67,7 @@ func helpCenterRoutes(workspace *routing.Router, a *app.App) {
 		Ability("articles:write").Status(fhttp.StatusOK)
 	routing.Get(workspace, article+"/versions", "articles.versions.index", art.Versions).Ability("articles:read")
 
-	extras := &v1.ArticleExtrasController{Articles: acts.Articles, Images: acts.HelpImages, IDs: a.IDs}
-	ratings := &v1.ArticleFeedbackController{Ratings: acts.HelpRatings, IDs: a.IDs}
-	routing.Get(workspace, article+"/feedback", "articles.feedback.show", ratings.Show).Ability("articles:read")
-	routing.Post(workspace, article+"/restorations", "articles.restorations.store", extras.Restore).
-		Ability("articles:write").Status(fhttp.StatusOK)
-	routing.Post(workspace, "/help-images", "help-images.store", extras.StoreImage).Internal().
-		Ability("articles:write").Status(fhttp.StatusCreated).
-		Use(middleware.BodyLimit(helpcenters.MaxImageBytes + imageUploadOverhead))
+	articleExtraRoutes(workspace, a, article)
 
 	portalRoutes(workspace, a)
 
@@ -86,6 +79,22 @@ func helpCenterRoutes(workspace *routing.Router, a *app.App) {
 	routing.Patch(workspace, article+"/audience", "articles.audience.update", aud.Article).Ability("articles:write")
 	routing.Patch(workspace, "/collections/{collection}/audience", "collections.audience.update", aud.Collection).
 		Ability("articles:write")
+}
+
+/*
+articleExtraRoutes declares an article's feedback, its restorations and
+the pictures articles show.
+*/
+func articleExtraRoutes(workspace *routing.Router, a *app.App, article string) {
+	acts := a.Actions
+	extras := &v1.ArticleExtrasController{Articles: acts.Articles, Images: acts.HelpImages, IDs: a.IDs}
+	ratings := &v1.ArticleFeedbackController{Ratings: acts.HelpRatings, IDs: a.IDs}
+	routing.Get(workspace, article+"/feedback", "articles.feedback.show", ratings.Show).Ability("articles:read")
+	routing.Post(workspace, article+"/restorations", "articles.restorations.store", extras.Restore).
+		Ability("articles:write").Status(fhttp.StatusOK)
+	routing.Post(workspace, "/help-images", "help-images.store", extras.StoreImage).Internal().
+		Ability("articles:write").Status(fhttp.StatusCreated).
+		Use(middleware.BodyLimit(helpcenters.MaxImageBytes + imageUploadOverhead))
 }
 
 /*
@@ -103,8 +112,8 @@ func themeRoutes(workspace *routing.Router, a *app.App) {
 		Status(fhttp.StatusCreated).Use(middleware.BodyLimit(helpcenters.MaxThemeArchiveBytes + imageUploadOverhead))
 	routing.Get(workspace, one, "help-centers.themes.show", th.Show).Ability("settings:write")
 	routing.Patch(workspace, one, "help-centers.themes.update", th.Update).Ability("settings:write")
-	routing.Get(workspace, one+"/archive", "help-centers.themes.archive", th.Download).Ability("settings:write")
-	routing.Put(workspace, "/help-centers/{help_center}/live-theme", "help-centers.live-theme.update", th.UpdateLive).
+	routing.Get(workspace, one+"/archive", "help-centers.themes.archive.show", th.Download).Ability("settings:write")
+	routing.Patch(workspace, "/help-centers/{help_center}/live-theme", "help-centers.live-theme.update", th.UpdateLive).
 		Ability("settings:write")
 }
 

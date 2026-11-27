@@ -78,14 +78,22 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 	}
 
 	w.Header().Set("Cache-Control", "private, no-store")
-	center.SignedIn, center.SignOutURL = true, base+"/sso/sign-out"
-	center.Sections = append(center.Sections, helpcenter.Section{
-		Key: "requests", Name: "Requests", Icon: "ticket", Path: "/tickets",
-	})
+	signedIn(&center, base)
 
 	s := newSite(r.Context(), c.Public, mine, &contact)
 	s.updates, s.at = updates, at
 	return center, s, true
+}
+
+/*
+signedIn marks a frame as a signed-in reader's: the sign-out link and
+their requests in the header.
+*/
+func signedIn(center *helpcenter.Center, base string) {
+	center.SignedIn, center.SignOutURL = true, base+"/sso/sign-out"
+	center.Sections = append(center.Sections, helpcenter.Section{
+		Key: "requests", Name: "Requests", Icon: "ticket", Path: "/tickets",
+	})
 }
 
 /*

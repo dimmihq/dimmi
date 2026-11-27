@@ -205,6 +205,9 @@ func helpCenterTables() []ArchiveTable {
 		},
 		{Name: "help_center_redirects", About: "Redirects of help centers.", Key: byID()},
 		{
+			Name: "help_center_themes", About: "Theme versions of help centers and their settings.", Key: byID(),
+		},
+		{
 			Name: "help_center_images", About: "Pictures in articles; archive_path is the file in this archive.",
 			Key: byID(),
 		},

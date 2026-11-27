@@ -89,7 +89,7 @@ func TestHelpCenterThemes(t *testing.T) {
 		theme := res.String("data.id")
 		assert.NotContains(t, string(c.page("").Body), "acme-hero")
 
-		c.d.Owner.PutJSON("/api/v1/help-centers/"+c.id+"/live-theme", testkit.JSON{"theme_id": theme}).
+		c.d.Owner.PatchJSON("/api/v1/help-centers/"+c.id+"/live-theme", testkit.JSON{"theme_id": theme}).
 			AssertOK().AssertJSONPath("data.theme_id", theme)
 		c.d.Owner.GetJSON("/api/v1/help-centers/"+c.id+"/themes").AssertOK().AssertJSONPath("data.0.live", true)
 		c.d.Owner.PatchJSON(
@@ -135,7 +135,7 @@ func TestHelpCenterThemes(t *testing.T) {
 		starter := c.d.Owner.Send("GET", "/api/v1/help-centers/"+c.id+"/themes/default/archive", nil).AssertOK()
 		assert.Contains(t, names(t, starter.Body), "layouts/theme.liquid")
 
-		c.d.Owner.PutJSON("/api/v1/help-centers/"+c.id+"/live-theme", testkit.JSON{"theme_id": nil}).
+		c.d.Owner.PatchJSON("/api/v1/help-centers/"+c.id+"/live-theme", testkit.JSON{"theme_id": nil}).
 			AssertOK().AssertJSONPath("data.theme_id", nil)
 		assert.NotContains(t, string(c.page("").AssertOK().Body), "acme-hero")
 	})

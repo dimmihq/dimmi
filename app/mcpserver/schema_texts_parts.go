@@ -91,6 +91,7 @@ func schemaTextPartsFromConversationRating() []map[string]map[string]string {
 		schemaTextsFromEmailDomain(),
 		schemaTextsFromTranslation(),
 		schemaTextsFromHelpCenterLanguages(),
+		schemaTextsFromHelpCenterTheme(),
 		schemaTextsFromEmailSending(),
 		schemaTextsFromEmailSignatureRendering(),
 		schemaTextsFromEventDefinition(),
