@@ -1,0 +1,9 @@
+{%- comment -%}The emoji readers react with, as small buttons.{%- endcomment -%}
+{%- if entry.reactions.size > 0 %}
+<form method="post" action="{{ entry.reactions_url }}" class="reactions" aria-label="{{ 'reactions' | t }}">
+{{ form_token_field }}
+{%- for r in entry.reactions %}
+<button type="submit" name="emoji" value="{{ r.emoji }}" class="btn small">{{ r.emoji }} {% if r.count > 0 %}{{ r.count }}{% endif %}</button>
+{%- endfor %}
+</form>
+{%- endif %}

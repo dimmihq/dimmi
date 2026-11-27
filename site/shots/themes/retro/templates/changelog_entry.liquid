@@ -1,0 +1,32 @@
+{%- comment -%}One changelog entry as a press release in a window.{%- endcomment -%}
+<article class="window wide">
+{%- assign wtitle = entry.title | append: ' - Press Release' %}
+{% render 'window', title: wtitle %}
+<div class="body">
+<p class="path">C:\<a href="{{ help_center.changelog_url }}">CHANGELOG</a>\{{ entry.slug | upcase | truncate: 20, "~1" }}.HTM</p>
+<div class="paper">
+<p class="meta">{{ entry.published | format_date }} {% render 'tags', labels: entry.labels, version: entry.version %}</p>
+<h1>{{ entry.title }}</h1>
+<p class="lede">{{ entry.summary }}</p>
+{%- if entry.authors.size > 0 %}<p class="meta">{{ entry.author_names }}</p>{% endif %}
+{%- if entry.cover != "" %}<div class="frame"><img src="{{ entry.cover }}" alt=""></div>{% endif %}
+<hr>
+<div class="prose">{{ entry.body }}</div>
+{%- if entry.related.size > 0 %}
+<p><b>{{ 'learn_more' | t }}:</b></p>
+<ul class="links">{% for a in entry.related %}<li><a href="{{ a.url }}">{{ a.title }}</a></li>{% endfor %}</ul>
+{%- endif %}
+</div>
+<div class="entry-foot">{% render 'reaction_row', entry: entry %}</div>
+<div class="nav-buttons">
+{%- if previous %}<a class="btn" href="{{ previous.url }}">&lt; {{ 'older' | t }}</a>{% else %}<span class="btn disabled">&lt; {{ 'older' | t }}</span>{% endif %}
+{%- if next %}<a class="btn" href="{{ next.url }}">{{ 'newer' | t }} &gt;</a>{% else %}<span class="btn disabled">{{ 'newer' | t }} &gt;</span>{% endif %}
+</div>
+</div>
+</article>
+{%- unless changelog.no_subscribe %}
+<section class="window dialog">
+{% render 'window', title: 'Join the mailing list!' %}
+<div class="body"><p>{{ 'updates_inbox_body' | t }}</p>{% render 'subscribe_box', subscribed: false %}</div>
+</section>
+{%- endunless %}

@@ -33,6 +33,7 @@
       "!site/dist",
       "!site/public",
       "!site/index.html",
+      "!site/shots/themes",
       "vite.config.ts",
       "package.json",
       "tsconfig.json",

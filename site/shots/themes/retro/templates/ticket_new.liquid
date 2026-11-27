@@ -1,0 +1,24 @@
+{%- comment -%}Opening a request: pick its kind, then fill in its fields.{%- endcomment -%}
+<section class="window dialog wider">
+{% render 'window', title: 'New Request Wizard' %}
+<div class="body">
+<h1>How can we help?</h1>
+<p>Pick what fits best, so it reaches the right people.</p>
+<fieldset><legend>Kind of request</legend>
+{%- for t in ticket_form.types %}
+<a href="{{ t.url }}" class="radio{% if t.id == ticket_form.type.id %} on{% endif %}"><span class="dot" aria-hidden="true"></span><span><b>{{ t.name }}</b>{% if t.description != "" %} — {{ t.description }}{% endif %}</span></a>
+{%- endfor %}
+</fieldset>
+{%- if ticket_form.type.id != "" %}
+<form method="post" action="{{ ticket_form.action }}" class="stack">
+{{ form_token_field }}
+<input type="hidden" name="key" value="{{ ticket_form.key }}">
+{%- if ticket_form.error != "" %}<p class="error" role="alert"><span class="glyph stop" aria-hidden="true"></span>{{ ticket_form.error }}</p>{% endif %}
+<label>Subject:<input type="text" name="title" value="{{ ticket_form.title }}" required maxlength="200" placeholder="A short summary"></label>
+<label>Details:<textarea name="description" rows="5" placeholder="Tell us what happened and what you expected.">{{ ticket_form.description }}</textarea></label>
+{%- for f in ticket_form.fields %}{% render 'field', field: f %}{% endfor %}
+<div class="row"><button type="submit" class="btn default">Send request &gt;</button></div>
+</form>
+{%- endif %}
+</div>
+</section>

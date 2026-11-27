@@ -1,0 +1,19 @@
+{%- comment -%}Search as the Find Files dialog.{%- endcomment -%}
+<section class="window wide">
+{% render 'window', title: 'Find: All Files' %}
+<div class="body">
+{% render 'search_bar', query: search.query %}
+{%- if search.query == "" %}
+<p>{{ 'search_hint' | t }}</p>
+{%- elsif search.results.size == 0 %}
+<p class="error"><span class="glyph stop" aria-hidden="true"></span>{{ 'no_answers' | t: query: search.query }}</p>
+{%- else %}
+<ul class="files">
+{%- for r in search.results %}
+<li><a href="{{ r.url }}"><span class="glyph doc" aria-hidden="true"></span>{{ r.title }}</a><span>{{ r.trail }}</span></li>
+{%- endfor %}
+</ul>
+{%- endif %}
+</div>
+<div class="statusbar"><span>{{ search.results.size }} file(s) found</span><span>Search complete</span></div>
+</section>

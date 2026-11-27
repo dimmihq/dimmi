@@ -1,0 +1,56 @@
+{%- comment -%}The home page: a welcome window, the collections as folders, hot links and a hit counter.{%- endcomment -%}
+<section class="window wide">
+{%- assign wtitle = help_center.name | append: ' - Welcome!' %}
+{% render 'window', title: wtitle %}
+<div class="body">
+<div class="marquee" aria-hidden="true"><span>{{ settings.marquee }}</span></div>
+<h1 class="rainbow">{{ help_center.name }}</h1>
+<p class="center"><span class="new">NEW!</span> {{ help_center.home_title }}</p>
+{%- if help_center.tagline != "" %}<p class="center">{{ help_center.tagline }}</p>{% endif %}
+{% render 'search_bar', query: "" %}
+</div>
+</section>
+
+<section class="window wide">
+{% render 'window', title: 'C:\HELP' %}
+<div class="body">
+<ul class="folders">
+{%- for col in collections %}
+<li><a href="{{ col.url }}"><span class="glyph folder big" aria-hidden="true"></span><span>{{ col.title }}</span><small>{{ col.count }} file(s)</small></a></li>
+{%- endfor %}
+</ul>
+</div>
+<div class="statusbar"><span>{{ collections.size }} object(s)</span><span>My Computer</span></div>
+</section>
+
+{%- if popular.size > 0 %}
+<section class="window">
+{% render 'window', title: 'Hot Links!!' %}
+<div class="body">
+<ul class="links">
+{%- for a in popular limit: 8 %}
+<li><a href="{{ a.url }}">{{ a.title }}</a></li>
+{%- endfor %}
+</ul>
+</div>
+</section>
+{%- endif %}
+
+<section class="window">
+{% render 'window', title: 'Guestbook.txt' %}
+<div class="body">
+{%- if updates.size > 0 %}
+<p><b>What's new on this site:</b></p>
+<ul class="links">
+{%- for u in updates limit: 4 %}
+<li><a href="{{ u.url }}">{{ u.title }}</a> <i>({{ u.published | format_date: 'short' }})</i></li>
+{%- endfor %}
+</ul>
+{%- endif %}
+<p class="construction"><span>UNDER CONSTRUCTION</span></p>
+{%- if settings.show_counter %}
+{%- assign visits = 'now' | date: '%j%H' | plus: 1337 %}
+<p class="center">You are visitor <span class="counter">{{ visits | prepend: '000000' | slice: -6, 6 }}</span></p>
+{%- endif %}
+</div>
+</section>
