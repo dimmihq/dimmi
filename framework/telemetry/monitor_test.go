@@ -56,7 +56,7 @@ func TestMonitoring(t *testing.T) {
 		t.Parallel()
 		tel, tracker := withTracker(t)
 
-		ctx, root := tel.StartTrace(t.Context(), "function", "answer conversation")
+		ctx, root := tel.StartTrace(t.Context(), "function", "answer request")
 		assert.False(t, telemetry.InAgent(ctx))
 		runCtx, run := tel.StartAI(ctx, telemetry.OpAgent, "invoke_agent Ada")
 		_, chat := tel.StartAI(runCtx, telemetry.OpChat, "chat m")
@@ -110,7 +110,7 @@ func TestMonitoring(t *testing.T) {
 		body := tracker.received()[0].body
 		assert.Contains(t, body, `"error.type":"rate_limited"`)
 		assert.Contains(t, body, `"status":"resource_exhausted"`)
-		assert.Contains(t, body, `"dimmi.tool.outcome":"pending_approval"`)
+		assert.Contains(t, body, `"tool.outcome":"pending_approval"`)
 		assert.NotContains(t, body, "ignored", "only a tool span is marked")
 	})
 

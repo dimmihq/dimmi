@@ -64,7 +64,7 @@ func (e *Engine) runCall(ctx context.Context, s *session, p *pending) {
 	switch {
 	case p.err == nil:
 	case errors.Is(p.err, errSpent):
-		span.Set("dimmi.tool.outcome", "refused")
+		span.Set("tool.outcome", "refused")
 	default:
 		span.FailWith(callFailure(p))
 	}

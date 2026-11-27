@@ -117,7 +117,7 @@ func TestToolFailureTraces(t *testing.T) {
 			require.NotEmpty(t, tool.SpanID, "the call has a tool span")
 			assert.Equal(t, tc.status, tool.Status)
 			assert.Equal(t, tc.errType, tool.Attr("error.type"))
-			assert.Equal(t, tc.outcome, tool.Attr("dimmi.tool.outcome"))
+			assert.Equal(t, tc.outcome, tool.Attr("tool.outcome"))
 			assert.NotContains(t, tool.Attr("error.type"), shopSeal)
 			assert.Empty(t, run.Status, "the agent recovered, so its run did not fail")
 		})

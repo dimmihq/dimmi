@@ -75,7 +75,7 @@ func (t *Telemetry) StartAI(ctx context.Context, op, name string) (context.Conte
 /*
 StartTrace begins a plain span that is not AI work itself, so the
 tracker counts nothing for it: the root several agent runs share when
-one agent hands the conversation to the next.
+one agent hands the work to the next.
 */
 func (t *Telemetry) StartTrace(ctx context.Context, op, name string) (context.Context, AISpan) {
 	return t.open(ctx, op, name)
@@ -168,7 +168,7 @@ outcome the agent works with, not a failure.
 */
 func ToolOutcome(ctx context.Context, outcome string) {
 	if span := sentry.SpanFromContext(ctx); span != nil && span.Op == OpTool {
-		span.SetData("dimmi.tool.outcome", outcome)
+		span.SetData("tool.outcome", outcome)
 	}
 }
 

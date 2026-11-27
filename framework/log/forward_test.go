@@ -100,7 +100,7 @@ func TestForward(t *testing.T) {
 			log.String("recipients", "ana@example.com"), log.String("subject", "Your refund"),
 			log.String("links", "https://x.test/magic?token=abc"), log.String("message", "raw mime"),
 			log.String("body", "Hi"), log.Err(errors.New("550 ana@example.com rejected")),
-			log.String("api_key", "k"), log.Group("contact", log.String("note", "write to bo@example.org")))
+			log.String("api_key", "k"), log.Group("person", log.String("note", "write to bo@example.org")))
 
 		got := rec.got()
 		require.Len(t, got, 1)
@@ -112,7 +112,7 @@ func TestForward(t *testing.T) {
 		assert.Equal(t, "550 [email] rejected", line["error"])
 		assert.NotEqual(t, "k", line["api_key"])
 		assert.NotEqual(t, "tok_live", line["token"])
-		assert.Contains(t, fmt.Sprint(line["contact"]), "write to [email]")
+		assert.Contains(t, fmt.Sprint(line["person"]), "write to [email]")
 		assert.Contains(t, out.String(), "ana@example.com", "the output is unchanged")
 		assert.Contains(t, out.String(), "Your refund")
 	})
