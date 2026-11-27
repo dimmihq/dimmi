@@ -2,6 +2,17 @@
 # its dashboard, and the ingest that browsers in every environment send
 # reports to. One instance serves staging and production; staging's edge
 # serves its host, so it goes live with main's deploys.
+#
+# Web Traffic reads a visitor's country from the header a CDN sets. The
+# edge sets it from the visitor's address, which the PROXY header gave it
+# (strict: never from a header the visitor sent), and drops the ones a
+# visitor could send instead. An address it cannot place sends an empty
+# header, and Web Traffic falls back to the visitor's language.
 errors.trydimmi.com {
-	reverse_proxy rustrak.rustrak.svc.cluster.local:8080
+	geoip2_vars strict
+	reverse_proxy rustrak.rustrak.svc.cluster.local:8080 {
+		header_up CF-IPCountry {geoip2.country_code}
+		header_up -X-Vercel-IP-Country
+		header_up -CloudFront-Viewer-Country
+	}
 }

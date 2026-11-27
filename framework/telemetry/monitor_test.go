@@ -30,8 +30,8 @@ func TestMonitoring(t *testing.T) {
 		t.Parallel()
 		tel, tracker := withTracker(t)
 
-		ctx, run := tel.StartAI(t.Context(), "gen_ai.invoke_agent", "answer conversation")
-		run.Set("gen_ai.conversation.id", "conv-1")
+		ctx, run := tel.StartAI(t.Context(), "gen_ai.invoke_agent", "research_agent")
+		run.Set("gen_ai.agent.name", "research_agent")
 		_, chat := tel.StartAI(ctx, "gen_ai.chat", "chat claude-haiku")
 		chat.Set("gen_ai.usage.input_tokens", 120)
 		chat.Fail()
@@ -42,7 +42,7 @@ func TestMonitoring(t *testing.T) {
 		requests := tracker.received()
 		require.Len(t, requests, 1)
 		for _, want := range []string{
-			`"type":"transaction"`, "gen_ai.invoke_agent", "gen_ai.chat", "conv-1",
+			`"type":"transaction"`, "gen_ai.invoke_agent", "gen_ai.chat", "research_agent",
 			`"gen_ai.operation.name":"chat"`, `"gen_ai.usage.input_tokens":120`, "internal_error",
 		} {
 			assert.Contains(t, requests[0].body, want)
