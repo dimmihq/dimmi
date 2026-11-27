@@ -127,7 +127,7 @@ All of dimmi is MIT licensed, with zero features held back for an enterprise edi
 
 ## Contributing
 
-Issues and pull requests are welcome. Read [AGENTS.md](AGENTS.md) before changing routes, events, or SDKs: the API and SDKs are public contracts, so changes stay additive. Found a bug? [Open an issue](https://github.com/dimmihq/dimmi/issues/new).
+Issues and pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) for local setup, seed data, and checks, and read [AGENTS.md](AGENTS.md) before changing routes, events, or SDKs. Found a bug? [Open an issue](https://github.com/dimmihq/dimmi/issues/new).
 
 <br>
 
@@ -147,7 +147,7 @@ Issues and pull requests are welcome. Read [AGENTS.md](AGENTS.md) before changin
   <a href="https://trydimmi.com/?utm_source=github&utm_medium=readme&utm_content=footer"><b>Start free</b></a> ·
   <a href="https://trydimmi.com/docs/self-hosting/?utm_source=github&utm_medium=readme&utm_content=footer"><b>Self-host it</b></a> ·
   <a href="https://trydimmi.com/docs/?utm_source=github&utm_medium=readme&utm_content=footer">Docs</a> ·
-  <a href="AGENTS.md">Contributing</a>
+  <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
 [tests-image]: https://img.shields.io/github/actions/workflow/status/dimmihq/dimmi/main.yml?branch=main&label=tests&style=for-the-badge&labelColor=002C22&color=00BC7D
