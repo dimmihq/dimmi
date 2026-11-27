@@ -186,8 +186,22 @@ export function pageSchemas(route: Route | undefined): Record<string, unknown>[]
     },
   ];
 
-  if (route.path === "/pricing") {
+  if (route.path === "/pricing" || route.path === "/self-host") {
     schemas.push(SOFTWARE_SCHEMA);
+  }
+
+  if (route.meta) {
+    schemas.push({
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: route.title,
+      description: route.description,
+      url: canonicalUrl(route.path),
+      datePublished: route.meta.published,
+      dateModified: route.meta.updated,
+      author: { "@type": "Person", name: "Frantz Kati" },
+      reviewedBy: { "@type": "Person", name: "Frantz Kati" },
+    });
   }
 
   return schemas;

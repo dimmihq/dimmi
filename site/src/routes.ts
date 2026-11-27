@@ -26,6 +26,7 @@ import { PrivacyPage } from "./pages/privacy";
 import { ProceduresPage } from "./pages/procedures";
 import { ReportsPage } from "./pages/reports";
 import { RoutinesPage } from "./pages/routines";
+import { SelfHostPage } from "./pages/self-host";
 import { TermsPage } from "./pages/terms";
 import { TicketsPage } from "./pages/tickets";
 import { WorkflowsPage } from "./pages/workflows";
@@ -113,6 +114,27 @@ export const routes: Route[] = [
     description:
       "Unlimited free seats, 100 free conversations every month, and 50% to 83% off AI fees with your own model keys. Free to self-host under MIT.",
     page: PricingPage,
+  },
+  {
+    path: "/self-host",
+    title: "Self-hosted help desk and live chat, MIT licensed | dimmi",
+    description:
+      "Run dimmi on your own Linux server in about 5 minutes. The same MIT code as dimmi Cloud: shared inbox, AI agents and help center. You pay us $0.",
+    page: SelfHostPage,
+    meta: {
+      type: "self-host",
+      keyword: "self-hosted help desk",
+      answer:
+        "dimmi self-hosts on one Linux server under the MIT license for $0 to dimmi, with the exact same features as dimmi Cloud.",
+      author: "frantz-kati",
+      published: "2026-11-27",
+      updated: "2026-11-27",
+      status: "published",
+      reviewedBy: "frantz-kati",
+      reviewedOn: "2026-11-27",
+      batch: "wave-1",
+      proof: ["public/shots/inbox-light.webp"],
+    },
   },
   {
     path: "/operator",
