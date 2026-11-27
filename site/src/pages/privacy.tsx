@@ -246,7 +246,7 @@ export function PrivacyPage() {
             ],
             [
               "Team members",
-              "Masked dashboard session recordings: page layout with every character of text and every input replaced by asterisks, clicks, page and request addresses with their timings, browser, device, and time zone, linked to your dimmi user ID. No images, media, request bodies, or IP addresses.",
+              "Masked dashboard session recordings: page layout with every character of text and every input replaced by asterisks, clicks, page and request addresses with their timings, browser, device, and time zone, linked to your dimmi user ID, name, email, and workspace. No images, media, request bodies, or IP addresses.",
               "Recorded in your browser while you are signed in to the dashboard.",
             ],
             [

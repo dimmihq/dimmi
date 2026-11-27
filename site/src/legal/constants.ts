@@ -472,7 +472,8 @@ export const COOKIES_AND_STORAGE: CookieEntry[] = [
     surface: "dimmi Cloud dashboard",
     name: "kimmi.anonymousId & kimmi.identity",
     mechanism: "Local Storage",
-    purpose: "Holds the recorder's random browser ID and the signed-in teammate's dimmi user ID. No name or email.",
+    purpose:
+      "Holds the recorder's random browser ID and the signed-in teammate's dimmi user ID, name, email, and workspace.",
     lifetime: "Persistent until cleared",
     category: "Diagnostics",
   },
