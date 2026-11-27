@@ -14,12 +14,16 @@
  * or GITHUB_SHA in CI), so the site's error reports carry the same release
  * as the app's.
  */
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import mdx from "@mdx-js/rollup";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import remarkFrontmatter from "remark-frontmatter";
+import remarkGfm from "remark-gfm";
+import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import { defineConfig, type Plugin } from "vite";
 import { vitePrerenderPlugin } from "vite-prerender-plugin";
 
@@ -50,6 +54,12 @@ export default defineConfig({
   cacheDir: fileURLToPath(new URL("../node_modules/.vite-site", import.meta.url)),
   plugins: [
     githubStarsPlugin(),
+    {
+      enforce: "pre",
+      ...mdx({
+        remarkPlugins: [remarkGfm, remarkFrontmatter, [remarkMdxFrontmatter, { name: "frontmatter" }]],
+      }),
+    },
     react(),
     tailwindcss(),
     vitePrerenderPlugin({ renderTarget: "#root" }),
@@ -60,6 +70,12 @@ export default defineConfig({
         const pages = (globalThis as { __DIMMI_PAGES__?: unknown }).__DIMMI_PAGES__;
         if (Array.isArray(pages)) {
           writeFileSync(join(distDir, "pages.json"), `${JSON.stringify(pages, null, 2)}\n`, "utf8");
+        }
+        const blogRss = (globalThis as { __DIMMI_BLOG_RSS__?: unknown }).__DIMMI_BLOG_RSS__;
+        if (typeof blogRss === "string" && blogRss.length > 0) {
+          const blogDir = join(distDir, "blog");
+          mkdirSync(blogDir, { recursive: true });
+          writeFileSync(join(blogDir, "rss.xml"), blogRss, "utf8");
         }
         generateSitemap(distDir);
       },

@@ -4,8 +4,11 @@
  * produces an empty HTML file.
  */
 import type { ComponentType } from "react";
+import { publishedBlogPosts } from "./blog/posts";
 import { AgentStudioPage } from "./pages/agent-studio";
 import { AgentsPage } from "./pages/agents";
+import { BlogIndexPage } from "./pages/blog/index";
+import { BlogPostPage } from "./pages/blog/post";
 import { BroadcastsPage } from "./pages/broadcasts";
 import { ChangelogPage } from "./pages/changelog";
 import { ApiChannelPage } from "./pages/channels/api";
@@ -58,7 +61,7 @@ export type Route = {
   path: string;
   title: string;
   description: string;
-  page: ComponentType;
+  page: ComponentType<{ path?: string }>;
   meta?: PageMeta;
 };
 
@@ -239,6 +242,32 @@ export const routes: Route[] = [
       "dimmi Cloud Privacy Policy, End-User Notice, Cookie Notice, Subprocessor List, AI Transparency, Security Overview, and Global DPA.",
     page: PrivacyPage,
   },
+  {
+    path: "/blog",
+    title: "Blog: engineering notes & open support guides | dimmi",
+    description:
+      "First-hand engineering notes, live customer support pricing audits, and MIT self-hosting guides from the team building dimmi's open support platform.",
+    page: BlogIndexPage,
+    meta: {
+      type: "marketing",
+      keyword: "dimmi blog",
+      answer: "First-hand teardowns, real architecture numbers, and setup guides from the team building dimmi.",
+      author: "frantz-kati",
+      published: "2026-11-27",
+      updated: "2026-11-27",
+      status: "published",
+      reviewedBy: "frantz-kati",
+      reviewedOn: "2026-11-27",
+      proof: ["shots/inbox-light.webp"],
+    },
+  },
+  ...publishedBlogPosts.map((post) => ({
+    path: post.path,
+    title: post.title,
+    description: post.description,
+    page: BlogPostPage,
+    meta: post.meta,
+  })),
 ];
 
 export function findRoute(path: string): Route | undefined {

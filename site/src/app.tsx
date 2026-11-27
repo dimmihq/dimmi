@@ -109,7 +109,7 @@ export function App({ path: initial }: { path: string }) {
           />
         ))}
         {Page ? (
-          <Page />
+          <Page path={location.path} />
         ) : (
           <div className="mx-auto max-w-2xl px-6 py-40 text-center">
             <h1 className="text-title-1-semibold">Page not found</h1>

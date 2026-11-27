@@ -22,10 +22,14 @@
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
+import mdx from "@mdx-js/rollup";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
+import remarkFrontmatter from "remark-frontmatter";
+import remarkGfm from "remark-gfm";
+import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 
@@ -130,6 +134,14 @@ export default defineConfig(({ command }) => ({
       },
       {
         extends: true,
+        plugins: [
+          {
+            enforce: "pre",
+            ...mdx({
+              remarkPlugins: [remarkGfm, remarkFrontmatter, [remarkMdxFrontmatter, { name: "frontmatter" }]],
+            }),
+          },
+        ],
         resolve: {
           alias: [
             { find: "@", replacement: fileURLToPath(new URL("./resources/js", import.meta.url)) },
