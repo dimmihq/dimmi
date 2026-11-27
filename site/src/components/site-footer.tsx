@@ -11,6 +11,8 @@ const pages = new Map<string, string>([
   ...PRODUCT_GROUPS.flatMap((group) => group.products.map((p) => [p.name, p.href] as const)),
   ...CHANNELS.map((c) => [c.name, c.href] as const),
   ["Pricing", "/pricing"],
+  ["Pricing comparison", "/pricing#compare"],
+  ["Cost calculator", "/pricing#calculator"],
   ["Self-host", "/#self-host"],
   ["dimmi Cloud", `${APP_URL}/signup`],
   ["Docs", "/docs"],
@@ -38,6 +40,7 @@ const columns = [
     title: "Channels",
     links: CHANNELS.map((c) => c.name),
   },
+  { title: "Compare", links: ["Pricing comparison", "Cost calculator"] },
   { title: "Run it", links: ["Self-host", "dimmi Cloud", "Security", "Self-Hosting Notice", "AI Transparency"] },
   { title: "Developers", links: ["Docs", "API reference", "SDKs", "Webhooks", "GitHub"] },
   {
@@ -49,7 +52,7 @@ const columns = [
 export function SiteFooter() {
   return (
     <footer className="dark site-brand border-t border-separator-border bg-background-full">
-      <div className="mx-auto w-full max-w-[1200px] border-x border-separator-border px-5 sm:px-12 grid grid-cols-2 gap-x-8 gap-y-12 py-16 sm:grid-cols-3 lg:grid-cols-[1.4fr_repeat(5,1fr)] [&>*]:min-w-0">
+      <div className="mx-auto w-full max-w-[1200px] border-x border-separator-border px-5 sm:px-12 grid grid-cols-2 gap-x-8 gap-y-12 py-16 sm:grid-cols-3 lg:grid-cols-[1.3fr_repeat(6,1fr)] [&>*]:min-w-0">
         <div className="col-span-full flex flex-col gap-4 lg:col-span-1">
           <DimmiLogo className="h-6 w-auto self-start text-text-primary" title="dimmi" />
           <p className="max-w-60 text-body-regular text-text-secondary">
