@@ -29,8 +29,10 @@ import { RoutinesPage } from "./pages/routines";
 import { TermsPage } from "./pages/terms";
 import { TicketsPage } from "./pages/tickets";
 import { VsChatwootPage } from "./pages/vs/chatwoot";
+import { VsCrispPage } from "./pages/vs/crisp";
 import { VsHubPage } from "./pages/vs/index";
 import { VsIntercomPage } from "./pages/vs/intercom";
+import { VsTawkToPage } from "./pages/vs/tawk-to";
 import { WorkflowsPage } from "./pages/workflows";
 import { SDK_COUNT } from "./sdks";
 
@@ -285,6 +287,46 @@ export const routes: Route[] = [
       answer: "Pick Chatwoot if you need Telegram or LINE channels today",
       proof: ["/shots/vs-sso-light.webp"],
       rivals: [{ name: "Chatwoot", checkedOn: "2026-11-27", source: "https://www.chatwoot.com/pricing" }],
+    },
+  },
+  {
+    path: "/vs/crisp",
+    title: "dimmi vs Crisp: open-source Crisp alternative",
+    description:
+      "dimmi vs Crisp: $45 to $295 flat workspace seat caps (+$10/seat) and AI credit limits vs unlimited free seats, built-in tickets, BYO keys, and MIT.",
+    page: VsCrispPage,
+    meta: {
+      type: "vs",
+      status: "published",
+      published: "2026-11-27",
+      updated: "2026-11-27",
+      author: "frantz-kati",
+      reviewedBy: "frantz-kati",
+      reviewedOn: "2026-11-27",
+      keyword: "crisp alternative",
+      answer: "Pick Crisp if you are a small team under 4 to 10 people",
+      proof: ["/shots/vs-members-light.webp"],
+      rivals: [{ name: "Crisp", checkedOn: "2026-11-27", source: "https://crisp.chat/en/pricing/" }],
+    },
+  },
+  {
+    path: "/vs/tawk-to",
+    title: "dimmi vs Tawk.to: open-source Tawk.to alternative",
+    description:
+      "dimmi vs Tawk.to: free live chat with $29 branding and AI add-ons vs BYO model keys, help center, changelog, developer SDKs, and MIT self-hosting.",
+    page: VsTawkToPage,
+    meta: {
+      type: "vs",
+      status: "published",
+      published: "2026-11-27",
+      updated: "2026-11-27",
+      author: "frantz-kati",
+      reviewedBy: "frantz-kati",
+      reviewedOn: "2026-11-27",
+      keyword: "tawk.to alternative",
+      answer: "Pick Tawk.to if you only need free human live chat for unlimited",
+      proof: ["/shots/vs-byo-key-light.webp", "/shots/help-center-light.webp", "/shots/vs-changelog-light.webp"],
+      rivals: [{ name: "Tawk.to", checkedOn: "2026-11-27", source: "https://www.tawk.to/pricing/" }],
     },
   },
   {

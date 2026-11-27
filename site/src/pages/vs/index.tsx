@@ -44,6 +44,26 @@ const COMPARISON_CARDS: ComparisonCard[] = [
     keyDiff: "100% MIT · single Go binary",
     tone: "#1f93ff",
   },
+  {
+    slug: "crisp",
+    href: "/vs/crisp",
+    rival: "Crisp",
+    headline: "dimmi vs Crisp",
+    summary:
+      "Compare Crisp's flat workspace seat caps ($45 to $295 + $10 extra seats) against unlimited free seats, ticketing, and BYO AI keys.",
+    keyDiff: "Unlimited seats · tickets included",
+    tone: "#1972f5",
+  },
+  {
+    slug: "tawk-to",
+    href: "/vs/tawk-to",
+    rival: "Tawk.to",
+    headline: "dimmi vs Tawk.to",
+    summary:
+      "Compare free live chat + $29 branding and AI add-ons against MIT open-source self-hosting, BYO LLM keys, help center, and changelog.",
+    keyDiff: "BYO AI keys · MIT self-hosted",
+    tone: "#03a84e",
+  },
 ];
 
 export function VsHubPage() {

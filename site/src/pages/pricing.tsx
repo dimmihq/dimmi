@@ -176,6 +176,14 @@ function Comparison() {
         <a href="/vs/chatwoot" className="underline underline-offset-4 hover:text-text-secondary">
           dimmi vs Chatwoot
         </a>
+        ,{" "}
+        <a href="/vs/crisp" className="underline underline-offset-4 hover:text-text-secondary">
+          dimmi vs Crisp
+        </a>
+        ,{" "}
+        <a href="/vs/tawk-to" className="underline underline-offset-4 hover:text-text-secondary">
+          dimmi vs Tawk.to
+        </a>
         , or{" "}
         <a href="/vs" className="underline underline-offset-4 hover:text-text-secondary">
           see all comparisons
