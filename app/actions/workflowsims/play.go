@@ -209,6 +209,7 @@ said, what has been sent of the saved script, dimmi's turns and state,
 and who watches.
 */
 type chat struct {
+	id        ids.UUID
 	s         *Simulations
 	p         playing
 	script    script
@@ -237,7 +238,8 @@ func (s *Simulations) newChat(p playing) *chat {
 	_ = json.Unmarshal(p.c.ActionMocks, &sc.mocks)
 	_ = json.Unmarshal(p.c.Assertions, &sc.assertions)
 	return &chat{
-		s: s, p: p, script: sc, sent: make([]bool, len(sc.messages)), lines: []Line{},
+		id: ids.New(),
+		s:  s, p: p, script: sc, sent: make([]bool, len(sc.messages)), lines: []Line{},
 		turns: []procedures.TestTurn{},
 	}
 }

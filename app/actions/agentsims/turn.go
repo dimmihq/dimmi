@@ -70,7 +70,7 @@ func (s *Simulations) simulate(ctx context.Context, in procedures.SimulateInput,
 	res, err := s.Simulator.Simulate(ctx, pipeline.SimulationInput{
 		WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, AgentID: &agentID, Agent: def,
 		History: in.History, Message: in.Message, Persona: in.Persona, Mocks: in.Mocks, State: in.State,
-		Confirmed: in.Confirmed, StreamID: in.StreamID, Now: in.Now,
+		Confirmed: in.Confirmed, StreamID: in.StreamID, ChatID: in.ChatID, Now: in.Now,
 	})
 	if errors.Is(err, pipeline.ErrNoAgent) {
 		return nil, ErrSimulatorOff
