@@ -1,16 +1,20 @@
 import { getCollection } from "astro:content";
 import type { APIRoute, GetStaticPaths } from "astro";
 
-import { operationMarkdown, operations } from "~docs/api/spec";
+import { apiCategories, categoryMarkdown, operationMarkdown, operations } from "~docs/api/spec";
 import { docMarkdown } from "~docs/markdown";
 
-// Each docs page and API endpoint as Markdown, at its path plus ".md".
+// Each docs page, API category and API endpoint as Markdown, at its path plus ".md".
 export const getStaticPaths = (async () => {
   const docs = (await getCollection("docs")).filter((entry) => entry.id !== "404");
   return [
     ...docs.map((entry) => ({
       params: { slug: entry.id },
       props: { body: docMarkdown(entry, new URL(import.meta.env.SITE).origin) },
+    })),
+    ...apiCategories.map((category) => ({
+      params: { slug: category.href.slice(1, -1) },
+      props: { body: categoryMarkdown(category) },
     })),
     ...operations.map((op) => ({ params: { slug: op.href.slice(1, -1) }, props: { body: operationMarkdown(op) } })),
   ];

@@ -6,11 +6,13 @@
  */
 import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
 
+import { relatedFor } from "~docs/api/related";
 import {
   BASE_URL,
   type Operation,
   example,
   fieldsOf,
+  operationLastUpdated,
   operationMetaDescription,
   operationMetaTitle,
   operations,
@@ -19,8 +21,9 @@ import {
   responsesOf,
   samples,
 } from "~docs/api/spec";
+import { withBase } from "~docs/base";
 import CodeTabs from "~docs/components/CodeTabs.astro";
-import { ApiFields, ApiSection, EndpointBar } from "~docs/components/react/api";
+import { ApiFields, ApiRelated, ApiSection, EndpointBar } from "~docs/components/react/api";
 
 export function getStaticPaths() {
   return operations.map((op) => {
@@ -32,6 +35,8 @@ export function getStaticPaths() {
 const { op } = Astro.props as { op: Operation };
 const metaTitle = operationMetaTitle(op);
 const metaDescription = operationMetaDescription(op);
+const updatedAt = operationLastUpdated(op);
+const related = relatedFor(op);
 const params = [
   { title: "Path parameters", fields: parameterFields(op, "path") },
   { title: "Query parameters", fields: parameterFields(op, "query") },
@@ -63,7 +68,7 @@ const auth = [
     ],
     tableOfContents: false,
     editUrl: false,
-    lastUpdated: false,
+    lastUpdated: updatedAt ?? false,
   }}
 >
   <div class="not-prose grid gap-10 xl:grid-cols-[minmax(0,1fr)_minmax(0,25rem)]">
@@ -99,5 +104,17 @@ const auth = [
         />
       )}
     </aside>
+  </div>
+  <div class="not-prose mt-12 xl:max-w-[calc(100%-27.5rem)]">
+    <ApiRelated
+      guide={{ ...related.guide, href: withBase(related.guide.href) }}
+      category={{ ...related.category, href: withBase(related.category.href) }}
+      siblings={related.siblings.map((sibling) => ({
+        title: sibling.title,
+        href: withBase(sibling.href),
+        method: sibling.method,
+        path: sibling.path,
+      }))}
+    />
   </div>
 </StarlightPage>
