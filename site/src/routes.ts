@@ -29,6 +29,8 @@ import { RoutinesPage } from "./pages/routines";
 import { TermsPage } from "./pages/terms";
 import { TicketsPage } from "./pages/tickets";
 import { VsChatwootPage } from "./pages/vs/chatwoot";
+import { VsFreshdeskPage } from "./pages/vs/freshdesk";
+import { VsFrontPage } from "./pages/vs/front";
 import { VsHubPage } from "./pages/vs/index";
 import { VsIntercomPage } from "./pages/vs/intercom";
 import { WorkflowsPage } from "./pages/workflows";
@@ -230,9 +232,9 @@ export const routes: Route[] = [
   },
   {
     path: "/vs",
-    title: "Compare dimmi against Intercom and Chatwoot | dimmi",
+    title: "Compare dimmi against top customer support tools | dimmi",
     description:
-      "Honest side-by-side comparisons of dimmi vs Intercom and Chatwoot: verified pricing, real product screenshots, MIT self-hosting, and trade-offs.",
+      "Honest side-by-side comparisons of dimmi vs Intercom, Chatwoot, Front, and Freshdesk: verified pricing, real product captures, and MIT hosting.",
     page: VsHubPage,
     meta: {
       type: "alternatives",
@@ -285,6 +287,46 @@ export const routes: Route[] = [
       answer: "Pick Chatwoot if you need Telegram or LINE channels today",
       proof: ["/shots/vs-sso-light.webp"],
       rivals: [{ name: "Chatwoot", checkedOn: "2026-11-27", source: "https://www.chatwoot.com/pricing" }],
+    },
+  },
+  {
+    path: "/vs/front",
+    title: "dimmi vs Front: open-source Front alternative",
+    description:
+      "dimmi vs Front: 1-channel Starter ($25), $65 omnichannel seats, and 20% WhatsApp fees vs every channel unlocked, $0 seats, BYO keys, and MIT code.",
+    page: VsFrontPage,
+    meta: {
+      type: "vs",
+      status: "published",
+      published: "2026-11-27",
+      updated: "2026-11-27",
+      author: "frantz-kati",
+      reviewedBy: "frantz-kati",
+      reviewedOn: "2026-11-27",
+      keyword: "front alternative",
+      answer: "Pick Front if you need a mature shared email workspace across sales",
+      proof: ["/shots/channel-email-thread-light.webp", "/shots/inbox-light.webp"],
+      rivals: [{ name: "Front", checkedOn: "2026-11-27", source: "https://front.com/pricing" }],
+    },
+  },
+  {
+    path: "/vs/freshdesk",
+    title: "dimmi vs Freshdesk: open-source Freshdesk alternative",
+    description:
+      "dimmi vs Freshdesk: $19 to $89 seats and $49 per 100 expiring Freddy sessions vs $0 seats, multiple SLAs, audit logs, BYO AI keys, and MIT hosting.",
+    page: VsFreshdeskPage,
+    meta: {
+      type: "vs",
+      status: "published",
+      published: "2026-11-27",
+      updated: "2026-11-27",
+      author: "frantz-kati",
+      reviewedBy: "frantz-kati",
+      reviewedOn: "2026-11-27",
+      keyword: "freshdesk alternative",
+      answer: "Pick Freshdesk if you want a low $19/agent annual seat price",
+      proof: ["/shots/procedure-hero-light.webp", "/shots/vs-sla-light.webp"],
+      rivals: [{ name: "Freshdesk", checkedOn: "2026-11-27", source: "https://www.freshworks.com/freshdesk/pricing/" }],
     },
   },
   {

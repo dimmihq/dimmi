@@ -168,17 +168,25 @@ function Comparison() {
           </span>
         ))}
         The AI answers {Math.round(SCENARIOS[0].aiShare * 100)}% of conversations and theirs resolves{" "}
-        {Math.round(RESOLUTION_RATE * 100)}% of those.{" "}
+        {Math.round(RESOLUTION_RATE * 100)}% of those. Side-by-side:{" "}
         <a href="/vs/intercom" className="underline underline-offset-4 hover:text-text-secondary">
-          dimmi vs Intercom
+          Intercom
         </a>
         ,{" "}
         <a href="/vs/chatwoot" className="underline underline-offset-4 hover:text-text-secondary">
-          dimmi vs Chatwoot
+          Chatwoot
+        </a>
+        ,{" "}
+        <a href="/vs/front" className="underline underline-offset-4 hover:text-text-secondary">
+          Front
+        </a>
+        ,{" "}
+        <a href="/vs/freshdesk" className="underline underline-offset-4 hover:text-text-secondary">
+          Freshdesk
         </a>
         , or{" "}
         <a href="/vs" className="underline underline-offset-4 hover:text-text-secondary">
-          see all comparisons
+          all comparisons
         </a>
         .
       </p>
