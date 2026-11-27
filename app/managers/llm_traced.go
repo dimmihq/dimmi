@@ -15,7 +15,9 @@ import (
 /*
 tracedLLM sends a span for each model call to the error tracker: what
 the model was asked, with its tools, and what it answered, with the
-model that answered and the tokens it used.
+model that answered and the tokens it used. A call made outside any
+agent run, by a background task, runs inside a run of its own named
+after the task, so the tracker never lists it under an unnamed agent.
 */
 type tracedLLM struct {
 	contracts.LLM
@@ -45,17 +47,17 @@ Chat runs the completion inside a model call span.
 */
 func (l *tracedLLM) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.ChatResponse, error) {
 	ctx, span := l.start(ctx, req)
-	defer span.End()
+	defer span.end()
 
 	res, err := l.LLM.Chat(ctx, req)
 	if err != nil {
-		span.Fail()
+		span.fail()
 
 		return nil, err //nolint:wrapcheck // the span is transparent; callers read the driver's error
 	}
 
-	answered(span, res.Text, res.ToolCalls)
-	record(span, res.Model, res.Usage)
+	answered(span.chat, res.Text, res.ToolCalls)
+	record(span.chat, res.Model, res.Usage)
 
 	return res, nil
 }
@@ -69,8 +71,8 @@ func (l *tracedLLM) Stream(ctx context.Context, req contracts.ChatRequest) (cont
 
 	stream, err := l.LLM.Stream(ctx, req)
 	if err != nil {
-		span.Fail()
-		span.End()
+		span.fail()
+		span.end()
 
 		return nil, err //nolint:wrapcheck // the span is transparent; callers read the driver's error
 	}
@@ -78,8 +80,59 @@ func (l *tracedLLM) Stream(ctx context.Context, req contracts.ChatRequest) (cont
 	return &tracedStream{ChatStream: stream, span: span}, nil
 }
 
-func (l *tracedLLM) start(ctx context.Context, req contracts.ChatRequest) (context.Context, telemetry.AISpan) {
-	ctx, span := l.telemetry.StartAI(ctx, "gen_ai.chat", "chat "+req.Model)
+/*
+callSpans are a model call's span and, for a call made outside any
+agent run, the background run around it.
+*/
+type callSpans struct {
+	run  *telemetry.AISpan
+	chat telemetry.AISpan
+}
+
+func (c callSpans) fail() {
+	c.chat.Fail()
+	if c.run != nil {
+		c.run.Fail()
+	}
+}
+
+func (c callSpans) end() {
+	c.chat.End()
+	if c.run != nil {
+		c.run.End()
+	}
+}
+
+/*
+backgroundTask names the background task a model call made outside any
+agent run belongs to: the one the context names, else the response
+schema the call asks for, else "model_call".
+*/
+func backgroundTask(ctx context.Context, req contracts.ChatRequest) string {
+	task := telemetry.Task(ctx)
+	if task == "" && req.Schema != nil {
+		task = req.Schema.Name
+	}
+	if task == "" {
+		task = "model_call"
+	}
+
+	return task
+}
+
+func (l *tracedLLM) start(ctx context.Context, req contracts.ChatRequest) (context.Context, callSpans) {
+	var spans callSpans
+	if !telemetry.InAgent(ctx) {
+		task := backgroundTask(ctx, req)
+		var run telemetry.AISpan
+		ctx, run = l.telemetry.StartAI(ctx, telemetry.OpAgent, "background "+task)
+		run.Set("gen_ai.agent.name", "background: "+task)
+		run.Set("gen_ai.agent.id", "background."+task)
+		spans.run = &run
+	}
+
+	ctx, span := l.telemetry.StartAI(ctx, telemetry.OpChat, "chat "+req.Model)
+	spans.chat = span
 	span.Set("gen_ai.system", string(contracts.UpstreamOf(l.LLM, req.Model)))
 	span.Set("gen_ai.request.model", req.Model)
 	span.Set("gen_ai.request.messages", asked(req))
@@ -93,7 +146,7 @@ func (l *tracedLLM) start(ctx context.Context, req contracts.ChatRequest) (conte
 		span.Set("gen_ai.request.available_tools", jsonText(names))
 	}
 
-	return ctx, span
+	return ctx, spans
 }
 
 /*
@@ -104,7 +157,7 @@ failure or its close.
 type tracedStream struct {
 	contracts.ChatStream
 
-	span  telemetry.AISpan
+	span  callSpans
 	text  strings.Builder
 	calls []contracts.ToolCall
 	ended bool
@@ -120,14 +173,14 @@ func (s *tracedStream) Next(ctx context.Context) (contracts.StreamEvent, error) 
 	case errors.Is(err, io.EOF):
 		s.end()
 	case err != nil:
-		s.span.Fail()
+		s.span.fail()
 		s.end()
 	case ev.Kind == contracts.StreamEventTextDelta:
 		s.text.WriteString(ev.Text)
 	case ev.Kind == contracts.StreamEventToolCallDone && ev.ToolCall != nil:
 		s.calls = append(s.calls, *ev.ToolCall)
 	case ev.Kind == contracts.StreamEventUsage && ev.Usage != nil:
-		record(s.span, ev.Model, *ev.Usage)
+		record(s.span.chat, ev.Model, *ev.Usage)
 	}
 
 	return ev, err //nolint:wrapcheck // the span is transparent; callers read the driver's error
@@ -145,8 +198,8 @@ func (s *tracedStream) Close() error {
 func (s *tracedStream) end() {
 	if !s.ended {
 		s.ended = true
-		answered(s.span, s.text.String(), s.calls)
-		s.span.End()
+		answered(s.span.chat, s.text.String(), s.calls)
+		s.span.end()
 	}
 }
 

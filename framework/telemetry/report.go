@@ -76,3 +76,15 @@ func (t *Telemetry) setupReporting(cfg Config) error {
 
 	return nil
 }
+
+/*
+Flush waits until everything queued for the error tracker is sent, or
+the context ends, and reports whether it all went.
+*/
+func (t *Telemetry) Flush(ctx context.Context) bool {
+	if t == nil || t.reporter == nil {
+		return true
+	}
+
+	return t.reporter.FlushWithContext(ctx)
+}

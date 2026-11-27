@@ -1,18 +1,38 @@
 package operator
 
-import "context"
+import (
+	"context"
+
+	"github.com/dimmihq/dimmi/framework/telemetry"
+)
+
+/*
+operatorName and operatorID name Operator in the error tracker; a
+subagent it spawns shows as its own agent beneath the run that spawned
+it.
+*/
+const (
+	operatorName = "Operator"
+	operatorID   = "operator"
+	subagentName = "Operator subagent"
+	subagentID   = "operator.subagent"
+)
 
 /*
 converse runs model calls and tools until the model answers, inside an
 agent run span, so the error tracker shows the run with its model and
-tool calls beneath it.
+tool calls beneath it and groups the runs of one thread.
 */
 func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
-	ctx, span := e.Telemetry.StartAI(ctx, "gen_ai.invoke_agent", "operator")
+	name, id := operatorName, operatorID
+	if s.sub != nil {
+		name, id = subagentName, subagentID
+	}
+	ctx, span := e.Telemetry.StartAI(ctx, telemetry.OpAgent, "invoke_agent "+name)
 	defer span.End()
 
-	span.Set("gen_ai.agent.name", "operator")
-	span.Set("gen_ai.agent.id", s.agent.ID.String())
+	span.Set("gen_ai.agent.name", name)
+	span.Set("gen_ai.agent.id", id)
 	span.Set("gen_ai.conversation.id", s.thread.ID.String())
 	span.Set("dimmi.workspace_id", s.thread.WorkspaceID.String())
 
@@ -20,6 +40,7 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 	if status == "failed" {
 		span.Fail()
 	}
+	span.Set("dimmi.outcome", status)
 
 	return text, status
 }
@@ -29,7 +50,7 @@ runCall runs one call inside a tool span that records what it was given
 and what it returned.
 */
 func (e *Engine) runCall(ctx context.Context, s *session, p *pending) {
-	ctx, span := e.Telemetry.StartAI(ctx, "gen_ai.execute_tool", "execute_tool "+p.call.Name)
+	ctx, span := e.Telemetry.StartAI(ctx, telemetry.OpTool, "execute_tool "+p.call.Name)
 	defer span.End()
 
 	span.Set("gen_ai.tool.name", p.call.Name)

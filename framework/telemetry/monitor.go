@@ -25,18 +25,60 @@ import (
 
 /*
 AISpan is one timed piece of AI work: an agent run, a model call or a
-tool call. Its methods do nothing when monitoring is off.
+tool call, or the plain span a run of several agents shares. Its
+methods do nothing when monitoring is off.
 */
 type AISpan struct {
 	span *sentry.Span
 }
 
 /*
-StartAI begins an AI span with the operation, such as
-"gen_ai.invoke_agent" or "gen_ai.chat", and its name. It nests under
-the AI span already in the context; without one it starts a new trace.
+The span operations the error tracker reads as AI work, named by the
+OpenTelemetry GenAI conventions Sentry follows.
+*/
+const (
+	OpAgent   = "gen_ai.invoke_agent"
+	OpChat    = "gen_ai.chat"
+	OpTool    = "gen_ai.execute_tool"
+	OpHandoff = "gen_ai.handoff"
+)
+
+/*
+agentKey marks a context inside an agent run; taskKey names the
+background task a model call made outside any agent belongs to.
+*/
+type (
+	agentKey struct{}
+	taskKey  struct{}
+)
+
+/*
+StartAI begins an AI span with the operation, such as OpAgent or
+OpChat, and its name. It nests under the span already in the context;
+without one it starts a new trace.
 */
 func (t *Telemetry) StartAI(ctx context.Context, op, name string) (context.Context, AISpan) {
+	ctx, span := t.open(ctx, op, name)
+	if span.span != nil {
+		span.Set("gen_ai.operation.name", operationName(op))
+	}
+	if op == OpAgent {
+		ctx = context.WithValue(ctx, agentKey{}, true)
+	}
+
+	return ctx, span
+}
+
+/*
+StartTrace begins a plain span that is not AI work itself, so the
+tracker counts nothing for it: the root several agent runs share when
+one agent hands the conversation to the next.
+*/
+func (t *Telemetry) StartTrace(ctx context.Context, op, name string) (context.Context, AISpan) {
+	return t.open(ctx, op, name)
+}
+
+func (t *Telemetry) open(ctx context.Context, op, name string) (context.Context, AISpan) {
 	if t == nil || t.hub == nil {
 		return ctx, AISpan{}
 	}
@@ -46,9 +88,34 @@ func (t *Telemetry) StartAI(ctx context.Context, op, name string) (context.Conte
 	}
 
 	span := sentry.StartSpan(ctx, op, sentry.WithDescription(name), sentry.WithTransactionName(name))
-	span.SetData("gen_ai.operation.name", operationName(op))
 
 	return span.Context(), AISpan{span: span}
+}
+
+/*
+InAgent reports whether the context is inside an agent run.
+*/
+func InAgent(ctx context.Context) bool {
+	in, _ := ctx.Value(agentKey{}).(bool)
+
+	return in
+}
+
+/*
+WithTask names the background task the model calls made with the
+context belong to, such as "simulated_customer".
+*/
+func WithTask(ctx context.Context, task string) context.Context {
+	return context.WithValue(ctx, taskKey{}, task)
+}
+
+/*
+Task returns the background task the context names, or "".
+*/
+func Task(ctx context.Context) string {
+	task, _ := ctx.Value(taskKey{}).(string)
+
+	return task
 }
 
 /*

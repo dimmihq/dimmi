@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -57,6 +58,7 @@ DescribeCustomer writes the scenario of a saved chat's customer.
 */
 func (r *Runner) DescribeCustomer(ctx context.Context, in CustomerProfile) (string, error) {
 	r.prepare()
+	ctx = telemetry.WithTask(ctx, "simulated_customer_profile")
 	model := r.customerModel()
 	if model == "" {
 		return "", ErrCustomerUnavailable

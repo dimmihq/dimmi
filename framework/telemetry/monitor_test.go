@@ -49,6 +49,28 @@ func TestMonitoring(t *testing.T) {
 		}
 	})
 
+	t.Run("shares a plain root between agent runs and marks what is inside one", func(t *testing.T) {
+		t.Parallel()
+		tel, tracker := withTracker(t)
+
+		ctx, root := tel.StartTrace(t.Context(), "function", "answer conversation")
+		assert.False(t, telemetry.InAgent(ctx))
+		runCtx, run := tel.StartAI(ctx, telemetry.OpAgent, "invoke_agent Ada")
+		_, chat := tel.StartAI(runCtx, telemetry.OpChat, "chat m")
+		assert.True(t, telemetry.InAgent(runCtx))
+		chat.End()
+		run.End()
+		root.End()
+		require.NoError(t, tel.Shutdown(t.Context()))
+
+		requests := tracker.received()
+		require.Len(t, requests, 1)
+		body := requests[0].body
+		assert.Contains(t, body, `"op":"function"`)
+		assert.Equal(t, 2, strings.Count(body, `"gen_ai.operation.name"`), "the root is not AI work")
+		assert.Equal(t, "simulated_customer", telemetry.Task(telemetry.WithTask(t.Context(), "simulated_customer")))
+	})
+
 	t.Run("checks a job in when it starts and when it fails", func(t *testing.T) {
 		t.Parallel()
 		tel, tracker := withTracker(t)

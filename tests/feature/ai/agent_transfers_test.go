@@ -14,6 +14,7 @@ import (
 	"github.com/dimmihq/dimmi/app/contracts"
 	decisionfake "github.com/dimmihq/dimmi/app/drivers/decision/fake"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/tests"
 )
 
 /*
@@ -30,9 +31,9 @@ type transferDesk struct {
 newTransferDesk makes Sales live on the default agent's model and lets
 it hand conversations to the default agent.
 */
-func newTransferDesk(t *testing.T) *transferDesk {
+func newTransferDesk(t *testing.T, opts ...tests.Option) *transferDesk {
 	t.Helper()
-	h := newHarness(t, nil)
+	h := newHarness(t, nil, opts...)
 	r := &transferDesk{harness: h}
 	h.d.TC.InWorkspace(func(ctx context.Context) error {
 		r.support = agentID(ctx, t, h.d)

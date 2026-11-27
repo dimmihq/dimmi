@@ -34,6 +34,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -87,6 +88,7 @@ func (r *Runner) JudgeRubrics(ctx context.Context, in Rubrics) ([]procedure.Judg
 		return nil, nil
 	}
 	r.prepare()
+	ctx = telemetry.WithTask(ctx, "simulation_judge")
 	if model := r.judgeModel(in.Wrote); model != "" {
 		if out, ok := r.judgeWithWriter(ctx, in, model); ok {
 			return out, nil
