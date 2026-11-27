@@ -267,8 +267,7 @@ export const RETENTION_SCHEDULE: RetentionRow[] = [
     category: "Dashboard session recordings (signed-in teammates)",
     scope: "Controller",
     period: "30 days",
-    notes:
-      "Masked in the browser and kept on dimmi's own servers in the EU. Recordings we star to fix a bug stay until unstarred.",
+    notes: "Masked in the browser and kept on dimmi's own servers in the EU. Deleted automatically after 30 days.",
   },
   {
     category: "Server access logs and application traces",
@@ -472,7 +471,8 @@ export const COOKIES_AND_STORAGE: CookieEntry[] = [
     surface: "dimmi Cloud dashboard",
     name: "kimmi.anonymousId & kimmi.identity",
     mechanism: "Local Storage",
-    purpose: "Holds the recorder's random browser ID and the signed-in teammate's dimmi user ID. No name or email.",
+    purpose:
+      "Holds the recorder's random browser ID, the signed-in teammate's dimmi user ID, and their workspace's ID and name. Never their name or email.",
     lifetime: "Persistent until cleared",
     category: "Diagnostics",
   },
