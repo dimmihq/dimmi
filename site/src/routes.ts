@@ -28,6 +28,7 @@ import { ReportsPage } from "./pages/reports";
 import { RoutinesPage } from "./pages/routines";
 import { TermsPage } from "./pages/terms";
 import { TicketsPage } from "./pages/tickets";
+import { IntercomCostCalculatorPage } from "./pages/tools/intercom-cost-calculator";
 import { VsIntercomPage } from "./pages/vs/intercom";
 import { WorkflowsPage } from "./pages/workflows";
 import { SDK_COUNT } from "./sdks";
@@ -243,6 +244,26 @@ export const routes: Route[] = [
       keyword: "intercom alternative",
       answer: "Pick Intercom if you need a mature platform with SOC 2",
       proof: ["/shots/vs-byo-key-light.webp", "/shots/vs-reports-light.webp"],
+      rivals: [{ name: "Intercom", checkedOn: "2026-11-27", source: "https://www.intercom.com/pricing" }],
+    },
+  },
+  {
+    path: "/tools/intercom-cost-calculator",
+    title: "Intercom pricing calculator: seats + Fin cost (2026)",
+    description:
+      "Work out your real Intercom bill: seats on Essential, Advanced or Expert, plus Fin at $0.99 per outcome. Compare it with dimmi. Prices checked Nov 27, 2026.",
+    page: IntercomCostCalculatorPage,
+    meta: {
+      type: "tool",
+      status: "published",
+      published: "2026-11-27",
+      updated: "2026-11-27",
+      author: "frantz-kati",
+      reviewedBy: "frantz-kati",
+      reviewedOn: "2026-11-27",
+      keyword: "intercom pricing calculator",
+      answer: "A 5-seat team on Intercom Essential ($29 list) handling 2,000 monthly chats",
+      proof: ["/shots/vs-reports-light.webp", "/shots/vs-byo-key-light.webp"],
       rivals: [{ name: "Intercom", checkedOn: "2026-11-27", source: "https://www.intercom.com/pricing" }],
     },
   },
