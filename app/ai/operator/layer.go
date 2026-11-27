@@ -198,6 +198,11 @@ func (e *Engine) openLayer(ctx context.Context, s *session) {
 	}
 	ls.suggested = ls.set.Suggest(ctx, toolset.Keywords{}, s.question)
 	s.layer = ls
+	direct := []string{}
+	for _, spec := range e.layerSpecs(s) {
+		direct = append(direct, spec.Name)
+	}
+	ls.set.WithDirect(direct)
 }
 
 /*
@@ -262,7 +267,13 @@ func (e *Engine) layerCall(ctx context.Context, s *session, p *pending) (result,
 		out, err := set.Load(p.call.Arguments)
 		return result{text: out, step: Step{Tool: toolset.LoadTool, Summary: "Looked up tools"}}, err
 	}
-	if inner := innerName(p.call.Arguments); set.IsFixed(inner) {
+	inner, innerArgs := toolset.Inner(p.call.Arguments)
+	if inner == toolset.LoadTool {
+		p.ran = inner
+		out, err := set.Load(innerArgs)
+		return result{text: out, step: Step{Tool: toolset.LoadTool, Summary: "Looked up tools"}}, err
+	}
+	if set.IsFixed(inner) {
 		return e.runFixed(ctx, s, p, inner)
 	}
 	c, err := set.Check(p.call.Arguments)
