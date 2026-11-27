@@ -69,7 +69,7 @@ Register makes the worker run jobs of its kind. Register every worker
 before Start; registering a kind twice is an error.
 */
 func Register[A Args](q *Queue, worker Worker[A]) error {
-	adapter := &riverWorker[A]{worker: worker, retries: map[int64]time.Duration{}}
+	adapter := &riverWorker[A]{worker: worker, monitors: &q.monitors, retries: map[int64]time.Duration{}}
 	if err := river.AddWorkerSafely(q.workers, adapter); err != nil {
 		var args A
 
@@ -124,16 +124,18 @@ kept by job id between the two calls.
 type riverWorker[A Args] struct {
 	river.WorkerDefaults[A]
 
-	worker  Worker[A]
-	mu      sync.Mutex
-	retries map[int64]time.Duration
+	worker   Worker[A]
+	monitors *monitors
+	mu       sync.Mutex
+	retries  map[int64]time.Duration
 }
 
 /*
 Work hands the job to the worker and remembers a RetryAfter delay when
-the job has attempts left.
+the job has attempts left. A monitored job checks in around the run.
 */
 func (w *riverWorker[A]) Work(ctx context.Context, job *river.Job[A]) error {
+	done := w.monitors.start(job.Kind)
 	err := w.worker.Handle(ctx, &Job[A]{
 		ID:          job.ID,
 		Args:        job.Args,
@@ -142,6 +144,7 @@ func (w *riverWorker[A]) Work(ctx context.Context, job *river.Job[A]) error {
 		MaxAttempts: job.MaxAttempts,
 		CreatedAt:   job.CreatedAt,
 	})
+	done(err)
 
 	if retry, ok := errors.AsType[*retryAfterError](err); ok && job.Attempt < job.MaxAttempts {
 		w.mu.Lock()

@@ -22,6 +22,13 @@
 	on_demand_tls {
 		ask http://web:9090/internal/tls/ask
 	}
+	# The country database the image carries (deploy/k8s/edge), which
+	# geoip2_vars reads a visitor's country from.
+	order geoip2_vars first
+	geoip2 {
+		databaseDirectory /usr/share/geoip
+		editionID dbip-country-lite
+	}
 }
 
 # Plain HTTP is its own site, so it reads the PROXY header too: it answers

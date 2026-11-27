@@ -22,13 +22,15 @@ import (
 /*
 Periodic is a job pushed on a schedule. Next returns the first run
 strictly after the given time. Args and Opts are what each run pushes.
-RunOnStart also pushes it as soon as a node becomes leader.
+RunOnStart also pushes it as soon as a node becomes leader. A Monitor
+makes each run check in with the error tracker.
 */
 type Periodic struct {
 	Next       func(after time.Time) time.Time
 	Args       Args
 	Opts       []Opt
 	RunOnStart bool
+	Monitor    *Monitor
 }
 
 /*
@@ -38,6 +40,10 @@ configured with NoLeader it does nothing: that node never pushes
 periodic jobs, so every node can register the same schedule.
 */
 func (q *Queue) AddPeriodic(p Periodic) {
+	if p.Monitor != nil {
+		q.monitors.add(p.Args.Kind(), *p.Monitor)
+	}
+
 	if q.noLeader {
 		return
 	}

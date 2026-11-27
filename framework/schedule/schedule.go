@@ -19,6 +19,7 @@ package schedule
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -89,6 +90,11 @@ func (s *Schedule) Apply() error {
 			Args:       task.args,
 			Opts:       task.opts,
 			RunOnStart: task.runOnStart,
+			Monitor: &queue.Monitor{
+				Slug:     strings.ReplaceAll(task.args.Kind(), "_", "-"),
+				Schedule: task.expr,
+				Timezone: task.location.String(),
+			},
 		})
 	}
 
