@@ -57,7 +57,7 @@ func (c PortalController) Feedback(w fhttp.ResponseWriter, r *fhttp.Request) {
 	}
 
 	board := helpcenter.Board{Statuses: c.Library.Feedback(), Submitted: r.URL.Query().Has("submitted")}
-	c.respond(w, r, fhttp.StatusOK, helpcenter.FeedbackPage(center, board, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.FeedbackPage(center, board))
 }
 
 /*
@@ -77,7 +77,7 @@ func (c PortalController) NewIdea(w fhttp.ResponseWriter, r *fhttp.Request) {
 		return
 	}
 
-	page := helpcenter.NewIdeaPage(center, helpcenter.IdeaForm{}, c.styles())
+	page := helpcenter.NewIdeaPage(center, helpcenter.IdeaForm{})
 	c.respond(w, r, fhttp.StatusOK, page)
 }
 
@@ -129,7 +129,7 @@ func (c PortalController) SignIn(w fhttp.ResponseWriter, r *fhttp.Request) {
 		return
 	}
 
-	c.respond(w, r, fhttp.StatusOK, helpcenter.SignInPage(center, c.Library.Collections(), false, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.SignInPage(center, c.Library.Collections(), false))
 }
 
 /*
@@ -169,7 +169,7 @@ func (c PortalController) Conversations(w fhttp.ResponseWriter, r *fhttp.Request
 		return
 	}
 
-	c.respond(w, r, fhttp.StatusOK, helpcenter.ConversationsPage(center, c.Library.Conversations(), c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.ConversationsPage(center, c.Library.Conversations()))
 }
 
 /*
@@ -192,7 +192,7 @@ func (c PortalController) Conversation(w fhttp.ResponseWriter, r *fhttp.Request)
 		return
 	}
 
-	page := helpcenter.ConversationPage(center, c.Library.Conversations(), conv, c.styles())
+	page := helpcenter.ConversationPage(center, c.Library.Conversations(), conv)
 	c.respond(w, r, fhttp.StatusOK, page)
 }
 
@@ -215,7 +215,7 @@ func (c PortalController) NewConversation(w fhttp.ResponseWriter, r *fhttp.Reque
 		conversations = c.Library.Conversations()
 	}
 
-	c.respond(w, r, fhttp.StatusOK, helpcenter.NewConversationPage(center, conversations, c.styles()))
+	c.respond(w, r, fhttp.StatusOK, helpcenter.NewConversationPage(center, conversations))
 }
 
 /*

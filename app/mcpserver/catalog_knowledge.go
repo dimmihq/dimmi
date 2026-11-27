@@ -26,6 +26,7 @@ func knowledgeDocs() map[string]Doc {
 		helpCenterSiteDocs(),
 		translationDocs(),
 		helpCenterDomainDocs(),
+		helpCenterThemeDocs(),
 	} {
 		maps.Copy(out, part)
 	}

@@ -1196,7 +1196,7 @@ const setHelpCenterLocales = `-- name: SetHelpCenterLocales :one
 UPDATE help_centers SET locale = $1, locales = $2::text[], cache_version = cache_version + 1,
     updated_at = $3
 WHERE workspace_id = $4 AND id = $5 AND deleted_at IS NULL
-RETURNING id, workspace_id, name, subdomain, locale, is_default, status, settings, indexing_enabled, ask_ai_enabled, cache_version, deleted_at, created_at, updated_at, custom_domain, locales
+RETURNING id, workspace_id, name, subdomain, locale, is_default, status, settings, indexing_enabled, ask_ai_enabled, cache_version, deleted_at, created_at, updated_at, custom_domain, locales, theme_id
 `
 
 type SetHelpCenterLocalesParams struct {
@@ -1235,6 +1235,7 @@ func (q *Queries) SetHelpCenterLocales(ctx context.Context, arg SetHelpCenterLoc
 		&i.UpdatedAt,
 		&i.CustomDomain,
 		&i.Locales,
+		&i.ThemeID,
 	)
 	return i, err
 }

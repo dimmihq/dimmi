@@ -52,6 +52,11 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 	at := pageAt{root: c.Addresses.Root(h), base: base}
 	rest := strings.TrimPrefix(r.URL.Path, "/hc/"+r.PathValue("center"))
 	localize(&center, snap, at, unindexed(samePage(cmp.Or(rest, "/"))))
+	if err := c.theme(r, &center, h, base); err != nil {
+		c.Errors.Render(w, r, err)
+		return center, nil, false
+	}
+	c.themePolicy(w, r, center)
 
 	updates := c.announce(r, h, &center)
 	contact, until, signed := c.readerOf(r, h)
@@ -73,14 +78,22 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 	}
 
 	w.Header().Set("Cache-Control", "private, no-store")
-	center.SignedIn, center.SignOutURL = true, base+"/sso/sign-out"
-	center.Sections = append(center.Sections, helpcenter.Section{
-		Key: "requests", Name: "Requests", Icon: "ticket", Path: "/tickets",
-	})
+	signedIn(&center, base)
 
 	s := newSite(r.Context(), c.Public, mine, &contact)
 	s.updates, s.at = updates, at
 	return center, s, true
+}
+
+/*
+signedIn marks a frame as a signed-in reader's: the sign-out link and
+their requests in the header.
+*/
+func signedIn(center *helpcenter.Center, base string) {
+	center.SignedIn, center.SignOutURL = true, base+"/sso/sign-out"
+	center.Sections = append(center.Sections, helpcenter.Section{
+		Key: "requests", Name: "Requests", Icon: "ticket", Path: "/tickets",
+	})
 }
 
 /*
@@ -175,7 +188,7 @@ func (c *HelpCenterController) SignInPage(w fhttp.ResponseWriter, r *fhttp.Reque
 	}
 
 	w.Header().Set("Cache-Control", "no-store")
-	page := helpcenter.ReaderSignInPage(center, center.Base+"/sso", r.URL.Query().Get("next"), c.styles())
+	page := helpcenter.ReaderSignInPage(center, center.Base+"/sso", r.URL.Query().Get("next"))
 	c.respond(w, r, fhttp.StatusOK, page)
 }
 
@@ -202,7 +215,7 @@ func (c *HelpCenterController) SignIn(w fhttp.ResponseWriter, r *fhttp.Request) 
 		f := readerForm(center, snap, next)
 		_, f.Error, _ = readerProblem(err)
 		w.Header().Set("Cache-Control", "no-store")
-		c.respond(w, r, fhttp.StatusUnauthorized, helpcenter.ReaderEmailPage(center, f, c.styles()))
+		c.respond(w, r, fhttp.StatusUnauthorized, helpcenter.ReaderEmailPage(center, f))
 	default:
 		c.Errors.Render(w, r, err)
 	}

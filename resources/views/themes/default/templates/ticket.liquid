@@ -1,0 +1,23 @@
+{%- comment -%}One request: where it stands, the fields the reader sees, the thread and a box to reply in.{%- endcomment -%}
+<div class="mx-auto w-full max-w-[44rem] px-5 pt-12 md:pt-16">
+<header class="stagger">
+<p class="flex items-center gap-2 text-body-2-regular text-text-tertiary">{{ ticket.type_icon | icon: 'size-4' }}{{ ticket.type }} · {{ ticket.ref }}</p>
+<h1 class="mt-3 text-title-1-medium tracking-tight">{{ ticket.title }}</h1>
+<div class="mt-3">{% render 'request_pill', label: ticket.label, group: ticket.group %}</div>
+</header>
+<ol class="mt-8 grid animate-rise grid-cols-3 gap-2" aria-label="Progress">
+{%- for s in ticket.steps %}
+<li aria-current="{% if s.current %}step{% else %}false{% endif %}" class="flex flex-col gap-2"><span class="h-1.5 rounded-full {% if s.done or s.current %}bg-brand{% else %}bg-background-secondary-default{% endif %}"></span><span class="text-caption-1-medium {% if s.current %}text-text-primary{% else %}text-text-tertiary{% endif %}">{{ s.label }}</span></li>
+{%- endfor %}
+</ol>
+{%- if ticket.fields.size > 0 %}
+<dl class="mt-8 grid animate-rise grid-cols-[minmax(8rem,auto)_1fr] gap-x-6 gap-y-2 text-body-2-regular">
+{%- for f in ticket.fields %}
+<dt class="text-text-tertiary">{{ f.label }}</dt>
+<dd class="text-text-primary">{{ f.value }}</dd>
+{%- endfor %}
+</dl>
+{%- endif %}
+{% render 'thread', messages: ticket.messages, class: 'mt-10', bubble: 'whitespace-pre-line ' %}
+{% render 'reply_box', action: ticket.reply_url, error: ticket.error %}
+</div>

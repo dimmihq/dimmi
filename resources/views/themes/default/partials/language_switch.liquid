@@ -1,0 +1,18 @@
+{%- comment -%}
+  Lets a reader read the page in another language the help center
+  speaks. Each choice leads to the same page in that language, or to
+  that language's home when the page is not translated.
+{%- endcomment -%}
+{%- if locale.languages.size > 1 -%}
+<details data-menu data-language-switch class="relative">
+<summary aria-label="{{ 'language' | t }}" title="{{ 'language' | t }}" class="flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-lg px-2 text-body-2-medium text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+{{ 'globe' | icon: 'size-4 text-foreground-icon-secondary' }}
+<span class="max-sm:sr-only">{{ locale.name }}</span>
+</summary>
+<div class="absolute end-0 top-10 z-40 max-h-80 w-56 overflow-y-auto rounded-xl border border-border-button-default bg-background-primary-default p-1 shadow-lg">
+{%- for l in locale.languages %}
+<a href="{{ l.url }}" hreflang="{{ l.code }}" lang="{{ l.code }}" data-turbo="false"{% if l.current %} aria-current="true"{% endif %} class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-body-2-medium text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:bg-background-secondary-hover aria-[current=true]:text-text-primary"><span class="flex-1 text-start">{{ l.name }}</span>{% if l.current %}{{ 'check' | icon: 'size-4 text-link' }}{% endif %}</a>
+{%- endfor %}
+</div>
+</details>
+{%- endif -%}

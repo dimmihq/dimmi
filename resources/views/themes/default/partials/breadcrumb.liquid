@@ -1,0 +1,9 @@
+{%- comment -%}The way back from a page: home, then each step in `crumbs`.{%- endcomment -%}
+<nav aria-label="{{ 'breadcrumb' | t }}">
+<ol class="flex flex-wrap items-center gap-1.5 text-body-2-regular text-text-tertiary">
+{%- for crumb in crumbs %}
+{%- unless forloop.first %}<li aria-hidden="true">/</li>{% endunless %}
+<li class="flex"><a href="{{ crumb.url }}" class="flex items-center gap-1 transition-colors hover:text-text-primary">{% if forloop.first %}{{ 'arrow-left-line' | icon: 'size-3.5 rtl:-scale-x-100' }}{{ 'home' | t }}{% else %}{{ crumb.title }}{% endif %}</a></li>
+{%- endfor %}
+</ol>
+</nav>

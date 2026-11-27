@@ -1,0 +1,8 @@
+<li class="flex items-center gap-3 border-separator-border px-4 py-3 [&+&]:border-t">
+<span class="grid size-8 shrink-0 place-items-center rounded-lg bg-background-secondary-default text-foreground-icon-secondary">{{ idea.icon | icon: 'size-4' }}</span>
+<span class="min-w-0 flex-1">{% if idea.url != "" %}<a href="{{ idea.url }}" class="block truncate text-body-medium hover:underline">{{ idea.title }}</a>{% else %}<span class="block truncate text-body-medium">{{ idea.title }}</span>{% endif %}<span class="block truncate text-body-2-regular text-text-tertiary">{{ idea.details }}</span></span>
+{%- if idea.comments > 0 %}
+<span class="flex items-center gap-1 text-caption-1-medium tabular-nums text-text-tertiary max-sm:hidden">{{ 'comment' | icon: 'size-3.5' }}{{ idea.comments }}</span>
+{%- endif %}
+{% render 'vote_button', idea: idea %}
+</li>

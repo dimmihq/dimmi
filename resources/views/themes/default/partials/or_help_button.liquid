@@ -1,0 +1,4 @@
+{%- comment -%}The help button offered as the other way, such as "Or ask AI" under a form.{%- endcomment -%}
+{%- if help_center.messenger -%}
+<button type="button" data-dimmi="open" title="{{ help_center.help_label }}" class="cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring {{ class }}"><span>{{ 'or' | t: action: help_center.help_label }}</span></button>
+{%- endif -%}

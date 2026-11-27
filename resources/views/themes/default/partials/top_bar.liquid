@@ -1,0 +1,41 @@
+{%- comment -%}
+  Runs across every page: the drawer's menu button, the logo, a search
+  box away from the home page, the sections, the language and theme
+  menus, a way to a person and the reader's sign-in. On narrow screens
+  the sections move into a menu of their own.
+{%- endcomment -%}
+<header class="sticky top-0 z-30 isolate flex h-14 shrink-0 items-center gap-3 border-b border-separator-border px-4 lg:px-6">
+<span aria-hidden="true" class="absolute inset-0 -z-10 bg-background-full/85 backdrop-blur-xl backdrop-saturate-150"></span>
+{%- if page.has_drawer %}
+<details data-drawer>
+<summary aria-label="{{ 'browse' | t }}" class="grid size-8 cursor-pointer list-none place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'menu' | icon: 'size-4' }}</summary>
+</details>
+{%- endif %}
+<a href="{{ help_center.home_url }}" class="flex min-w-0 items-center gap-2.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring">{% render 'logo' %}</a>
+{%- if page.section == "help" and page.trail.size > 1 %}
+<form action="{{ help_center.search_url }}" method="get" role="search" class="ms-2 flex h-8 min-w-0 max-w-[18rem] flex-1 items-center gap-2 rounded-lg border border-border-button-default bg-background-secondary-default px-2.5 max-xl:hidden">
+{{ 'search' | icon: 'size-3.5 shrink-0 text-foreground-icon-tertiary' }}
+<label for="top-search" class="sr-only">{{ 'search_label' | t }}</label>
+<input id="top-search" type="search" name="q" placeholder="{{ 'search_short' | t }}" class="min-w-0 flex-1 bg-transparent text-body-2-regular outline-none placeholder:text-text-placeholder">
+</form>
+{%- endif %}
+<nav aria-label="{{ 'sections' | t }}" class="ms-auto flex items-center gap-0.5 max-lg:hidden">
+{%- for s in help_center.sections %}
+<a href="{{ s.url }}"{% if s.key == page.section %} aria-current="page"{% endif %} class="whitespace-nowrap rounded-lg px-2.5 py-1.5 text-body-medium text-text-secondary outline-none transition-colors hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring aria-[current=page]:text-text-primary">{{ s.name }}</a>
+{%- endfor %}
+</nav>
+<div class="flex shrink-0 items-center gap-2 max-lg:ms-auto">
+{% render 'language_switch' %}
+{% render 'theme_switch' %}
+{% render 'help_button', class: 'inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-body-medium text-text-secondary transition-colors hover:text-text-primary max-sm:hidden [&>span]:max-xl:sr-only', icon_class: 'size-4' %}
+{% render 'account' %}
+<details data-menu class="group relative lg:hidden">
+<summary aria-label="{{ 'sections' | t }}" class="grid size-8 cursor-pointer list-none place-items-center rounded-lg text-foreground-icon-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'more' | icon: 'size-4' }}</summary>
+<div class="absolute end-0 top-11 z-40 w-60 rounded-2xl border border-border-button-default bg-background-primary-default p-2 shadow-lg">
+{%- for s in help_center.sections %}
+<a href="{{ s.url }}" class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-body-medium hover:bg-background-secondary-hover">{{ s.icon | icon: 'size-4 text-foreground-icon-tertiary' }}{{ s.name }}</a>
+{%- endfor %}
+</div>
+</details>
+</div>
+</header>

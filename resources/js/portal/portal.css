@@ -14,8 +14,7 @@
 @import "@fontsource-variable/jetbrains-mono";
 @import "../styles/globals.css";
 
-@source "../../views/helpcenter";
-@source "../../views/changelog";
+@source "../../views/themes/default";
 
 :root {
   --font-inter: "Inter Variable";

@@ -39,6 +39,7 @@ type HelpCenter struct {
 	IndexingEnabled bool                           `json:"indexing_enabled"`
 	AskAIEnabled    bool                           `json:"ask_ai_enabled"`
 	Settings        helpcenters.HelpCenterSettings `json:"settings"`
+	ThemeID         *string                        `json:"theme_id"`
 	CreatedAt       time.Time                      `json:"created_at"`
 	UpdatedAt       time.Time                      `json:"updated_at"`
 }
@@ -47,8 +48,13 @@ type HelpCenter struct {
 NewHelpCenter shapes a help center reachable at the URL.
 */
 func NewHelpCenter(h models.HelpCenter, url string) HelpCenter {
+	var theme *string
+	if h.ThemeID != nil {
+		theme = new(models.PublicID(models.PrefixHelpCenterTheme, *h.ThemeID))
+	}
 	return HelpCenter{
-		ID: models.PublicID(models.PrefixHelpCenter, h.ID), Object: "help_center", Name: h.Name,
+		ThemeID: theme,
+		ID:      models.PublicID(models.PrefixHelpCenter, h.ID), Object: "help_center", Name: h.Name,
 		Subdomain: h.Subdomain, URL: url, CustomDomain: h.CustomDomain, Locale: h.Locale, DefaultLocale: h.Locale,
 		Locales: helpcenters.LocalesOf(h), IsDefault: h.IsDefault,
 		Status: h.Status, IndexingEnabled: h.IndexingEnabled, AskAIEnabled: h.AskAiEnabled,

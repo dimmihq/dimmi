@@ -59,11 +59,12 @@ func (b board) reader(t *testing.T, email string) *fhttp.Cookie {
 }
 
 func (b board) form(cookie *fhttp.Cookie, path string, values url.Values) *testkit.Response {
-	client := b.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
-		WithHeader("Accept", "text/html")
+	client := b.d.TC.Client()
 	if cookie != nil {
 		client = client.WithCookie(cookie)
 	}
+	client = tests.HelpForms(b.d.TC.T, client, "/hc/"+b.subdomain).
+		WithHeader("Content-Type", "application/x-www-form-urlencoded").WithHeader("Accept", "text/html")
 	return client.Send("POST", "/hc/"+b.subdomain+path, values.Encode())
 }
 
@@ -105,11 +106,12 @@ func TestFeedbackPortal(t *testing.T) {
 		ana := b.reader(t, "ana@example.org")
 		b.form(ana, "/feedback", url.Values{"title": {"Export to CSV"}}).AssertStatus(fhttp.StatusSeeOther)
 		vote := func(cookie *fhttp.Cookie) *testkit.Response {
-			client := b.d.TC.Client().WithHeader("Content-Type", "application/x-www-form-urlencoded").
-				WithHeader("Accept", "application/json")
+			client := b.d.TC.Client()
 			if cookie != nil {
 				client = client.WithCookie(cookie)
 			}
+			client = tests.HelpForms(b.d.TC.T, client, "/hc/"+b.subdomain).
+				WithHeader("Content-Type", "application/x-www-form-urlencoded").WithHeader("Accept", "application/json")
 			return client.Send("POST", "/hc/"+b.subdomain+"/feedback/1-export-to-csv/votes", "")
 		}
 

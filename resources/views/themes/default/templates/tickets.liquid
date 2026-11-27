@@ -1,0 +1,32 @@
+{%- comment -%}The signed-in reader's requests, or their company's under its own tab, with a way to open a new one.{%- endcomment -%}
+<div class="mx-auto w-full max-w-[48rem] px-5 pt-12 md:pt-16">
+<header class="stagger flex flex-wrap items-end justify-between gap-6">
+<div>
+<h1 class="text-display-4-medium tracking-tight">Your requests</h1>
+<p class="mt-2 text-title-3-regular text-text-secondary">Follow everything you asked us, and where it stands.</p>
+</div>
+{%- if tickets.types.size > 0 %}
+<a href="{{ tickets.new_url }}" class="button-brand inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">{{ 'edit' | icon: 'size-4' }}New request</a>
+{%- endif %}
+</header>
+{%- if tickets.company %}
+<nav aria-label="Whose requests" class="mt-8 inline-flex gap-1 rounded-xl bg-background-secondary-default p-1">
+{%- for tab in tickets.tabs %}
+<a href="{{ tab.url }}" aria-current="{% if tab.current %}page{% else %}false{% endif %}" class="inline-flex h-8 items-center rounded-lg px-3 text-body-2-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-border-focus-ring {% if tab.current %}bg-background-primary-default text-text-primary shadow-xs{% else %}text-text-secondary hover:text-text-primary{% endif %}">{{ tab.name }}</a>
+{%- endfor %}
+</nav>
+{%- endif %}
+{%- if tickets.items.size == 0 %}
+<div class="mt-10 animate-rise rounded-2xl border border-dashed border-border-button-default px-6 py-12 text-center">
+<span class="mx-auto grid size-11 place-items-center rounded-2xl bg-background-secondary-default text-foreground-icon-secondary">{{ 'ticket' | icon: 'size-5' }}</span>
+<p class="mt-4 text-body-medium">No requests yet</p>
+<p class="mt-1 text-body-2-regular text-text-tertiary">When you ask us for something, it shows here with where it stands.</p>
+</div>
+{%- else %}
+<ul class="mt-6 animate-rise overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
+{%- for r in tickets.items %}
+<li class="border-separator-border [&+&]:border-t"><a href="{{ r.url }}" class="group flex items-center gap-4 px-4 py-3.5 outline-none transition-colors hover:bg-background-secondary-hover focus-visible:bg-background-secondary-hover"><span class="grid size-8 shrink-0 place-items-center rounded-lg bg-background-secondary-default text-foreground-icon-secondary">{{ r.type_icon | icon: 'size-4' }}</span><span class="min-w-0 flex-1"><span class="block truncate text-body-medium text-text-primary">{{ r.title }}</span><span class="block truncate text-body-2-regular text-text-tertiary">{{ r.ref }} · {{ r.type }}{% unless r.mine %} · shared by your company{% endunless %}</span></span>{% render 'request_pill', label: r.label, group: r.group %}<span class="w-14 shrink-0 text-end text-caption-1-regular text-text-tertiary">{{ r.updated }}</span></a></li>
+{%- endfor %}
+</ul>
+{%- endif %}
+</div>

@@ -1,0 +1,14 @@
+{%- comment -%}An article's headings beside it; the page's script marks the one being read.{%- endcomment -%}
+<nav aria-labelledby="contents" data-contents>
+<div>
+<p id="contents" class="text-caption-1-medium text-text-tertiary">{{ 'in_this_article' | t }}</p>
+<ul class="mt-3 flex flex-col border-s border-separator-border">
+{%- for h in headings %}
+<li><a href="#{{ h.id }}" class="-ms-px block border-s border-transparent py-1 text-body-2-regular text-text-secondary transition-colors hover:border-border-button-hover hover:text-text-primary aria-[current=location]:border-brand aria-[current=location]:text-text-primary ps-3">{{ h.title }}</a></li>
+{%- for sub in h.children %}
+<li><a href="#{{ sub.id }}" class="-ms-px block border-s border-transparent py-1 text-body-2-regular text-text-secondary transition-colors hover:border-border-button-hover hover:text-text-primary aria-[current=location]:border-brand aria-[current=location]:text-text-primary ps-6">{{ sub.title }}</a></li>
+{%- endfor %}
+{%- endfor %}
+</ul>
+</div>
+</nav>

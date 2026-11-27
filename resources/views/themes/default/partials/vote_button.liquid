@@ -1,0 +1,9 @@
+{%- comment -%}
+  Votes for a request or takes the vote back. A plain form, so it works
+  without scripts; the page's script sends it in the background and
+  writes the new count and state on the button.
+{%- endcomment -%}
+<form method="post" action="{{ idea.vote_url }}" data-vote="{{ idea.title }}">
+{{ form_token_field }}
+<button type="submit" aria-label="{{ 'vote_for' | t: title: idea.title, count: idea.votes }}" aria-pressed="{{ idea.voted }}" class="flex h-12 w-11 cursor-pointer flex-col items-center justify-center rounded-xl border border-border-button-default bg-background-primary-default text-caption-1-semibold tabular-nums text-text-secondary outline-none transition hover:border-border-button-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring active:scale-95 aria-pressed:border-transparent aria-pressed:bg-tint aria-pressed:text-link">{{ 'vote' | icon: 'size-4' }}<span data-votes>{{ idea.votes }}</span></button>
+</form>

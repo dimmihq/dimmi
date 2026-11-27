@@ -10726,6 +10726,71 @@
         ],
         "type": "object"
       },
+      "CollectionHelpCenterTheme": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/HelpCenterTheme"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionHelpCenterThemeMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionHelpCenterThemeMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
       "CollectionIdentitySecret": {
         "additionalProperties": false,
         "properties": {
@@ -20862,6 +20927,13 @@
             "description": "The part of the address picked for this help center: 3 to 40 lowercase letters, digits and dashes, such as acme.",
             "type": "string"
           },
+          "theme_id": {
+            "description": "Id of the theme version the help center's pages wear, starting with thm_. Null for the default theme.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "updated_at": {
             "description": "When it last changed, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
             "format": "date-time",
@@ -20887,6 +20959,7 @@
           "indexing_enabled",
           "ask_ai_enabled",
           "settings",
+          "theme_id",
           "created_at",
           "updated_at"
         ],
@@ -21279,6 +21352,142 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "HelpCenterTheme": {
+        "additionalProperties": false,
+        "properties": {
+          "api_version": {
+            "description": "The theme API the theme is written for, from its theme.json.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "content_hash": {
+            "description": "A hash of every file of the theme; two versions with the same hash hold the same files.",
+            "type": "string"
+          },
+          "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "file_count": {
+            "description": "How many files the theme holds.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "help_center_id": {
+            "description": "Id of the help center the theme belongs to, starting with hc_.",
+            "type": "string"
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "live": {
+            "description": "Whether this is the version the help center's pages wear now.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The theme's name, from its theme.json.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "settings": {
+            "description": "The settings the theme declares in its theme.json, which the team may change without code.",
+            "items": {
+              "$ref": "#/components/schemas/HelpCenterThemeSetting"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "size_bytes": {
+            "description": "The size of all the theme's files together, in bytes.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "theme_version": {
+            "description": "The theme author's own version label, such as 1.2.0. Empty when not set.",
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "When it last changed, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {},
+            "description": "The team's values for the theme's settings, by setting id. Settings left out use their defaults.",
+            "type": "object"
+          },
+          "version": {
+            "description": "The upload's number within the help center, counting up from 1.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "help_center_id",
+          "version",
+          "name",
+          "theme_version",
+          "api_version",
+          "live",
+          "settings",
+          "values",
+          "content_hash",
+          "file_count",
+          "size_bytes",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "HelpCenterThemeSetting": {
+        "additionalProperties": false,
+        "properties": {
+          "default": {
+            "description": "The value used until the team sets one. Left out when the theme gives none."
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "info": {
+            "description": "More words for the team about the setting. Left out when the theme gives none.",
+            "type": "string"
+          },
+          "label": {
+            "description": "The setting's name as the team reads it.",
+            "type": "string"
+          },
+          "options": {
+            "description": "The values a select setting allows. Left out for other types.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "type": {
+            "description": "What the setting holds: text, textarea, color, checkbox, number, url or select.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "label"
+        ],
         "type": "object"
       },
       "HelpImageOutputBody": {
@@ -32781,6 +32990,18 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/HelpCenterAnalytics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceHelpCenterTheme": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HelpCenterTheme"
           }
         },
         "required": [
@@ -45176,6 +45397,20 @@
         },
         "type": "object"
       },
+      "UpdateHelpCenterThemeRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "settings": {
+            "additionalProperties": {},
+            "description": "Values to change, by setting id.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "settings"
+        ],
+        "type": "object"
+      },
       "UpdateIdentitySecretBody": {
         "additionalProperties": false,
         "properties": {
@@ -45409,6 +45644,22 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "UpdateLiveThemeRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "theme_id": {
+            "description": "The theme version to wear, null for the default theme.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "theme_id"
+        ],
         "type": "object"
       },
       "UpdateMemberBody": {
@@ -66497,6 +66748,348 @@
         "summary": "Post a feature request",
         "x-abilities": [
           "feedback:write"
+        ]
+      }
+    },
+    "/help-centers/{help_center}/live-theme": {
+      "patch": {
+        "description": "Makes a theme version the one every page of the help center renders in, or the default theme again with a null theme_id. Readers see the change at once. Returns the help center with its theme_id.",
+        "operationId": "help-centers.live-theme.update",
+        "parameters": [
+          {
+            "description": "Id of the help center, starting with hc_, such as hc_01jx2m8k4t. Find it with GET /help-centers.",
+            "in": "path",
+            "name": "help_center",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLiveThemeRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceHelpCenter"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Change the theme a help center wears",
+        "x-abilities": [
+          "settings:write"
+        ]
+      }
+    },
+    "/help-centers/{help_center}/themes": {
+      "get": {
+        "description": "Lists every theme version uploaded to a help center, newest first, with the one readers see. Returns the theme versions, live set on the one the help center's pages wear.",
+        "operationId": "help-centers.themes.index",
+        "parameters": [
+          {
+            "description": "Id of the help center, starting with hc_, such as hc_01jx2m8k4t. Find it with GET /help-centers.",
+            "in": "path",
+            "name": "help_center",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionHelpCenterTheme"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List a help center's themes",
+        "x-abilities": [
+          "settings:write"
+        ]
+      },
+      "post": {
+        "description": "Uploads a theme's folder as a zip in the file field of a multipart form. dimmi checks every file and parses every template; a theme with problems is refused with each one's file and line, and nothing is kept. A theme that passes is kept as a new version, not yet live. Returns the new theme version.",
+        "operationId": "help-centers.themes.store",
+        "parameters": [
+          {
+            "description": "Id of the help center, starting with hc_, such as hc_01jx2m8k4t. Find it with GET /help-centers.",
+            "in": "path",
+            "name": "help_center",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "filename": {
+                    "contentMediaType": "application/octet-stream",
+                    "description": "filename of the file being uploaded",
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "general purpose name for multipart form value",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceHelpCenterTheme"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Upload a help center theme",
+        "x-abilities": [
+          "settings:write"
+        ]
+      }
+    },
+    "/help-centers/{help_center}/themes/{theme}": {
+      "get": {
+        "description": "Reads one theme version of a help center: its name, settings and the team's values. Returns the theme version.",
+        "operationId": "help-centers.themes.show",
+        "parameters": [
+          {
+            "description": "Id of the help center, starting with hc_, such as hc_01jx2m8k4t. Find it with GET /help-centers.",
+            "in": "path",
+            "name": "help_center",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Id of the theme version, starting with thm_. Find it with GET /help-centers/{help_center}/themes.",
+            "in": "path",
+            "name": "theme",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceHelpCenterTheme"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get a help center theme",
+        "x-abilities": [
+          "settings:write"
+        ]
+      },
+      "patch": {
+        "description": "Sets the team's values for the settings a theme version declares in its theme.json. A value that does not fit its setting is refused. Returns the theme version with its new values.",
+        "operationId": "help-centers.themes.update",
+        "parameters": [
+          {
+            "description": "Id of the help center, starting with hc_, such as hc_01jx2m8k4t. Find it with GET /help-centers.",
+            "in": "path",
+            "name": "help_center",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Id of the theme version, starting with thm_. Find it with GET /help-centers/{help_center}/themes.",
+            "in": "path",
+            "name": "theme",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateHelpCenterThemeRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceHelpCenterTheme"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Change a theme's settings",
+        "x-abilities": [
+          "settings:write"
+        ]
+      }
+    },
+    "/help-centers/{help_center}/themes/{theme}/archive": {
+      "get": {
+        "description": "Downloads a theme version's files as a zip, or the default theme's with default as the id. Returns the theme's folder as a zip file.",
+        "operationId": "help-centers.themes.archive.show",
+        "parameters": [
+          {
+            "description": "Id of the help center, starting with hc_, such as hc_01jx2m8k4t. Find it with GET /help-centers.",
+            "in": "path",
+            "name": "help_center",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A theme version's id, or default for the default theme.",
+            "in": "path",
+            "name": "theme",
+            "required": true,
+            "schema": {
+              "description": "A theme version's id, or default for the default theme.",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Type": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Download a help center theme",
+        "x-abilities": [
+          "settings:write"
         ]
       }
     },

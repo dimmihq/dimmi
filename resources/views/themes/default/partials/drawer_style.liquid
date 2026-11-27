@@ -1,0 +1,18 @@
+{%- comment -%}
+  Slides the browse drawer in from the start edge and pushes the page
+  aside by its width. It sits in the head so the drawer is closed from
+  the first paint, before the stylesheet arrives.
+{%- endcomment -%}
+<style>
+:root { --drawer-width: min(20rem, 85vw); --drawer-ease: cubic-bezier(0.32, 0.72, 0, 1); }
+body { overflow-x: clip; }
+[data-drawer-panel] { inline-size: var(--drawer-width); translate: -100% 0; visibility: hidden; transition: translate 380ms var(--drawer-ease), visibility 0s linear 380ms; }
+[dir="rtl"] [data-drawer-panel] { translate: 100% 0; }
+[data-page] { transition: translate 380ms var(--drawer-ease); }
+[data-drawer-backdrop] { display: none; }
+html:has(details[data-drawer][open]) [data-drawer-panel] { translate: 0 0; visibility: visible; transition: translate 380ms var(--drawer-ease); }
+html:has(details[data-drawer][open]) [data-page] { translate: var(--drawer-width) 0; }
+html:has(details[data-drawer][open]) [data-drawer-backdrop] { display: block; cursor: pointer; }
+html[dir="rtl"]:has(details[data-drawer][open]) [data-page] { translate: calc(var(--drawer-width) * -1) 0; }
+@media (prefers-reduced-motion: reduce) { [data-drawer-panel], [data-page] { transition: none; } }
+</style>

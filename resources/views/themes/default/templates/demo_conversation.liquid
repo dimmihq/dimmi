@@ -1,0 +1,9 @@
+{%- capture sidebar %}{% render 'demo_conversations_sidebar' %}{% endcapture -%}
+<div class="mx-auto w-full max-w-[44rem] px-5 pt-12 md:pt-16">
+<header class="stagger">
+{% render 'demo_conversation_status', status: conversation.status %}
+<h1 class="mt-3 text-title-1-medium tracking-tight">{{ conversation.subject }}</h1>
+</header>
+{% render 'thread', messages: conversation.messages, class: 'mt-8', bubble: '' %}
+{% render 'reply_box', action: conversation.reply_url %}
+</div>

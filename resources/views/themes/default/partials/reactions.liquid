@@ -1,0 +1,14 @@
+{%- comment -%}
+  The row of emoji readers react with. Each is a button of a plain form;
+  the script sends it in the background and writes the new counts.
+{%- endcomment -%}
+{%- if entry.reactions.size > 0 -%}
+<form method="post" action="{{ entry.reactions_url }}" data-reactions class="flex flex-wrap items-center gap-1.5" aria-label="{{ 'reactions' | t }}">
+{{ form_token_field }}
+{%- for r in entry.reactions %}
+{%- assign name = 'reaction_' | append: r.name | t %}
+{%- assign count_text = r.count | append: "" %}
+<button type="submit" name="emoji" value="{{ r.emoji }}" aria-label="{{ 'reaction_count' | t: name: name, count: count_text }}" class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-border-button-default bg-background-primary-default px-2.5 text-body-2-medium tabular-nums text-text-secondary outline-none transition hover:border-border-button-hover hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring active:scale-95"><span class="text-[0.9375rem] leading-none">{{ r.emoji }}</span><span data-count{% if r.count == 0 %} hidden{% endif %}>{{ r.count }}</span></button>
+{%- endfor %}
+</form>
+{%- endif -%}
