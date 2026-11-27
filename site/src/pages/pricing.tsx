@@ -168,7 +168,11 @@ function Comparison() {
           </span>
         ))}
         The AI answers {Math.round(SCENARIOS[0].aiShare * 100)}% of conversations and theirs resolves{" "}
-        {Math.round(RESOLUTION_RATE * 100)}% of those.
+        {Math.round(RESOLUTION_RATE * 100)}% of those.{" "}
+        <a href="/vs/intercom" className="underline underline-offset-4 hover:text-text-secondary">
+          See the full dimmi vs Intercom breakdown
+        </a>
+        .
       </p>
     </Section>
   );

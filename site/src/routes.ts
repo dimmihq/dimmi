@@ -28,6 +28,7 @@ import { ReportsPage } from "./pages/reports";
 import { RoutinesPage } from "./pages/routines";
 import { TermsPage } from "./pages/terms";
 import { TicketsPage } from "./pages/tickets";
+import { VsIntercomPage } from "./pages/vs/intercom";
 import { WorkflowsPage } from "./pages/workflows";
 import { SDK_COUNT } from "./sdks";
 
@@ -224,6 +225,26 @@ export const routes: Route[] = [
     title: `Headless chat API, webhooks & ${SDK_COUNT} SDKs | dimmi`,
     description: `Build custom web or mobile chat on /widget/v1, sync backend threads over /api/v1, subscribe to signed webhooks, and use ${SDK_COUNT} typed SDKs and MCP.`,
     page: ApiChannelPage,
+  },
+  {
+    path: "/vs/intercom",
+    title: "dimmi vs Intercom: open-source Intercom alternative",
+    description:
+      "dimmi vs Intercom: $29 seats ($19 promo) and $0.99 Fin outcomes vs free seats, BYO model keys, and MIT self-hosting. Bills at 1, 5, and 25 seats.",
+    page: VsIntercomPage,
+    meta: {
+      type: "vs",
+      status: "published",
+      published: "2026-11-27",
+      updated: "2026-11-27",
+      author: "frantz-kati",
+      reviewedBy: "frantz-kati",
+      reviewedOn: "2026-11-27",
+      keyword: "intercom alternative",
+      answer: "Pick Intercom if you need a mature platform with SOC 2",
+      proof: ["/shots/vs-byo-key-light.webp", "/shots/vs-reports-light.webp"],
+      rivals: [{ name: "Intercom", checkedOn: "2026-11-27", source: "https://www.intercom.com/pricing" }],
+    },
   },
   {
     path: "/terms",

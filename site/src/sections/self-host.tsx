@@ -174,6 +174,10 @@ export function SelfHost() {
           <CodeCard />
         </Card>
       </div>
+      <div className="flex flex-wrap items-center gap-6 border-t border-separator-border pt-6">
+        <MonoLink href="/vs/intercom">Compare dimmi vs Intercom</MonoLink>
+        <MonoLink href="/pricing">See full pricing</MonoLink>
+      </div>
     </Section>
   );
 }

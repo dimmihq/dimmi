@@ -236,6 +236,7 @@ function SupportSpecialists() {
           </div>
           <div className="flex flex-wrap items-center gap-5">
             <MonoLink href="/agent-studio">Explore Agent Studio</MonoLink>
+            <MonoLink href="/vs/intercom">Compare dimmi vs Intercom Fin</MonoLink>
           </div>
         </div>
         <div className="grid grid-cols-1 divide-y divide-separator-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
