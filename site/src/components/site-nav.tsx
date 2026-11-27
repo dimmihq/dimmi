@@ -1,4 +1,4 @@
-import { RiArrowDownSLine, RiArrowRightLine, RiGithubFill } from "@remixicon/react";
+import { RiArrowDownSLine, RiArrowRightLine } from "@remixicon/react";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { ThemeToggle } from "@/components/application/theme/theme-toggle";
@@ -7,8 +7,9 @@ import { DimmiLogo } from "@/features/brand/logo";
 import { cx } from "@/utils/cx";
 
 import { CHANNEL_PATHS, CHANNELS } from "../channels";
-import { APP_URL, GITHUB_URL } from "../links";
+import { APP_URL } from "../links";
 import { PRODUCT_GROUPS, PRODUCT_PATHS } from "../products";
+import { GitHubStars } from "./github-stars";
 import { SiteNavMobile } from "./site-nav-mobile";
 
 const links = [
@@ -49,13 +50,7 @@ export function SiteNav({ path }: { path: string }) {
         </nav>
         <div className="ms-auto flex items-center gap-2">
           <ThemeToggle appearance="segmented" size="small" className="max-sm:hidden" />
-          <a
-            href={GITHUB_URL}
-            className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-body-medium text-text-secondary hover:text-text-primary lg:inline-flex"
-          >
-            <RiGithubFill className="size-[18px]" aria-hidden />
-            GitHub
-          </a>
+          <GitHubStars variant="nav" location="nav" className="hidden lg:inline-flex" />
           <ButtonLink href={`${APP_URL}/login`} variant="secondary" size="small" className="hidden sm:inline-flex">
             Sign in
           </ButtonLink>
