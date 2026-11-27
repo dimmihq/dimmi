@@ -1,4 +1,4 @@
-import { RiGithubFill, RiMenuLine } from "@remixicon/react";
+import { RiMenuLine } from "@remixicon/react";
 
 import { ThemeToggle } from "@/components/application/theme/theme-toggle";
 import { Button, ButtonLink } from "@/components/base/buttons/button";
@@ -6,8 +6,9 @@ import { Drawer, DrawerBody, DrawerFooter, DrawerHeader, DrawerTrigger } from "@
 import { cx } from "@/utils/cx";
 
 import { CHANNELS } from "../channels";
-import { APP_URL, GITHUB_URL } from "../links";
+import { APP_URL } from "../links";
 import { PRODUCT_GROUPS } from "../products";
+import { GitHubStars } from "./github-stars";
 
 const heading = "px-3 pt-4 pb-1 font-mono text-[11px] tracking-[0.14em] text-text-tertiary uppercase";
 
@@ -83,10 +84,7 @@ export function SiteNavMobile({
                 <a href="/docs" onClick={close} className={row}>
                   Docs
                 </a>
-                <a href={GITHUB_URL} onClick={close} className={row}>
-                  <RiGithubFill className="size-5 shrink-0" aria-hidden />
-                  GitHub
-                </a>
+                <GitHubStars variant="mobile" location="mobile_nav" onClick={close} />
               </nav>
             </DrawerBody>
             <DrawerFooter className="flex-col items-stretch gap-3">

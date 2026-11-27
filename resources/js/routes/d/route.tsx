@@ -15,8 +15,10 @@ export const Route = createFileRoute("/d")({
     if (!me) {
       throw redirect({ to: "/login", search: { redirect: location.href } });
     }
-    recordSession(me.user.id);
     const { workspace: current, missing, stale } = addressed(me.workspaces);
+    if (current) {
+      recordSession({ id: me.user.id, workspace: current });
+    }
     if (missing) {
       return { missing };
     }

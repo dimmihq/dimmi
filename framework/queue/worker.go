@@ -144,12 +144,25 @@ func (w *riverWorker[A]) Work(ctx context.Context, job *river.Job[A]) error {
 		MaxAttempts: job.MaxAttempts,
 		CreatedAt:   job.CreatedAt,
 	})
-	done(err)
+	done(checkInError(err))
 
 	if retry, ok := errors.AsType[*retryAfterError](err); ok && job.Attempt < job.MaxAttempts {
 		w.mu.Lock()
 		w.retries[job.ID] = retry.delay
 		w.mu.Unlock()
+	}
+
+	return err
+}
+
+/*
+checkInError is the error a monitored run checks in with. A postponed
+run did its work and asked to run again, so it checks in as a success:
+only a run that failed or was given up reports its error.
+*/
+func checkInError(err error) error {
+	if _, postponed := errors.AsType[*river.JobSnoozeError](err); postponed {
+		return nil
 	}
 
 	return err
