@@ -1,0 +1,119 @@
+---
+title: "Theme reference"
+description: "The pages, theme.json fields, Liquid tags and filters a help center theme can use, and the dimmi theme CLI commands."
+---
+
+This page lists everything a help center theme can use. For how to build and publish one, start with [Help center themes](/help-center/themes/). For the variables each page reads, see [Theme variables](/help-center/theme-variables/).
+
+## Pages
+
+Each page renders `templates/<name>.liquid`, then the layout around it.
+
+| Template | Page | Path |
+| --- | --- | --- |
+| `home` | Help center home | `/` |
+| `collection` | One collection | `/collections/<slug>` |
+| `article` | One article | `/articles/<slug>` |
+| `search` | Search results | `/search?q=` |
+| `404` | Page not found | any unknown path |
+| `changelog` | Changelog timeline and label pages | `/changelog`, `/changelog/labels/<label>` |
+| `changelog_entry` | One changelog entry | `/changelog/<slug>` |
+| `changelog_subscription` | Confirm or end a subscription from a mail link | `/changelog/subscribers/...` |
+| `feature_requests` | Feature request board | `/feedback` |
+| `feature_request` | One feature request | `/feedback/<slug>` |
+| `feature_request_new` | Post a feature request | `/feedback/new` |
+| `sign_in` | Reader sign-in with email | `/sso/sign-in` |
+| `sign_in_code` | Enter the emailed code | after `/sso/codes` |
+| `sign_in_return` | Signing a reader in from your product or the messenger | `/sso` |
+| `tickets` | The reader's requests | `/tickets` |
+| `ticket` | One request | `/tickets/<ref>` |
+| `ticket_new` | Open a request | `/tickets/new` |
+
+In a language other than the default, every path starts with the language, such as `/fr/articles/<slug>`.
+
+Templates named `demo_*` belong to dimmi's sample help center. Your help center never renders them.
+
+## theme.json
+
+| Field | Required | What it holds |
+| --- | --- | --- |
+| `api_version` | yes | The theme API the theme is written for. Use `1`. |
+| `name` | yes | 1 to 100 characters. |
+| `version` | no | Your own version label, such as `1.2.0`. |
+| `author` | no | Who made the theme. |
+| `settings` | no | Settings a team can change, read as `settings.<id>`. |
+| `content_security_policy` | no | Outside https origins pages may load from, on the help center's own address. |
+
+Each setting has an `id` (lowercase letters, digits and `_`, starting with a letter), a `type`, a `label`, and optionally `info`, `default` and `options`:
+
+| Type | Value |
+| --- | --- |
+| `text`, `textarea` | Text up to 10,000 characters |
+| `color` | A hex color such as `#10b981` |
+| `checkbox` | `true` or `false` |
+| `number` | A number |
+| `url` | An http(s) address or a path |
+| `select` | One of `options` |
+
+`content_security_policy` takes lists of origins, such as `https://fonts.gstatic.com` or `https://*.example.com`, under `script_src`, `style_src`, `img_src`, `font_src`, `connect_src`, `frame_src` and `media_src`.
+
+## Tags
+
+| Tag | Example |
+| --- | --- |
+| `if`, `elsif`, `else`, `unless` | `{% if article.author.name != "" %}…{% endif %}` |
+| `case`, `when` | `{% case ticket.group %}{% when 'resolved' %}…{% endcase %}` |
+| `for` with `limit`, `offset`, `reversed`, `else`, `break`, `continue` | `{% for a in popular limit: 3 %}…{% else %}…{% endfor %}` |
+| `assign` | `{% assign title = page.title \| upcase %}` |
+| `capture` | `{% capture when %}<time>{{ article.age }}</time>{% endcapture %}` |
+| `render` | `{% render 'avatar', person: reader, size: 'size-8' %}` |
+| `render … with`, `render … for` | `{% render 'idea_card' for board.list as idea %}` |
+| `echo` | `{% echo help_center.name \| upcase %}` |
+| `raw`, `comment`, `{% # note %}` | `{% raw %}{{ not parsed }}{% endraw %}` |
+| `layout` | `{% layout none %}` or `{% layout 'landing' %}` |
+
+Inside `for`, `forloop` has `index`, `index0`, `rindex`, `rindex0`, `first`, `last`, `length` and `parentloop`.
+
+A partial drawn with `render` sees the globals and the arguments passed to it, never the variables of the template around it. A page's own `assign`s are visible in the layout.
+
+`empty` and `blank` compare with text, lists and maps: `{% if search.results == empty %}`.
+
+## dimmi filters
+
+| Filter | What it does | Example |
+| --- | --- | --- |
+| `t` | The help center's word for a key, in the page's language, with named arguments | `{{ 'article_count' \| t: count: 3 }}` |
+| `url` | A path under the help center's base | `{{ '/search' \| url }}` |
+| `asset_url` | The cache-forever address of a theme asset | `{{ 'theme.css' \| asset_url }}` |
+| `stylesheet_tag` | A `<link rel="stylesheet">` for an address | `{{ 'theme.css' \| asset_url \| stylesheet_tag }}` |
+| `script_tag` | A deferred `<script>` on the help center's own address, nothing elsewhere | `{{ 'theme.js' \| asset_url \| script_tag }}` |
+| `icon` | One of dimmi's icons as inline SVG, with a class | `{{ 'search' \| icon: 'size-4' }}` |
+| `format_date` | A time as the page's language writes it: long, `short` or `iso` | `{{ entry.published \| format_date: 'short' }}` |
+
+An argument to `t` that is HTML, such as a `capture`, goes in as markup and the rest of the words are escaped.
+
+## Liquid filters
+
+`abs`, `append`, `at_least`, `at_most`, `capitalize`, `ceil`, `compact`, `concat`, `date`, `default`, `divided_by`, `downcase`, `escape`, `escape_once`, `first`, `floor`, `join`, `json`, `last`, `lstrip`, `map`, `minus`, `modulo`, `newline_to_br`, `plus`, `prepend`, `raw`, `remove`, `remove_first`, `replace`, `replace_first`, `reverse`, `round`, `rstrip`, `size`, `slice`, `sort`, `sort_natural`, `split`, `strip`, `strip_html`, `strip_newlines`, `sum`, `times`, `truncate`, `truncatewords`, `uniq`, `upcase`, `url_decode`, `url_encode`, `where`.
+
+They behave as in [Shopify's Liquid](https://shopify.github.io/liquid/). `raw` prints a value without escaping it.
+
+## CLI commands
+
+| Command | What it does |
+| --- | --- |
+| `dimmi theme init [folder]` | Writes the default theme into an empty folder |
+| `dimmi theme preview [folder]` | Serves the help center on `127.0.0.1` in the folder's theme, reloading on every save |
+| `dimmi theme publish [folder]` | Uploads the theme, checks it and makes it live |
+
+| Flag | Commands | Default |
+| --- | --- | --- |
+| `--help-center hc_...` | all | the workspace's default help center |
+| `--port` | `preview` | `4500` |
+| `--no-browser` | `preview` | opens the browser |
+| `--upload-only` | `publish` | makes the version live |
+| `--json` | all | one JSON object a line, for AI agents |
+
+Flags go before the folder: `dimmi theme preview --port 5000 acme-theme`.
+
+In a preview, forms do not post. Your platform stylesheet, images and messenger load from dimmi.

@@ -1,0 +1,25 @@
+{%- comment -%}One request: its progress, fields and the conversation, with a reply box.{%- endcomment -%}
+<section class="window wide">
+{%- assign wtitle = ticket.ref | append: ' - ' | append: ticket.title %}
+{% render 'window', title: wtitle %}
+<div class="body">
+<p class="muted">{{ ticket.type }} · {{ ticket.ref }} · <span class="sticker {{ ticket.group }}">{{ ticket.label }}</span></p>
+<h1>{{ ticket.title }}</h1>
+<div class="progress" aria-label="Progress">{% for s in ticket.steps %}<span class="{% if s.done or s.current %}on{% endif %}{% if s.current %} current{% endif %}">{{ s.label }}</span>{% endfor %}</div>
+{%- if ticket.fields.size > 0 %}
+<table class="grid-table"><tbody>{% for f in ticket.fields %}<tr><th>{{ f.label }}</th><td>{{ f.value }}</td></tr>{% endfor %}</tbody></table>
+{%- endif %}
+<ol class="chat">
+{%- for m in ticket.messages %}
+<li class="{% if m.mine %}mine{% endif %}"><b>&lt;{{ m.author.name }}&gt;</b> <i>[{{ m.at }}]</i> <span class="pre">{{ m.body }}</span></li>
+{%- endfor %}
+</ol>
+<form method="post" action="{{ ticket.reply_url }}" class="compose">
+{{ form_token_field }}
+{%- if ticket.error and ticket.error != "" %}<p class="error" role="alert">{{ ticket.error }}</p>{% endif %}
+<label for="reply">Reply:</label>
+<textarea id="reply" name="body" rows="3" required></textarea>
+<div class="row"><button type="submit" class="btn default">Send</button></div>
+</form>
+</div>
+</section>

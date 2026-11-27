@@ -1,0 +1,16 @@
+{%- comment -%}Confirming or ending a changelog subscription from a mail link.{%- endcomment -%}
+<section class="window dialog">
+{% render 'window', title: subscription.title %}
+<div class="body">
+<p class="error"><span class="glyph question" aria-hidden="true"></span><b>{{ subscription.title }}</b></p>
+{%- if subscription.invalid %}
+<p>{{ 'subscription_link_expired' | t }}</p>
+{%- elsif subscription.done %}
+<p role="status">{{ subscription.done_text }}</p>
+{%- else %}
+<p>{{ subscription.ask }}</p>
+<form method="post" action="{{ subscription.action }}" class="row">{{ form_token_field }}<button type="submit" class="btn">{{ subscription.button }}</button></form>
+{%- endif %}
+<p><a href="{{ help_center.changelog_url }}">{{ 'back_to_changelog' | t }}</a></p>
+</div>
+</section>

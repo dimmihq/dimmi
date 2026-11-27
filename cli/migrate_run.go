@@ -305,7 +305,7 @@ func (a *app) status(ctx context.Context) error {
 	}
 
 	if st.State == nil {
-		a.say("No migration has run from this machine yet. Start with `dimmi migrate plan`.", nil)
+		a.say("No migration has run from this machine yet. Start with `dimmi migrate plan`.")
 
 		return nil
 	}

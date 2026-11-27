@@ -34,6 +34,13 @@ func schemaTextsFromHelpCenterTheme() map[string]map[string]string {
 				"use their defaults.",
 			"version": "The upload's number within the help center, counting up from 1.",
 		},
+		"ThemePreview": {
+			"location": "Where the page sends the reader instead, for a redirect. Left out otherwise.",
+			"status":   "The HTTP status the page answers with, such as 200, 302 or 404.",
+			"template": "The theme template the page renders, such as article. Left out for a redirect.",
+			"variables": "The variables the template reads, by name. HTML and times are one-key objects, " +
+				"{\"$html\": ...} and {\"$time\": ...}.",
+		},
 		"HelpCenterThemeSetting": {
 			"default": "The value used until the team sets one. Left out when the theme gives none.",
 			"info":    "More words for the team about the setting. Left out when the theme gives none.",

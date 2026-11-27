@@ -46,6 +46,13 @@ func helpCenterThemeDocs() map[string]Doc {
 			Use:     "Downloads a theme version's files as a zip, or the default theme's with default as the id.",
 			Returns: "the theme's folder as a zip file.",
 		},
+		"help-centers.theme-preview.show": {
+			Title: "Build a help center page for a theme preview",
+			Use: "Builds one page of the help center with its live content, as a theme would render it, without " +
+				"rendering it. The dimmi CLI renders the page in the theme on the developer's computer.",
+			Returns: "the page's status, its redirect when it has one, and the template and variables it renders.",
+			Params:  map[string]string{"path": "The page's path, such as /articles/install or /fr."},
+		},
 		"help-centers.live-theme.update": {
 			Title: "Change the theme a help center wears",
 			Use: "Makes a theme version the one every page of the help center renders in, or the default " +

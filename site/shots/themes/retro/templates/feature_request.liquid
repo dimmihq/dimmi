@@ -1,0 +1,38 @@
+{%- comment -%}One feature request with its votes, details and the comments under it.{%- endcomment -%}
+<article class="window wide">
+{%- assign wtitle = request.idea.title | append: ' - Request' %}
+{% render 'window', title: wtitle %}
+<div class="body">
+<p class="path">C:\<a href="{{ help_center.feedback_url }}">FEEDBACK</a>\{{ request.idea.slug | upcase | truncate: 20, "~1" }}</p>
+<div class="request-head">
+{% render 'vote', idea: request.idea %}
+<div>
+<span class="sticker" style="background: {{ request.status.color }}">{{ request.status.name }}</span>
+<h1>{{ request.idea.title }}</h1>
+<p class="muted">{{ request.author }} · {{ request.posted }}</p>
+</div>
+</div>
+{%- if request.pending %}<p class="notice">{{ 'only_you_until_approved' | t }}</p>{% endif %}
+{%- if request.update_url != "" %}<p class="notice">📣 <a href="{{ request.update_url }}">{{ 'shipped_read' | t }}</a></p>{% endif %}
+{%- if request.details != "" %}<div class="paper prose">{{ request.details }}</div>{% endif %}
+</div>
+</article>
+<section class="window wide">
+{%- assign ctitle = 'comments' | t | append: ' - Message Board' %}
+{% render 'window', title: ctitle %}
+<div class="body">
+{%- if request.comments.size == 0 %}<p class="muted">{{ 'no_comments' | t }}</p>{% endif %}
+<ol class="posts">{% for c in request.comments %}{% render 'post', comment: c %}{% endfor %}</ol>
+{%- if request.commented %}<p class="notice">{{ 'comment_posted' | t }}</p>{% endif %}
+{%- if request.can_act %}
+<form method="post" action="{{ request.comment_url }}" class="compose">
+{{ form_token_field }}
+<label for="comment-body">{{ 'add_comment' | t }}:</label>
+<textarea id="comment-body" name="body" rows="3" required maxlength="5000"></textarea>
+<div class="row"><button type="submit" class="btn">{{ 'comment' | t }}</button></div>
+</form>
+{%- elsif request.sign_in_url != "" %}
+<p><a class="btn" href="{{ request.sign_in_url }}">{{ 'sign_in_to_comment' | t }}</a></p>
+{%- endif %}
+</div>
+</section>

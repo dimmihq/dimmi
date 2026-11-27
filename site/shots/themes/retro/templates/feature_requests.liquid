@@ -1,0 +1,43 @@
+{%- comment -%}The feature request board: a roadmap of status windows, or one sorted list.{%- endcomment -%}
+<section class="window wide">
+{% render 'window', title: 'Feature Request-O-Matic 2000' %}
+<div class="body">
+<div class="board-head">
+<div><h1 class="rainbow left">{{ 'feature_requests' | t }}</h1><p>{{ 'feedback_tagline' | t }}</p></div>
+<a class="btn big" href="{{ board.new_url }}">💡 {{ 'submit_idea' | t }}</a>
+</div>
+{%- if board.submitted %}<p class="notice">✔ {% if board.pending %}{{ 'idea_thanks_pending' | t }}{% else %}{{ 'idea_thanks' | t }}{% endif %}</p>{% endif %}
+{%- if board.boards.size > 1 %}
+<nav class="tabs" aria-label="{{ 'boards' | t }}">{% for tab in board.tabs %}<a href="{{ tab.url }}" class="tab{% if tab.current %} on{% endif %}"{% if tab.current %} aria-current="page"{% endif %}>{{ tab.name }}</a>{% endfor %}</nav>
+{%- endif %}
+<div class="toolbar">
+<nav class="chips" aria-label="{{ 'order' | t }}">{% for sort in board.sorts %}<a href="{{ sort.url }}" class="btn small{% if sort.current %} pressed{% endif %}"{% if sort.current %} aria-current="page"{% endif %}>{{ sort.name }}</a>{% endfor %}</nav>
+<form method="get" action="{{ help_center.feedback_url }}" role="search" class="addressbar slim">
+{%- if board.sort != "" %}<input type="hidden" name="sort" value="{{ board.sort }}">{% endif %}
+{%- if board.active != "" %}<input type="hidden" name="board" value="{{ board.active }}">{% endif %}
+<label for="idea-q">{{ 'search' | t }}:</label><input id="idea-q" type="search" name="q" value="{{ board.query }}" placeholder="{{ 'search_requests' | t }}"><button class="btn">Go!</button>
+</form>
+</div>
+</div>
+</section>
+{%- if board.listed %}
+<section class="window wide">
+{% render 'window', title: 'Results' %}
+<div class="body">
+{%- if board.list.size == 0 %}<p>{{ 'no_requests_match' | t }}</p>{% endif %}
+<ul class="ideas">{% for idea in board.list %}{% render 'idea_line', idea: idea %}{% endfor %}</ul>
+</div>
+</section>
+{%- else %}
+{%- for s in board.statuses %}
+<section class="window column" id="{{ s.slug }}">
+{%- assign stitle = s.name | append: ' (' | append: s.count | append: ')' %}
+{% render 'window', title: stitle %}
+<div class="body">
+<div class="status-bar" style="background: {{ s.color }}"></div>
+{%- if s.ideas.size == 0 %}<p class="muted">{{ 'nothing_here_yet' | t }}</p>{% endif %}
+<ul class="ideas">{% for idea in s.ideas %}{% render 'idea_line', idea: idea %}{% endfor %}</ul>
+</div>
+</section>
+{%- endfor %}
+{%- endif %}

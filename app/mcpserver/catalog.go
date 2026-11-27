@@ -108,5 +108,6 @@ func excluded() map[string]string {
 			"the dimmi CLI sends them.",
 		"help-centers.themes.store":        "Takes a theme's folder as a zip file; the dimmi CLI uploads it.",
 		"help-centers.themes.archive.show": "Answers with a zip file; the dimmi CLI downloads it.",
+		"help-centers.theme-preview.show":  "Feeds the dimmi CLI's local theme preview, which renders it.",
 	}
 }

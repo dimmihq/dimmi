@@ -29,10 +29,11 @@ const ClientID = "dimmi-cli"
 
 /*
 Scopes are what the CLI asks for: settings:write, which the migrations
-API requires, and a refresh token
-so a long migration or a sync that runs for weeks stays signed in.
+and theme APIs require, articles:read, to list the help centers a theme
+is for, and a refresh token so a long migration or a sync that runs for
+weeks stays signed in.
 */
-const Scopes = "settings:write offline_access"
+const Scopes = "settings:write articles:read offline_access"
 
 /*
 Token is a saved dimmi sign-in.

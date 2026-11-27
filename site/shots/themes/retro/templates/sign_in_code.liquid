@@ -1,0 +1,27 @@
+{%- comment -%}Entering the emailed code, as a second logon step.{%- endcomment -%}
+<section class="window dialog">
+{% render 'window', title: 'Enter Network Password' %}
+<div class="body">
+<div class="logon">
+<span class="glyph keys" aria-hidden="true">📨</span>
+<div>
+<h1>{{ 'check_email' | t }}</h1>
+{%- capture masked %}<bdi dir="ltr">{{ sign_in.masked }}</bdi>{% endcapture %}
+<p>{{ 'code_sent' | t: email: masked }}</p>
+<form method="post" action="{{ sign_in.check_url }}" class="stack">
+{{ form_token_field }}
+<input type="hidden" name="next" value="{{ sign_in.next }}">
+<input type="hidden" name="email" value="{{ sign_in.email }}">
+<label>{{ 'code' | t }}:<input type="text" name="code" required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="123456" dir="ltr" class="mono"></label>
+{%- if sign_in.error != "" %}<p class="error" role="alert"><span class="glyph stop" aria-hidden="true"></span>{{ sign_in.error }}</p>{% endif %}
+<div class="row"><button type="submit" class="btn default">{{ 'sign_in' | t }}</button></div>
+</form>
+<form method="post" action="{{ sign_in.resend_url }}" class="row left">
+{{ form_token_field }}
+<input type="hidden" name="next" value="{{ sign_in.next }}"><input type="hidden" name="email" value="{{ sign_in.email }}"><input type="hidden" name="resend" value="1">
+<button type="submit" class="btn small">{{ 'resend_code' | t }}</button><a class="btn small" href="{{ sign_in.restart_url }}">{{ 'use_another_email' | t }}</a>
+</form>
+</div>
+</div>
+</div>
+</section>
