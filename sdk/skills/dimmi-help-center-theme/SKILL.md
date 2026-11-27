@@ -64,7 +64,7 @@ dimmi theme publish --json acme-theme
 
 dimmi checks the whole theme again. If it refuses, every `theme_problem` names a file and line, and nothing changed for readers. On success, `theme_published` gives the version number and id (`thm_...`).
 
-`--upload-only` stores the version without making it live. To go back to the default theme or an earlier version, the person can call `PUT /api/v1/help-centers/{help_center}/live-theme` with `{"theme_id": null}` or the version's id.
+`--upload-only` stores the version without making it live. To go back to the default theme or an earlier version, the person can call `PATCH /api/v1/help-centers/{help_center}/live-theme` with `{"theme_id": null}` or the version's id.
 
 ## Limits to keep in mind
 

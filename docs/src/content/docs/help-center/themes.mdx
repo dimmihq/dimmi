@@ -176,7 +176,7 @@ A post without it is refused with `403`. A script that posts can send the token 
 Each publish keeps a new version and never changes old ones. To go back, make an earlier version live, or the default theme:
 
 ```bash
-curl -X PUT https://trydimmi.com/api/v1/help-centers/hc_1042/live-theme \
+curl -X PATCH https://trydimmi.com/api/v1/help-centers/hc_1042/live-theme \
   -H "Authorization: Bearer $DIMMI_TOKEN" -H "Content-Type: application/json" \
   -d '{"theme_id": null}'
 ```
