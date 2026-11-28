@@ -1,7 +1,7 @@
 import { resumeMail, stopMail } from "./support/database";
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
 import { deliverEmail, rawEmail } from "./support/inbound";
-import { openAddress } from "./support/inbox";
+import { openAddress, openComposer } from "./support/inbox";
 
 /*
  * suffixOf is the unique part of the person's address, so workspaces
@@ -33,7 +33,7 @@ it.describe("a reply that was not delivered", () => {
     await row.click();
 
     stopMail(person.email, customer);
-    await page.getByRole("button", { name: /Reply to Bob Stone/ }).click();
+    await openComposer(page, /Reply to Bob Stone/);
     await page.getByRole("textbox", { name: "Reply to Bob Stone" }).fill("It went out today.");
     await page.getByRole("button", { name: "Send", exact: true }).click();
 

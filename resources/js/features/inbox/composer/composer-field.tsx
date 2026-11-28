@@ -5,11 +5,12 @@
  * takes the place of a field mid-typing: keys pressed while the fields
  * swap would land nowhere. In a field nobody is in, it arrives at once;
  * in the field being written in, after a pause in the typing, and it
- * takes the focus over so writing carries on.
+ * takes the focus over so writing carries on. Once the editor has been
+ * preloaded, a field opens as the editor and never swaps.
  */
 import { type ComponentType, useCallback, useEffect, useRef, useState } from "react";
 
-import { loadEditor } from "./load-editor";
+import { loadEditor, loadedEditor } from "./load-editor";
 import type { RichEditorProps } from "./rich-editor";
 
 type Editor = ComponentType<RichEditorProps>;
@@ -41,9 +42,10 @@ function load(): Promise<Editor> {
 type Arrival = "first" | "aside" | "inside";
 
 export function ComposerField(props: RichEditorProps) {
-  const [editor, setEditor] = useState<{ component: Editor; arrival: Arrival } | undefined>(() =>
-    loaded ? { component: loaded, arrival: "first" } : undefined,
-  );
+  const [editor, setEditor] = useState<{ component: Editor; arrival: Arrival } | undefined>(() => {
+    const ready = loaded ?? loadedEditor();
+    return ready ? { component: ready, arrival: "first" } : undefined;
+  });
   const focused = useRef(false);
   const typedAt = useRef(0);
 
