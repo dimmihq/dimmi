@@ -110,13 +110,24 @@ export function retrying(
 }
 
 /*
+ * trimTrailingSlashes drops every "/" at the end of a URL, in linear time.
+ */
+function trimTrailingSlashes(url: string): string {
+  let end = url.length;
+  while (end > 0 && url[end - 1] === "/") {
+    end--;
+  }
+  return url.slice(0, end);
+}
+
+/*
  * createDimmiApi answers an openapi-fetch client for one token.
  */
 export function createDimmiApi(options: DimmiApiOptions): DimmiApi {
   if (!options.token) {
     throw new Error("dimmi: createDimmiApi needs a token.");
   }
-  const baseUrl = options.baseUrl ?? (options.host ? `${options.host.replace(/\/+$/, "")}/api/v1` : "");
+  const baseUrl = options.baseUrl ?? (options.host ? `${trimTrailingSlashes(options.host)}/api/v1` : "");
   if (!baseUrl) {
     throw new Error("dimmi: createDimmiApi needs host or baseUrl.");
   }
