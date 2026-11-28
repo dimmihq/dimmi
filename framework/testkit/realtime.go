@@ -98,6 +98,7 @@ type Realtime struct {
 	conn  *websocket.Conn
 	id    int
 	queue []realtimeFrame
+	inbox chan realtimeMessage
 }
 
 /*
@@ -121,7 +122,9 @@ func DialRealtime(tb testing.TB, baseURL string, opts RealtimeOptions) (*Realtim
 	require.NoError(tb, err)
 	Cleanup(tb, func() { _ = conn.CloseNow() })
 
-	c := &Realtime{tb: tb, conn: conn}
+	c := &Realtime{tb: tb, conn: conn, inbox: make(chan realtimeMessage, realtimeInbox)}
+	go c.listen()
+
 	reply := c.command(map[string]any{"connect": map[string]any{"token": opts.Token}})
 
 	return c, reply.Error
@@ -242,8 +245,13 @@ func (c *Realtime) Closed() int {
 	defer cancel()
 
 	for {
-		if _, _, err := c.conn.Read(ctx); err != nil {
-			return int(websocket.CloseStatus(err))
+		select {
+		case m := <-c.inbox:
+			if m.err != nil {
+				return int(websocket.CloseStatus(m.err))
+			}
+		case <-ctx.Done():
+			require.FailNow(c.tb, "the server did not close the connection")
 		}
 	}
 }
