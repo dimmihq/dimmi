@@ -49,8 +49,29 @@ export function startMonitoring(): void {
   if (environment === "production") {
     countVisits();
   }
-  recordSessions(environment);
 
+  // The recorder and the error tracker wait until the page has loaded, so
+  // they never compete with the page's own CSS, fonts and images. Web
+  // vitals are still measured from the start: the browser buffers them.
+  afterLoad(() => {
+    recordSessions(environment);
+    startTracking(environment);
+  });
+}
+
+/** Runs once the page has loaded and the browser is idle. */
+function afterLoad(run: () => void): void {
+  const idle = () =>
+    window.requestIdleCallback ? window.requestIdleCallback(run, { timeout: 2000 }) : setTimeout(run, 0);
+  if (document.readyState === "complete") {
+    idle();
+  } else {
+    window.addEventListener("load", idle, { once: true });
+  }
+}
+
+/** Starts the error tracker, which also reports page loads and web vitals. */
+function startTracking(environment: string): void {
   void import("@sentry/browser").then((Sentry) => {
     Sentry.init({
       dsn: `https://${key}@${new URL(tracker).host}/${project}`,
