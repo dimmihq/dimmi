@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/telemetry"
 
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
@@ -20,6 +21,24 @@ const (
 )
 
 /*
+conversationOf is the conversation a run is grouped under on the error
+tracker. A simulated chat has no conversation, so its turns share the
+chat's id, and a single simulated turn stands alone under its run's.
+*/
+func conversationOf(st *run, kind string) ids.UUID {
+	if kind != simulationKind {
+		return st.env.Conversation.ID
+	}
+	if st.sim != nil && st.sim.in.ChatID != (ids.UUID{}) {
+		return st.sim.in.ChatID
+	}
+	if st.rec != nil {
+		return st.rec.Run.ID
+	}
+	return ids.UUID{}
+}
+
+/*
 tracedRun runs one agent's turn inside an agent run span named after
 the agent as the workspace sees it, so the error tracker shows the run
 with its model and tool calls beneath it and groups the runs of one
@@ -34,8 +53,8 @@ func (r *Runner) tracedRun(
 
 	span.Set("gen_ai.agent.name", st.env.Agent.Name)
 	span.Set("gen_ai.agent.id", st.env.Agent.ID.String())
-	if kind != simulationKind {
-		span.Set("gen_ai.conversation.id", st.env.Conversation.ID.String())
+	if id := conversationOf(st, kind); id != (ids.UUID{}) {
+		span.Set("gen_ai.conversation.id", id.String())
 	}
 	span.Set("dimmi.workspace_id", st.env.Agent.WorkspaceID.String())
 	span.Set("dimmi.run.kind", kind)

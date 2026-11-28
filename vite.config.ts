@@ -124,7 +124,7 @@ export default defineConfig(({ command }) => ({
             "@dimmi/server": fileURLToPath(new URL("./sdk/server/src/index.ts", import.meta.url)),
             "@dimmi/browser": fileURLToPath(new URL("./sdk/browser/src/index.ts", import.meta.url)),
             "@dimmi/react": fileURLToPath(new URL("./sdk/react/src/index.ts", import.meta.url)),
-          },
+          } as Record<string, string>,
         },
         test: { name: "sdk", environment: "node", globals: true, include: ["sdk/*/src/**/*.test.ts"] },
       },

@@ -167,7 +167,7 @@ func (c *chat) agentTurn(ctx context.Context, ask agentAsk) (*pipeline.Simulatio
 	in := pipeline.SimulationInput{
 		WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, AgentID: answering, History: history, Message: msg,
 		Persona: c.script.persona, Mocks: c.script.mocks, State: c.state, Confirmed: confirmed,
-		StreamID: c.turnStream(at), Now: c.p.c.SimulatedAt,
+		StreamID: c.turnStream(at), ChatID: c.id, Now: c.p.c.SimulatedAt,
 	}
 	res, err := c.s.Simulator.Simulate(ctx, in)
 	var moved *pipeline.SimTransfer

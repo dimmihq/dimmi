@@ -13,8 +13,10 @@ import { startMonitoring } from "./monitoring";
 import { DEFAULT_TITLE, findRoute, routes } from "./routes";
 import { headElements } from "./seo";
 import { startSupport } from "./support";
+import { captureUtm } from "./track";
 
 if (typeof window !== "undefined") {
+  captureUtm();
   startMonitoring();
   startSupport();
   const target = document.getElementById("root");

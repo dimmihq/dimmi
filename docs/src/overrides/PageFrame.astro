@@ -35,9 +35,20 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 <script>
   import { startMonitoring } from "../../../site/src/monitoring";
   import { startSupport } from "../../../site/src/support";
+  import { captureUtm, track } from "../../../site/src/track";
 
+  captureUtm();
   startMonitoring();
   startSupport();
+
+  document.addEventListener("click", (event) => {
+    const button = (event.target as Element | null)?.closest<HTMLButtonElement>(".expressive-code .copy button");
+    if (!button) return;
+    const code = button.dataset.code ?? "";
+    if (window.location.pathname.startsWith("/docs/self-hosting/") || code.includes("install.sh")) {
+      track("install_copy", { location: "docs" });
+    }
+  });
 
   // Brings the current page's link into view in a long sidebar.
   const current = document.querySelector<HTMLElement>("#docs-sidebar [aria-current='page']");

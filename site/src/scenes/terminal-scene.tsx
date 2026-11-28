@@ -2,9 +2,14 @@
  * The self-host install, played as a terminal: the one command, then the
  * installer's real stages (prepare, configure, start, check) ticking off.
  */
+import { RiCheckLine, RiFileCopyLine } from "@remixicon/react";
 import { motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 
+import { track } from "../track";
 import { useScene } from "./use-scene";
+
+const INSTALL_COMMAND = "curl -fsSL https://github.com/dimmihq/dimmi/releases/latest/download/install.sh | bash";
 
 const lines = [
   { kind: "cmd", text: "curl -fsSL …/install.sh | bash" },
@@ -17,17 +22,47 @@ const lines = [
 
 export function TerminalScene() {
   const { ref, step } = useScene(lines.length, { interval: [1400, 900, 900, 1300, 900], hold: 4200 });
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const copyCommand = () => {
+    track("install_copy", { location: "home" });
+    void navigator.clipboard?.writeText(INSTALL_COMMAND).catch(() => undefined);
+    setCopied(true);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div
       ref={ref}
       className="w-full overflow-hidden rounded-t-xl border border-b-0 border-neutral-800 bg-neutral-950 shadow-[0_24px_60px_-28px_rgb(0_0_0/0.45)]"
     >
-      <div className="flex items-center gap-1.5 border-b border-neutral-800 px-4 py-3">
+      <div className="flex items-center gap-1.5 border-b border-neutral-800 px-4 py-2.5">
         <span className="size-2.5 rounded-full bg-neutral-700" />
         <span className="size-2.5 rounded-full bg-neutral-700" />
         <span className="size-2.5 rounded-full bg-neutral-700" />
         <span className="ms-3 font-mono text-caption-1-regular text-neutral-500">root@support-1</span>
+        <button
+          type="button"
+          onClick={copyCommand}
+          aria-label="Copy install command"
+          className="ms-auto inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 font-mono text-[11px] leading-4 text-neutral-300 transition-colors hover:border-neutral-700 hover:text-neutral-100 focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:outline-none"
+        >
+          {copied ? (
+            <>
+              <RiCheckLine className="size-3.5 text-accent-400" aria-hidden />
+              Copied
+            </>
+          ) : (
+            <>
+              <RiFileCopyLine className="size-3.5 text-neutral-400" aria-hidden />
+              Copy
+            </>
+          )}
+        </button>
       </div>
       <div className="flex h-[312px] flex-col gap-2 px-5 py-5 font-mono text-[12.5px] leading-6">
         {lines.slice(0, step + 1).map((line) => (

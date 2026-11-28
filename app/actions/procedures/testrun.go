@@ -62,6 +62,7 @@ func (p *Procedures) runTestCase(ctx context.Context, run simulated) TestResult 
 
 	limit := min(len(script.messages)+extraTurns, maxTestMessages)
 	chat := &played{
+		id:       ids.New(),
 		observed: procedure.Observed{Branches: map[string]string{}}, sent: make([]bool, len(script.messages)),
 	}
 	chat.sent[0] = true
@@ -107,6 +108,7 @@ every transfer and handover recorded between them. Wrote are the
 models that wrote the agent's replies, so the judge is none of them.
 */
 type played struct {
+	id        ids.UUID
 	history   []pipeline.SimMessage
 	state     *pipeline.SimState
 	observed  procedure.Observed
@@ -161,7 +163,7 @@ func (p *Procedures) playTurn(ctx context.Context, run simulated, chat *played, 
 	turn, err := answer(ctx, SimulateInput{
 		Membership: run.m, ID: run.id, History: chat.history, Message: msg.Text, Persona: script.persona,
 		Mocks: script.mocks, State: chat.state, Confirmed: confirmed(msg, chat.state),
-		StreamID: run.w.turnStream(turnAt), Now: run.c.SimulatedAt, HeldBy: chat.heldBy,
+		StreamID: run.w.turnStream(turnAt), ChatID: chat.id, Now: run.c.SimulatedAt, HeldBy: chat.heldBy,
 	})
 	if err != nil {
 		return TestTurn{}, err

@@ -8,6 +8,7 @@ import { GITHUB_URL } from "../links";
 import { TerminalScene } from "../scenes/terminal-scene";
 import { useStartInView } from "../scenes/use-scene";
 import { SDK_COUNT } from "../sdks";
+import { track } from "../track";
 
 const TAB_DURATION = 4200;
 
@@ -132,7 +133,7 @@ function Card({
   anchor: string;
   title: string;
   body: string;
-  link: { href: string; label: string };
+  link: { href: string; label: string; onClick?: () => void };
   children: React.ReactNode;
 }) {
   return (
@@ -142,7 +143,9 @@ function Card({
         <h3 className="text-[24px] leading-8 font-medium tracking-[-0.02em] text-text-primary">{title}</h3>
         <p className="max-w-[480px] text-[16px] leading-7 text-pretty text-text-secondary">{body}</p>
         <span className="mt-2">
-          <MonoLink href={link.href}>{link.label}</MonoLink>
+          <MonoLink href={link.href} onClick={link.onClick}>
+            {link.label}
+          </MonoLink>
         </span>
       </div>
     </div>
@@ -161,7 +164,11 @@ export function SelfHost() {
           anchor="self-host"
           title="Self-host"
           body="Run one script on a Linux server for HTTPS, Postgres, and easy updates with dimmictl. You pay your host, and we take $0."
-          link={{ href: GITHUB_URL, label: "View on GitHub" }}
+          link={{
+            href: GITHUB_URL,
+            label: "View on GitHub",
+            onClick: () => track("github_click", { location: "self_host" }),
+          }}
         >
           <TerminalScene />
         </Card>

@@ -10,6 +10,7 @@ import { useState } from "react";
 
 import type { Me } from "@/lib/api/auth";
 import { updateOnboarding, type Workspace } from "@/lib/api/workspace";
+import { trackSignupDone } from "@/lib/traffic";
 
 import { ChannelsStep } from "./channels-step";
 import { OnboardingFrame } from "./frame";
@@ -102,6 +103,9 @@ export function Onboarding({ me, workspace: initial, canSetUp, canLeave = false 
           name={name}
           label={label}
           onSaved={(id) => {
+            if (workspace === null) {
+              trackSignupDone(me.instance.edition);
+            }
             setWorkspace(id);
             go(nextStep("workspace"), id);
           }}

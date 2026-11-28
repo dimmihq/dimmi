@@ -1,11 +1,13 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 
 import { SignupForm } from "@/features/auth/signup-form";
 import { useSignedIn } from "@/features/auth/use-signed-in";
 import { authConfigQuery } from "@/lib/api/auth";
 import { safeRedirect } from "@/lib/location";
 import { currentUser } from "@/lib/session";
+import { trackSignupStarted } from "@/lib/traffic";
 
 interface SignupSearch {
   redirect?: string;
@@ -27,6 +29,14 @@ function SignupPage() {
   const search = Route.useSearch();
   const { data: config } = useSuspenseQuery(authConfigQuery);
   const target = safeRedirect(search.redirect);
+  const tracked = useRef(false);
+
+  useEffect(() => {
+    if (!tracked.current && config.signup_mode === "open") {
+      tracked.current = true;
+      trackSignupStarted(config.edition);
+    }
+  }, [config.edition, config.signup_mode]);
 
   return <SignupForm config={config} redirect={target} onSignedIn={useSignedIn(target)} />;
 }

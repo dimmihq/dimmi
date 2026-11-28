@@ -5,6 +5,7 @@ import { ButtonLink } from "@/components/base/buttons/button";
 import { GitHubStars } from "../components/github-stars";
 import { APP_URL } from "../links";
 import { HeroProduct } from "../scenes/hero-product";
+import { track } from "../track";
 
 const highlights = [
   "No per-seat pricing",
@@ -42,7 +43,11 @@ export function Hero() {
             MIT. Run on our cloud with free seats, or host it yourself for $0.
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <ButtonLink href={`${APP_URL}/signup`} trailingIcon={RiArrowRightLine}>
+            <ButtonLink
+              href={`${APP_URL}/signup`}
+              trailingIcon={RiArrowRightLine}
+              onClick={() => track("cta_start_free", { location: "hero" })}
+            >
               Start free, no card
             </ButtonLink>
             <GitHubStars location="hero" />

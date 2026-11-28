@@ -4,6 +4,7 @@ import { ButtonLink } from "@/components/base/buttons/button";
 
 import { Section } from "../components/container";
 import { APP_URL, GITHUB_URL } from "../links";
+import { track } from "../track";
 
 /* Rays fanning up from the bottom edge, each ending in a small node. */
 const rays = Array.from({ length: 34 }, (_, i) => {
@@ -25,10 +26,19 @@ export function FinalCta() {
           Try dimmi free on our cloud, or self-host it and pay us $0.
         </h2>
         <div className="flex flex-wrap justify-center gap-3">
-          <ButtonLink href={`${APP_URL}/signup`} trailingIcon={RiArrowRightLine}>
+          <ButtonLink
+            href={`${APP_URL}/signup`}
+            trailingIcon={RiArrowRightLine}
+            onClick={() => track("cta_start_free", { location: "final_cta" })}
+          >
             Start free, no card
           </ButtonLink>
-          <ButtonLink href={GITHUB_URL} variant="secondary" leadingIcon={RiGithubFill}>
+          <ButtonLink
+            href={GITHUB_URL}
+            variant="secondary"
+            leadingIcon={RiGithubFill}
+            onClick={() => track("github_click", { location: "final_cta" })}
+          >
             Self-host on GitHub
           </ButtonLink>
         </div>
