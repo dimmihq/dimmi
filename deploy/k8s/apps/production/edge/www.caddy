@@ -1,0 +1,4 @@
+# The www name only sends visitors to the bare domain, path and query kept.
+www.trydimmi.com {
+	redir https://trydimmi.com{uri} 308
+}
