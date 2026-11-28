@@ -35,8 +35,7 @@ import (
 Web declares the browser page routes.
 */
 func Web(a *app.App) {
-	spa := &web.AppController{Vite: a.Vite, Errors: a.Errors, Reporting: reporting(a), Recording: recording(a),
-		Support: spaview.Support{Messenger: a.Config.Frontend.SupportMessenger}}
+	spa := appController(a)
 	redirect := &web.OAuthRedirectController{
 		Providers: a.Providers, Attempts: a.OAuthAttempts, Cookies: a.Cookies, Clock: a.Clock,
 		ConfirmationTTL: a.Config.Auth.PasswordConfirmation.TTL, Errors: a.Errors,
@@ -86,6 +85,16 @@ func Web(a *app.App) {
 	})
 
 	ssoPages(a)
+}
+
+/*
+appController builds the controller that serves the app's pages.
+*/
+func appController(a *app.App) *web.AppController {
+	return &web.AppController{
+		Vite: a.Vite, Errors: a.Errors, Reporting: reporting(a), Recording: recording(a),
+		Support: spaview.Support{Messenger: a.Config.Frontend.SupportMessenger},
+	}
 }
 
 /*

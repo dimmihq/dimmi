@@ -154,7 +154,8 @@ func TestAppPage(t *testing.T) {
 
 	t.Run("names the server's own messenger to the app only when one is set", func(t *testing.T) {
 		t.Parallel()
-		tc := tests.New(t, withBuild(), tests.WithEnv("DIMMI_FRONTEND__SUPPORT_MESSENGER=wgt_01m89n8mc6e64trfb4yt4xfh1p"))
+		tc := tests.New(t, withBuild(),
+			tests.WithEnv("DIMMI_FRONTEND__SUPPORT_MESSENGER=wgt_01m89n8mc6e64trfb4yt4xfh1p"))
 
 		res := tc.Client().Send(fhttp.MethodGet, "/d", nil).AssertOK()
 		assert.Contains(t, string(res.Body),
