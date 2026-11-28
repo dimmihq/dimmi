@@ -12,8 +12,10 @@ import { App } from "./app";
 import { startMonitoring } from "./monitoring";
 import { DEFAULT_TITLE, findRoute, routes } from "./routes";
 import { headElements } from "./seo";
+import { captureUtm } from "./track";
 
 if (typeof window !== "undefined") {
+  captureUtm();
   startMonitoring();
   const target = document.getElementById("root");
   if (target) {

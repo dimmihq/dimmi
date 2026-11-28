@@ -50,7 +50,7 @@ const parts: PartSummary[] = [
     id: "cookie-notice",
     numeral: "III",
     title: "Cookie Notice",
-    description: "Every first-party cookie and browser storage key. Zero ads.",
+    description: "Every first-party cookie and browser storage key, plus cookieless visit counts.",
     items: [{ id: "cookies-inventory", label: "III.1 Complete cookie table" }],
   },
   {
@@ -137,10 +137,10 @@ export function PrivacyPage() {
           Your database, files, and backups live on Hetzner servers and object storage in Germany (EU), and
           outbound/inbound email runs through AWS in Frankfurt, Germany. When a workspace enables built-in AI features,
           prompt text goes to US AI providers (Anthropic, OpenAI, Voyage AI, and Cloudflare for the Clef decision
-          model). We never sell personal data, we run zero advertising trackers and zero third-party analytics on our
-          website and docs, and no subprocessor trains AI models on Customer Data. Our website, docs, and dashboard
-          record masked sessions on our own servers in the EU, only to operate, support, analyze, and improve dimmi.
-          Your customers are never recorded.
+          model). We never sell personal data, we set zero analytics or advertising cookies (trydimmi.com counts visits
+          and clicks on our own Rustrak server without cookies or stored IP addresses), and no subprocessor trains AI
+          models on Customer Data. Our website, docs, and dashboard record masked sessions on our own servers in the EU,
+          only to operate, support, analyze, and improve dimmi. Your customers are never recorded.
         </p>
       </Clause>
 
@@ -176,7 +176,7 @@ export function PrivacyPage() {
           rows={[
             [
               "Website & docs visitors",
-              "Minimal server access logs, masked session recordings kept on our own servers, and local theme preference (zero ad trackers, zero third-party analytics).",
+              "Minimal server access logs, cookieless visit and click counts on our own Rustrak server (daily-salted hash; no stored IP address), masked session recordings kept on our own servers, and local theme preference.",
               "Data Controller",
               "Part I (Privacy Policy)",
             ],
@@ -412,9 +412,10 @@ export function PrivacyPage() {
         <p>
           We protect data using TLS in transit, Argon2id password hashing, passkeys and 2FA, SAML/OIDC SSO,
           per-workspace credential encryption, PostgreSQL row-level security, ClamAV scanning, and 365-day audit logs
-          (full details and honest boundaries in <LegalLink href="#security-overview">Part VI</LegalLink>). We use only
-          first-party cookies and browser storage with zero ads, and our masked session recorder runs on our own servers
-          (full inventory in <LegalLink href="#cookie-notice">Part III</LegalLink>).
+          (full details and honest boundaries in <LegalLink href="#security-overview">Part VI</LegalLink>). We set zero
+          analytics or advertising cookies, count visits on trydimmi.com without cookies on our own Rustrak server, and
+          run our masked session recorder on our own servers (full inventory in{" "}
+          <LegalLink href="#cookie-notice">Part III</LegalLink>).
         </p>
       </Clause>
 

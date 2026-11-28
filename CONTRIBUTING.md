@@ -133,6 +133,19 @@ Run the matching generator whenever you edit its source files:
 - **Config structs (`config/`):** `make config-example`
 - **Routes, requests, resources, or webhook events:** run `make api-snapshot`, `make api-compat`, `make sdk-check`, and `make sdk-compat` in that order, then commit the updated snapshots in `tests/contracts/`. Never hand-edit generated SDK files.
 
+## Marketing links and UTM parameters
+
+Tag external links to `trydimmi.com` with consistent `utm_*` query parameters so Rustrak Web Traffic groups traffic cleanly. Keep the README link pattern as `utm_source=github&utm_medium=readme&utm_content=<spot>`.
+
+| Parameter | Allowed values | Notes |
+| --- | --- | --- |
+| `utm_source` | `x`, `reddit`, `hn`, `devto`, `producthunt`, `github`, `whatsapp`, `linkedin`, or the directory name | Where the link is posted. |
+| `utm_medium` | `social`, `community`, `launch`, `directory`, or `readme` | Channel category. |
+| `utm_campaign` | Short lowercase slug, such as `showhn-dec26` | Optional campaign or launch name. |
+| `utm_content` | The specific post or spot | Distinguishes links within the same source. |
+
+The marketing site and docs store the first-touch `utm_*` values in `sessionStorage` (`dimmi_utm`) for the current browser tab. When a visitor opens `/signup`, `signup_started` reads `utm_source` from that saved first touch (or the current URL) without setting cookies.
+
 ## Rules to remember
 
 - **Protect public contracts:** changes to `/api/v1`, `/widget/v1`, webhooks, and `sdk/` stay additive only. See [AGENTS.md](AGENTS.md).

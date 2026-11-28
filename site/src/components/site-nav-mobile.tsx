@@ -8,6 +8,7 @@ import { cx } from "@/utils/cx";
 import { CHANNELS } from "../channels";
 import { APP_URL } from "../links";
 import { PRODUCT_GROUPS } from "../products";
+import { track } from "../track";
 import { GitHubStars } from "./github-stars";
 
 const heading = "px-3 pt-4 pb-1 font-mono text-[11px] tracking-[0.14em] text-text-tertiary uppercase";
@@ -93,7 +94,15 @@ export function SiteNavMobile({
                 <ButtonLink href={`${APP_URL}/login`} variant="secondary">
                   Sign in
                 </ButtonLink>
-                <ButtonLink href={`${APP_URL}/signup`}>Start free</ButtonLink>
+                <ButtonLink
+                  href={`${APP_URL}/signup`}
+                  onClick={() => {
+                    track("cta_start_free", { location: "mobile_nav" });
+                    close();
+                  }}
+                >
+                  Start free
+                </ButtonLink>
               </div>
             </DrawerFooter>
           </>

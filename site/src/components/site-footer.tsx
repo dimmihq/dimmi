@@ -5,6 +5,7 @@ import { CHANNELS } from "../channels";
 import { LEGAL_ENTITY } from "../legal/constants";
 import { APP_URL, GITHUB_URL } from "../links";
 import { PRODUCT_GROUPS } from "../products";
+import { track } from "../track";
 
 // Where each footer link goes.
 const pages = new Map<string, string>([
@@ -57,6 +58,7 @@ export function SiteFooter() {
           </p>
           <a
             href={GITHUB_URL}
+            onClick={() => track("github_click", { location: "footer" })}
             className="inline-flex items-center gap-1.5 self-start text-body-medium text-text-secondary transition-colors hover:text-text-primary"
           >
             <RiGithubFill className="size-[18px]" aria-hidden />
@@ -72,6 +74,9 @@ export function SiteFooter() {
                   {pages.has(link) ? (
                     <a
                       href={pages.get(link)}
+                      onClick={
+                        link === "GitHub" ? () => track("github_click", { location: "footer_developers" }) : undefined
+                      }
                       className="text-body-regular text-text-secondary transition-colors hover:text-text-primary"
                     >
                       {link}

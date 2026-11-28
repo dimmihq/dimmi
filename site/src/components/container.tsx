@@ -102,9 +102,13 @@ export function Tag({ children, className }: { children: ReactNode; className?: 
 }
 
 /* A text link in mono capitals with an arrow that nudges on hover. */
-export function MonoLink({ href, children }: { href: string; children: ReactNode }) {
+export function MonoLink({ href, onClick, children }: { href: string; onClick?: () => void; children: ReactNode }) {
   return (
-    <a href={href} className={cx("group inline-flex items-center gap-1.5 self-start text-text-primary", mono)}>
+    <a
+      href={href}
+      onClick={onClick}
+      className={cx("group inline-flex items-center gap-1.5 self-start text-text-primary", mono)}
+    >
       {children}
       <RiArrowRightLine className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
     </a>

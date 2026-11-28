@@ -9,6 +9,7 @@ import { cx } from "@/utils/cx";
 import { CHANNEL_PATHS, CHANNELS } from "../channels";
 import { APP_URL } from "../links";
 import { PRODUCT_GROUPS, PRODUCT_PATHS } from "../products";
+import { track } from "../track";
 import { GitHubStars } from "./github-stars";
 import { SiteNavMobile } from "./site-nav-mobile";
 
@@ -54,7 +55,11 @@ export function SiteNav({ path }: { path: string }) {
           <ButtonLink href={`${APP_URL}/login`} variant="secondary" size="small" className="hidden sm:inline-flex">
             Sign in
           </ButtonLink>
-          <ButtonLink href={`${APP_URL}/signup`} size="small">
+          <ButtonLink
+            href={`${APP_URL}/signup`}
+            size="small"
+            onClick={() => track("cta_start_free", { location: "nav" })}
+          >
             Start free
           </ButtonLink>
           <div className="lg:hidden">

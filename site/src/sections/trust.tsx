@@ -1,6 +1,8 @@
 import { RiCheckLine } from "@remixicon/react";
+import { useEffect, useRef } from "react";
 
 import { MonoLink, Section } from "../components/container";
+import { track } from "../track";
 
 const security = [
   "SAML single sign-on",
@@ -19,10 +21,33 @@ const pricing = [
 
 const title = "text-[32px] leading-[1.14] font-medium tracking-[-0.025em] text-text-primary max-sm:text-[26px]";
 
+let pricingSectionViewed = false;
+
 export function Trust() {
+  const pricingRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = pricingRef.current;
+    if (!el || pricingSectionViewed || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting && !pricingSectionViewed) {
+          pricingSectionViewed = true;
+          track("pricing_section_view");
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.25 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <Section frameClassName="grid grid-cols-1 gap-y-16 lg:grid-cols-2 [&>*]:min-w-0">
-      <div className="flex flex-col gap-4 lg:pe-16">
+      <div ref={pricingRef} className="flex flex-col gap-4 lg:pe-16">
         <h3 className={title}>Pricing you can do in 10 seconds.</h3>
         <p className="text-[16px] leading-7 text-text-secondary">
           No plans to compare and no seat fees. Every workspace gets the full product on day one.

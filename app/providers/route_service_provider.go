@@ -49,6 +49,7 @@ import (
 	appmiddleware "github.com/dimmihq/dimmi/app/http/middleware"
 	"github.com/dimmihq/dimmi/app/support/helpsample"
 	"github.com/dimmihq/dimmi/app/support/widgetassets"
+	appconfig "github.com/dimmihq/dimmi/config"
 )
 
 /*
@@ -230,6 +231,9 @@ func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources
 		extra.Scripts = append(extra.Scripts, recorder...)
 		extra.Connect = append(extra.Connect, recorder...)
 	}
+	if !slices.Contains(params, "embeds") {
+		extra.Scripts = append(extra.Scripts, trafficScriptSources(p.App)...)
+	}
 	if slices.Contains(params, "embeds") || slices.Contains(params, "dashboard") {
 		extra.Frames = append(extra.Frames, markdown.EmbedOrigins()...)
 	}
@@ -266,6 +270,18 @@ func sessionsSources(a *app.App) []string {
 	}
 
 	return nil
+}
+
+/*
+trafficScriptSources returns the Rustrak origin for the cloud signup
+events script, and nothing on self-hosted builds.
+*/
+func trafficScriptSources(a *app.App) []string {
+	if a.Config.App.Edition != appconfig.EditionCloud {
+		return nil
+	}
+
+	return errorsSources(a)
 }
 
 /*

@@ -15,6 +15,8 @@
  * is sent, and decide whether visits are counted as well.
  */
 
+import { attachTrafficScript } from "./track";
+
 const tracker = "https://errors.trydimmi.com";
 const project = "3";
 const key = "ee0d3c1646fa87790f5f180d1d4ba547";
@@ -69,6 +71,7 @@ function countVisits(): void {
   script.src = `${tracker}/public/web-traffic/script.js`;
   script.dataset.project = project;
   script.dataset.key = key;
+  attachTrafficScript(script);
   document.head.append(script);
 }
 
