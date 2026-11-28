@@ -1,7 +1,9 @@
 package realtime_test
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -73,6 +75,20 @@ func TestRealtimeConnections(t *testing.T) {
 
 		require.NotNil(t, refusal)
 		assert.Equal(t, unauthorized, refusal.Code)
+	})
+
+	t.Run("stays open while a quiet client answers the server's pings", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, tests.WithEnv("DIMMI_BROADCASTING__PING_INTERVAL=500ms"))
+		url := tc.RealtimeURL()
+
+		c := tc.ListenAs(tc.Owner, url)
+		// Several pings, each with its 200ms pong deadline, pass before the next command.
+		quiet, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+		defer cancel()
+		<-quiet.Done()
+
+		assert.Nil(t, c.Subscribe("workspace:"+public(models.PrefixWorkspace, tc.Workspace.Workspace.ID)).Error)
 	})
 
 	t.Run("refuses every connection while the application is still booting", func(t *testing.T) {
