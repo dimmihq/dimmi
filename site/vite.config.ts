@@ -76,5 +76,7 @@ export default defineConfig({
     proxy: { "/docs": { target: "http://localhost:5190", ws: true } },
   },
   preview: { host: "localhost", port: 5181, strictPort: true },
-  build: { outDir: "dist", emptyOutDir: true },
+  // Source maps are served beside the scripts: the site's source is public
+  // anyway, and they give the error tracker and browsers readable stacks.
+  build: { outDir: "dist", emptyOutDir: true, sourcemap: true },
 });
