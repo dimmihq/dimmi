@@ -14,9 +14,15 @@ CADDYFILE="$(dirname "$0")/../deploy/k8s/apps/base/edge/Caddyfile"
 
 matcher=" $(grep -E '^\s*@site path ' "$CADDYFILE" | sed -E 's/^\s*@site path//') "
 missing=0
-for entry in "$DIST"/*; do
+for entry in "$DIST"/* "$DIST"/.well-known; do
+  [[ -e "$entry" ]] || continue
   name="$(basename "$entry")"
-  if [[ -d "$entry" ]]; then
+  if [[ "$name" == ".well-known" ]]; then
+    # The app answers most of /.well-known, so the site's files there are
+    # listed one by one.
+    want=()
+    for file in "$entry"/*; do want+=("/.well-known/$(basename "$file")"); done
+  elif [[ -d "$entry" ]]; then
     [[ "$name" == "index.html" ]] && continue
     if [[ -f "$entry/index.html" ]]; then want=("/$name" "/$name/*"); else want=("/$name/*"); fi
   else

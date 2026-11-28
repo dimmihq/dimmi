@@ -15,6 +15,7 @@ configMapGenerator:
     behavior: merge
     files:
       - help.caddy
+      - www.caddy
   - name: edge
     literals:
       - HOST=trydimmi.com

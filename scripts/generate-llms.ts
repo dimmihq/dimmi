@@ -8,7 +8,7 @@
  * - Full Markdown docs & REST API reference index from site/dist/docs/llms.txt
  * - Complete Markdown corpus from site/dist/docs/llms-full.txt
  */
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -299,6 +299,8 @@ export function generateLlms(distDir = fileURLToPath(new URL("../site/dist", imp
   const fullContent = `${fullHeader}\n\n---\n\n${docsFullBody}`;
   writeFileSync(join(distDir, "llms-full.txt"), fullContent, "utf8");
 
+  writeArdManifest(distDir, sdks);
+
   return {
     llmsLines: llmsContent.trimEnd().split("\n").length,
     fullBytes: Buffer.byteLength(fullContent, "utf8"),
@@ -311,4 +313,43 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   process.stdout.write(
     `llms: wrote site/dist/llms.txt (${llmsLines} lines) and site/dist/llms-full.txt (${fullKb} KB)\n`,
   );
+}
+
+/**
+ * Writes the Agentic Resource Discovery manifest (ARD v0.91) at
+ * /.well-known/ard.json: the MCP server's card and the install skill,
+ * from the same docs/sdks.json the llms.txt files read, so it never drifts.
+ */
+function writeArdManifest(distDir: string, sdks: SdksManifest): void {
+  const publisher = new URL(SITE_URL).hostname;
+  const manifest = {
+    entries: [
+      {
+        identifier: `urn:air:${publisher}:server:mcp`,
+        displayName: "dimmi MCP server",
+        type: "application/mcp-server-card+json",
+        url: sdks.mcp.server_card,
+        description: `Remote MCP server at ${sdks.mcp.url} (Streamable HTTP, OAuth 2.0 or Bearer API token): search knowledge, manage conversations, contacts, tickets, help articles and procedures, or propose reviewable Operator edits.`,
+        representativeQueries: [
+          "connect my AI agent to my dimmi support inbox",
+          "search dimmi help articles and conversations from an MCP client",
+          "manage customer support tickets with an MCP server",
+        ],
+      },
+      {
+        identifier: `urn:air:${publisher}:skill:${sdks.install_skill.name}`,
+        displayName: "Install dimmi with an AI coding agent",
+        type: "application/agent-skills+md",
+        url: sdks.install_skill.skill_md,
+        description: `Agent skill that adds the dimmi messenger and SDKs to an app. Guide: ${sdks.install_skill.docs}`,
+        representativeQueries: [
+          "add the dimmi chat messenger to my app",
+          "install the dimmi SDK with my coding agent",
+          "set up an open-source Intercom alternative in my codebase",
+        ],
+      },
+    ],
+  };
+  mkdirSync(join(distDir, ".well-known"), { recursive: true });
+  writeFileSync(join(distDir, ".well-known", "ard.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 }
