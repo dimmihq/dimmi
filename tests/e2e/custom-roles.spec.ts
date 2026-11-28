@@ -1,6 +1,6 @@
 import { addTeammate } from "./support/database";
 import { createAccount, expect, test as it, signIn } from "./support/fixtures";
-import { startConversation } from "./support/inbox";
+import { openComposer, startConversation } from "./support/inbox";
 
 it.describe("custom roles", () => {
   it("an admin makes a read only role and a member with it cannot reply", async ({ page, guest, person, request }) => {
@@ -37,7 +37,7 @@ it.describe("custom roles", () => {
     await guest.setViewportSize({ width: 1440, height: 900 });
     await signIn(guest, teammate);
     await guest.goto(`/d/inbox/unassigned/${conversation}`);
-    await guest.getByRole("button", { name: /Reply to Emily Johnson/ }).click();
+    await openComposer(guest, /Reply to Emily Johnson/);
     await guest.getByRole("textbox", { name: "Reply to Emily Johnson" }).fill("I should not be able to send this.");
     await guest.getByRole("button", { name: "Send", exact: true }).click();
 

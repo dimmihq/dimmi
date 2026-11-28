@@ -33,7 +33,7 @@ import {
   RiUser3Line,
 } from "@remixicon/react";
 import { type Editor, EditorContent, useEditor, useEditorState } from "@tiptap/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { VariableToken } from "@/features/broadcasts/writer/variable-token";
@@ -281,6 +281,14 @@ export default function RichEditor({
 
   linkRef.current = () => setLinking((editor?.getAttributes("link").href as string | undefined) ?? "https://");
 
+  // The editor's own autofocus waits a frame. When it takes the place of
+  // a plain field, keys pressed in that frame would land nowhere, so it
+  // takes the focus as it mounts, with the caret already at the end.
+  useLayoutEffect(() => {
+    if (autoFocus && editor && !editor.isDestroyed && editor.view.dom.isConnected) {
+      editor.view.focus();
+    }
+  }, [editor, autoFocus]);
   useEffect(() => whenReady(editor, (ready) => syncContent(ready, value)), [editor, value]);
   useEffect(
     () => whenReady(editor, (ready) => autoFocus && focusKey && ready.commands.focus("end")),
