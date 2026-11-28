@@ -31,6 +31,19 @@ type Call struct {
 }
 
 /*
+Inner is the tool a call_tool request names and the arguments it
+carries for it, an empty object when it carries none.
+*/
+func Inner(args json.RawMessage) (string, json.RawMessage) {
+	var in struct {
+		Name      string          `json:"name"`
+		Arguments json.RawMessage `json:"arguments"`
+	}
+	_ = json.Unmarshal(orEmpty(args), &in)
+	return in.Name, orEmpty(in.Arguments)
+}
+
+/*
 Check reads a call_tool request and checks it: the tool exists, is
 loaded, and its arguments match its schema. A refusal is one short
 sentence the model can act on.

@@ -152,6 +152,7 @@ func (r *Runner) openLayer(ctx context.Context, st *run) {
 	ls := &layerState{set: set, earlier: earlier, fixed: fixed}
 	ls.suggested = set.Suggest(ctx, toolset.Keywords{}, r.redactFor(st.env, st.env.pendingText()))
 	st.layer = ls
+	set.WithDirect(specNames(r.layerSpecs(st)))
 
 	lp := st.loop
 	lp.system += "\n\n" + set.Prompt()
@@ -220,7 +221,12 @@ func (r *Runner) layerCall(ctx context.Context, st *run, call contracts.ToolCall
 		out, err := set.Load(call.Arguments)
 		return call.Name, out, err
 	}
-	if inner := innerName(call.Arguments); set.IsFixed(inner) {
+	inner, innerArgs := toolset.Inner(call.Arguments)
+	if inner == toolset.LoadTool {
+		out, err := set.Load(innerArgs)
+		return inner, out, err
+	}
+	if set.IsFixed(inner) {
 		return r.runFixed(ctx, st, inner, call.Arguments)
 	}
 	c, err := set.Check(call.Arguments)
@@ -266,14 +272,14 @@ func (r *Runner) runFixed(ctx context.Context, st *run, name string, args json.R
 }
 
 /*
-innerName is the tool a call_tool request names.
+specNames are the names of specs.
 */
-func innerName(args json.RawMessage) string {
-	var in struct {
-		Name string `json:"name"`
+func specNames(specs []contracts.ToolSpec) []string {
+	out := make([]string, 0, len(specs))
+	for _, s := range specs {
+		out = append(out, s.Name)
 	}
-	_ = json.Unmarshal(args, &in)
-	return in.Name
+	return out
 }
 
 /*

@@ -134,6 +134,7 @@ type Set struct {
 	limits  Limits
 	listMax int
 	fixed   map[string]bool
+	direct  []string
 	alias   *aliases
 }
 
@@ -184,6 +185,17 @@ func (s *Set) WithFixed(names []string) *Set {
 	for _, n := range names {
 		s.fixed[n] = true
 	}
+	return s
+}
+
+/*
+WithDirect names the tools the model is offered by name this run, the
+layer's own among them, so the instructions can say which tools are
+ready and never loaded.
+*/
+func (s *Set) WithDirect(names []string) *Set {
+	s.direct = slices.Clone(names)
+	slices.Sort(s.direct)
 	return s
 }
 
@@ -272,16 +284,17 @@ func Specs() []contracts.ToolSpec {
 		{
 			Name: LoadTool,
 			Description: "Load tools from the groups in your instructions. Pass names to get their full " +
-				"definitions, or a group to list its tools. Then run a tool with call_tool.",
+				"definitions, or a group to list its tools. Then run a tool with call_tool. Call load_tools by " +
+				"name, never through call_tool.",
 			Schema: json.RawMessage(`{"type":"object","properties":{"names":{"type":"array","items":` +
 				`{"type":"string"},"description":"Tool names to load."},"group":{"type":"string",` +
 				`"description":"A group to list."}},"additionalProperties":false}`),
 		},
 		{
 			Name: CallTool,
-			Description: "Run a tool from the groups. Load it first unless you know its arguments; " +
-				"arguments that do not fit are refused with the tool's definition. To read the rest of a cut text, " +
-				"run read_rest with its ref.",
+			Description: "Run a tool from the groups, and only those: a tool in this list is called by name. " +
+				"Load a group's tool first unless you know its arguments; arguments that do not fit are refused " +
+				"with the tool's definition. To read the rest of a cut text, run read_rest with its ref.",
 			Schema: json.RawMessage(`{"type":"object","properties":{"name":{"type":"string"},` +
 				`"arguments":{"type":"object"}},"required":["name"],"additionalProperties":false}`),
 		},
@@ -289,8 +302,11 @@ func Specs() []contracts.ToolSpec {
 }
 
 /*
-Prompt is the instructions' list of groups, one line each, the tool
-names of a small group included.
+Prompt is the instructions' part on tools: the tools called by name,
+which are ready and never loaded, then the list of groups, one line
+each, the tool names of a small group included. Naming the ready tools
+matters: told only that tools are loaded and then run through
+call_tool, a model ran load_tools itself through call_tool.
 */
 func (s *Set) Prompt() string {
 	members := map[string][]string{}
@@ -299,9 +315,14 @@ func (s *Set) Prompt() string {
 		members[g] = append(members[g], n)
 	}
 	var b strings.Builder
-	b.WriteString("More tools are in these groups. They are never called by name: load what you need with " +
-		"load_tools, then run it with call_tool, passing the tool's name and arguments. Loaded tools last until " +
-		"the next message.\n")
+	if len(s.direct) > 0 {
+		b.WriteString("These tools are ready now and you call each by its own name: " +
+			strings.Join(s.direct, ", ") + ". Never load one of them, and never pass one of them to " +
+			CallTool + ".\n\n")
+	}
+	b.WriteString("More tools are in these groups. A tool from a group is never called by name: load what you " +
+		"need with load_tools, then run it with call_tool, passing the tool's name and arguments. Loaded tools " +
+		"last until the next message.\n")
 	for _, g := range s.groups {
 		names := members[g.Name]
 		if len(names) == 0 {
