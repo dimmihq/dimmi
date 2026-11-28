@@ -12,7 +12,6 @@
 @import "./styles/globals.css";
 @import "@xyflow/react/dist/base.css" layer(base);
 
-
 /*
  * React Flow's canvas drawn in BoardUI's tokens: lines in the button
  * hover border, a quiet dot grid in the separator colour, and the
