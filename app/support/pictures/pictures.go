@@ -15,6 +15,7 @@ package pictures
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -76,12 +77,34 @@ func Store(ctx context.Context, disk filesystem.Filesystem, upload io.Reader) (s
 }
 
 /*
+Inline redraws the upload as a square PNG of the size on each side and
+returns it as a data address, for a picture shown once and never kept.
+
+Errors: [exceptions.ErrInvalidAvatar], [exceptions.ErrAvatarTooLarge].
+*/
+func Inline(upload io.Reader, side int) (string, error) {
+	picture, err := draw(upload, side)
+	if err != nil {
+		return "", err
+	}
+
+	return "data:" + image.PNG.ContentType() + ";base64," + base64.StdEncoding.EncodeToString(picture), nil
+}
+
+/*
 square reads the upload and returns the picture to keep.
 */
 func square(upload io.Reader) ([]byte, error) {
+	return draw(upload, size)
+}
+
+/*
+draw reads the upload and returns it as a square PNG of the size.
+*/
+func draw(upload io.Reader, side int) ([]byte, error) {
 	limits := image.Limits{MaxBytes: MaxBytes, MaxPixels: maxPixels}
 
-	picture, cfg, err := image.Thumbnail(upload, size, limits)
+	picture, cfg, err := image.Thumbnail(upload, side, limits)
 	if errors.Is(err, image.ErrTooLarge) {
 		return nil, exceptions.ErrAvatarTooLarge
 	}

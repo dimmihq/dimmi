@@ -83,11 +83,15 @@ func (s *Social) Connect(ctx context.Context, in ConnectSocialInput) (models.Cha
 		}
 	}
 
+	kept := s.keepPicture(ctx, account.PictureURL)
+
 	conn, err := s.store(ctx, in, social.Facts{
-		AccountID: account.ID, Name: account.Name, Username: account.Username, PictureURL: account.PictureURL,
+		AccountID: account.ID, Name: account.Name, Username: account.Username, PictureURL: kept,
 		BusinessID: secret.BusinessID, AppID: s.App.AppID,
 	}, secrets)
 	if err != nil {
+		s.dropPicture(ctx, kept)
+
 		return conn, err
 	}
 
@@ -234,8 +238,13 @@ func (s *Social) List(ctx context.Context, m authz.Membership) ([]models.Channel
 
 		return err
 	})
+	if err != nil {
+		return nil, err
+	}
 
-	return out, err
+	s.adoptPictures(ctx, out)
+
+	return out, nil
 }
 
 /*
@@ -308,11 +317,18 @@ func (s *Social) Disconnect(ctx context.Context, m authz.Membership, id ids.UUID
 		_ = s.graph(token).Delete(ctx, SocialFactsOf(conn).AccountID+"/subscribed_apps")
 	}
 
-	return s.read(ctx, func(q *models.Queries) error {
+	err = s.read(ctx, func(q *models.Queries) error {
 		_, err := q.DisconnectChannelConnection(ctx, models.DisconnectChannelConnectionParams{
 			Now: s.Clock.Now(), WorkspaceID: m.Workspace.ID, ID: id,
 		})
 
 		return err
 	})
+	if err != nil {
+		return err
+	}
+
+	s.dropPicture(ctx, SocialFactsOf(conn).PictureURL)
+
+	return nil
 }

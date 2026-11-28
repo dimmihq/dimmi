@@ -146,6 +146,11 @@ func (s *Social) Signup(ctx context.Context, m authz.Membership, in SocialSignup
 	}
 
 	grant, err := s.remember(ctx, m.Workspace.ID, grantSecret{Token: token, BusinessID: s.business(ctx, token)})
+	if err != nil {
+		return SocialGrant{}, err
+	}
+
+	s.inlinePictures(ctx, accounts)
 
 	return SocialGrant{Grant: grant, Accounts: accounts}, err
 }

@@ -11,28 +11,50 @@ import {
   RiGlobalLine,
   RiInstagramLine,
   RiMailLine,
-  RiMessengerLine,
+  RiMessengerFill,
   RiPlugLine,
   RiTimeLine,
-  RiWhatsappLine,
+  RiWhatsappFill,
 } from "@remixicon/react";
+import type { ComponentType } from "react";
 
 import { Focusable } from "react-aria-components";
 
+import { SlackMark } from "@/components/application/brand/slack-mark";
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
+import { socialLook } from "@/features/settings/social-look";
+import { whatsappGreen } from "@/features/settings/whatsapp-look";
 import { avatarColor } from "@/features/shell/avatar-color";
 import type { Conversation, InboxSummary, Viewer } from "@/lib/api/inbox";
 
+import { cx } from "@/utils/cx";
+
 import { waitedFor } from "./conversations";
 
-const channels: Record<string, { icon: typeof RiMailLine; label: string }> = {
+/*
+ * How each channel's badge looks. A channel that belongs to another
+ * company wears that company's mark in its own colour, the same colour
+ * its settings pages use: a white glyph on a disc of the `brand` colour,
+ * which reads the same in light and dark. A mark that carries its own
+ * colours (`own`) sits on the neutral disc instead. dimmi's own
+ * channels keep a neutral icon.
+ */
+interface ChannelLook {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  brand?: string;
+  own?: boolean;
+}
+
+const channelLooks: Record<string, ChannelLook> = {
   email: { icon: RiMailLine, label: "Email" },
   widget: { icon: RiChat3Line, label: "Messenger" },
   api: { icon: RiPlugLine, label: "API" },
-  whatsapp: { icon: RiWhatsappLine, label: "WhatsApp" },
-  facebook: { icon: RiMessengerLine, label: "Facebook Messenger" },
-  instagram: { icon: RiInstagramLine, label: "Instagram" },
+  slack: { icon: SlackMark, label: "Slack", own: true },
+  whatsapp: { icon: RiWhatsappFill, label: "WhatsApp", brand: whatsappGreen },
+  facebook: { icon: RiMessengerFill, label: socialLook.facebook.name, brand: socialLook.facebook.brand },
+  instagram: { icon: RiInstagramLine, label: socialLook.instagram.name, brand: socialLook.instagram.brand },
 };
 
 /*
@@ -40,7 +62,7 @@ const channels: Record<string, { icon: typeof RiMailLine; label: string }> = {
  * the conversation came through, named in a tooltip on hover.
  */
 export function ChannelBadge({ channel }: { channel: Conversation["channel"] }) {
-  const known = channels[channel.type];
+  const known = channelLooks[channel.type];
   const Icon = known?.icon ?? RiGlobalLine;
   const label = channel.name || known?.label || channel.type;
 
@@ -50,9 +72,16 @@ export function ChannelBadge({ channel }: { channel: Conversation["channel"] }) 
         <span
           role="img"
           aria-label={`Via ${label}`}
-          className="absolute -end-1 -bottom-1 grid size-5 place-items-center rounded-full bg-background-primary-default text-foreground-icon-secondary shadow-xs ring-1 ring-border-button-default"
+          data-channel={channel.type}
+          className={cx(
+            "absolute -end-1 -bottom-1 grid size-5 place-items-center rounded-full shadow-xs ring-1",
+            known?.brand
+              ? "text-text-white ring-background-primary-default"
+              : "bg-background-primary-default text-foreground-icon-secondary ring-border-button-default",
+          )}
+          style={known?.brand ? { backgroundColor: known.brand } : undefined}
         >
-          <Icon aria-hidden className="block size-3" />
+          <Icon className={cx("block", known?.own ? "size-2.5" : "size-3")} />
         </span>
       </Focusable>
       <Tooltip>Via {label}</Tooltip>

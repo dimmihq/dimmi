@@ -28,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/encryption"
+	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/log"
 	"github.com/dimmihq/dimmi/framework/queue"
@@ -63,6 +64,8 @@ type Social struct {
 	App      appconfig.MetaServiceConfig
 	Login    appconfig.SocialServiceConfig
 	AppURL   string
+	// Pictures is where connected accounts' pictures are kept.
+	Pictures filesystem.Filesystem
 }
 
 /*
