@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -83,20 +84,26 @@ type DomainVerifier interface {
 /*
 Domains manages the domains help centers answer on. Target is the
 hostname their CNAME points at, Reserved the hosts of the install
-itself no workspace may claim, and TLS, when set, is told when a domain
-is verified or removed. Probe answers the routing probe the checks run,
-and Resolver looks up the target's own addresses.
+itself no workspace may claim, and ReservedZones the domains whose
+every subdomain the install hands out itself, such as the help
+centers' base domain. Other subdomains of the install's hosts stay
+open: verifying the TXT record proves the team runs that zone, so the
+install's own team can serve its help center on help.<its domain>.
+TLS, when set, is told when a domain is verified or removed. Probe
+answers the routing probe the checks run, and Resolver looks up the
+target's own addresses.
 */
 type Domains struct {
-	DB       *database.DB
-	Clock    clock.Clock
-	Verifier DomainVerifier
-	Target   string
-	Reserved []string
-	TLS      customdomain.TLS
-	Schedule customdomain.Schedule
-	Probe    customdomain.Probe
-	Resolver dns.Resolver
+	DB            *database.DB
+	Clock         clock.Clock
+	Verifier      DomainVerifier
+	Target        string
+	Reserved      []string
+	ReservedZones []string
+	TLS           customdomain.TLS
+	Schedule      customdomain.Schedule
+	Probe         customdomain.Probe
+	Resolver      dns.Resolver
 }
 
 /*
@@ -276,8 +283,11 @@ func (d *Domains) checkHost(raw string) (string, error) {
 	if customdomain.IsApex(host) {
 		return "", ErrDomainApex
 	}
-	for _, own := range d.Reserved {
-		if own != "" && (host == own || strings.HasSuffix(host, "."+own)) {
+	if slices.Contains(d.Reserved, host) {
+		return "", ErrDomainReserved
+	}
+	for _, zone := range d.ReservedZones {
+		if zone != "" && (host == zone || strings.HasSuffix(host, "."+zone)) {
 			return "", ErrDomainReserved
 		}
 	}
