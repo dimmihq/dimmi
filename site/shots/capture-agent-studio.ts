@@ -13,6 +13,8 @@ import { fileURLToPath } from "node:url";
 
 import { chromium, type Page } from "@playwright/test";
 
+import { downscaleShots } from "./downscale.ts";
+
 const base = process.env.SHOTS_URL ?? "http://localhost:8091";
 const email = process.env.SHOTS_EMAIL ?? "maya@stowline.test";
 const password = process.env.SHOTS_PASSWORD ?? "stowline-demo-2026";
@@ -480,3 +482,5 @@ try {
 } finally {
   await browser.close();
 }
+// Write the half-width variants the site's srcsets serve.
+await downscaleShots();

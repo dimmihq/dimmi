@@ -5,19 +5,22 @@
  * what will go there.
  */
 import { cx } from "@/utils/cx";
-
+import { sectionWidth, shotSrcSet } from "../shot-src";
 import { SHOTS } from "../shots";
 
 export function ProductShot({
   name,
   alt,
   bleed = false,
+  sizes = sectionWidth(16),
   className,
 }: {
   name: keyof typeof SHOTS;
   alt: string;
   /* Sits on the bottom edge of its panel, open at the bottom like a window rising out of it. */
   bleed?: boolean;
+  /* The img sizes value; the default fits a shot spanning a section, inside its 16px frame. */
+  sizes?: string;
   className?: string;
 }) {
   const shot = SHOTS[name];
@@ -40,6 +43,8 @@ export function ProductShot({
           <>
             <img
               src={`/shots/${name}-light.webp`}
+              srcSet={shotSrcSet(`${name}-light`)}
+              sizes={sizes}
               alt={alt}
               width={shot.width}
               height={shot.height}
@@ -49,6 +54,8 @@ export function ProductShot({
             />
             <img
               src={`/shots/${name}-dark.webp`}
+              srcSet={shotSrcSet(`${name}-dark`)}
+              sizes={sizes}
               alt={alt}
               width={shot.width}
               height={shot.height}

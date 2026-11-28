@@ -15,6 +15,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, type Page } from "@playwright/test";
 
+import { downscaleShots } from "./downscale.ts";
 import { BASE_CSS, ICONS, type Scheme } from "./placeholders/theme.ts";
 
 const WIDGET_ORIGIN = process.env.WIDGET_ORIGIN ?? "http://127.0.0.1:8097";
@@ -402,6 +403,8 @@ async function main() {
     await browser.close();
     rmSync(TMP_DIR, { recursive: true, force: true });
   }
+  // Write the half-width variants the site's srcsets serve.
+  await downscaleShots();
 }
 
 main().catch((err: unknown) => {

@@ -8,12 +8,15 @@
  *   node site/shots/capture.ts [--only inbox]
  *
  * SHOTS_URL points at the app (default http://localhost:8080). The demo
- * owner signs in with the password db:seed prints.
+ * owner signs in with the password db:seed prints. When it finishes it
+ * runs downscale.ts, which writes each shot's half-width .1x.webp.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { chromium, type Page } from "@playwright/test";
+
+import { downscaleShots } from "./downscale.ts";
 
 const base = process.env.SHOTS_URL ?? "http://localhost:8080";
 const email = process.env.SHOTS_EMAIL ?? "maya@lumen.test";
@@ -458,3 +461,6 @@ if (Object.keys(manifest).length > 0) {
   const kept = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : {};
   writeFileSync(file, `${JSON.stringify({ ...kept, ...manifest }, null, 2)}\n`);
 }
+
+// Write the half-width variants the site's srcsets serve.
+await downscaleShots();

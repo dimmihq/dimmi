@@ -18,6 +18,8 @@ import { fileURLToPath } from "node:url";
 
 import { chromium } from "@playwright/test";
 
+import { downscaleShots } from "./downscale.ts";
+
 const base = process.env.THEME_SHOTS_URL ?? "http://localhost:8080/hc/builder-check";
 const out = fileURLToPath(new URL("../public/shots/", import.meta.url));
 
@@ -59,3 +61,5 @@ try {
   await browser.close();
   rmSync(work, { recursive: true, force: true });
 }
+// Write the half-width variants the site's srcsets serve.
+await downscaleShots();

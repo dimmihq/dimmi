@@ -4,7 +4,7 @@
  * panel's bottom edge.
  */
 import { cx } from "@/utils/cx";
-
+import { shotSrcSet, upTo } from "../shot-src";
 import { SHOTS } from "../shots";
 
 export function ShotStill({
@@ -21,13 +21,16 @@ export function ShotStill({
 }) {
   const shot = SHOTS[name];
   const bottom = anchor === "bottom";
+  const width = Math.min(shot.width, maxWidth);
+  // The image sits inside a 4px pad and two 1px borders on each side.
+  const sizes = upTo(width - 12);
   return (
     <div
       className={cx(
         "overflow-hidden border border-border-button-default bg-background-full shadow-[0_24px_60px_-28px_rgb(0_0_0/0.25)]",
         bottom ? "mb-5 self-end rounded-b-xl border-t-0 p-1 pt-0" : "self-start rounded-t-xl border-b-0 p-1 pb-0",
       )}
-      style={{ width: Math.min(shot.width, maxWidth), maxWidth: "100%" }}
+      style={{ width, maxWidth: "100%" }}
     >
       <div
         className={cx(
@@ -40,6 +43,8 @@ export function ShotStill({
           <>
             <img
               src={`/shots/${name}-light.webp`}
+              srcSet={shotSrcSet(`${name}-light`)}
+              sizes={sizes}
               alt={alt}
               width={shot.width}
               height={shot.height}
@@ -49,6 +54,8 @@ export function ShotStill({
             />
             <img
               src={`/shots/${name}-dark.webp`}
+              srcSet={shotSrcSet(`${name}-dark`)}
+              sizes={sizes}
               alt={alt}
               width={shot.width}
               height={shot.height}
