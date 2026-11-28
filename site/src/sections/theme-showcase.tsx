@@ -4,6 +4,7 @@
  * sharp on any screen.
  */
 import { Intro, Panel, Section } from "../components/container";
+import { shotSrcSet } from "../shot-src";
 
 export function ThemeShowcase() {
   return (
@@ -15,6 +16,9 @@ export function ThemeShowcase() {
       <Panel className="p-3 sm:p-5">
         <img
           src="/shots/theme-retro-home.webp"
+          srcSet={shotSrcSet("theme-retro-home")}
+          // The section's content box less the panel's pad (p-3, sm:p-5) and the image's border.
+          sizes="(min-width: 1200px) 1060px, (min-width: 640px) calc(100vw - 140px), calc(100vw - 68px)"
           alt="A dimmi help center redesigned as a Windows 95 desktop, with a teal background, grey windows, folders for each collection and a scrolling banner"
           width={3840}
           height={2400}

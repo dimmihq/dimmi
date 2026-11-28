@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { cx } from "@/utils/cx";
 
 import flows from "../flows.json";
+import { shotSrcSet, upTo } from "../shot-src";
 import { useStartInView } from "./use-scene";
 
 export type FlowName = keyof typeof flows;
@@ -62,6 +63,8 @@ export function ShotFlow({
 
   const scale = Math.min(1, maxHeight / flow.height, maxWidth / flow.width);
   const width = Math.round(flow.width * scale);
+  // The frames sit inside a 4px pad and two 1px borders; a top-right panel never shrinks them.
+  const sizes = anchor === "top-right" ? `${width - 12}px` : upTo(width - 12);
 
   // Fetch every frame as soon as the flow is first seen, so no step ever
   // lands on a frame the browser has not loaded yet.
@@ -71,9 +74,13 @@ export function ShotFlow({
     }
     const scheme = document.documentElement.classList.contains("dark") ? "dark" : "light";
     for (const i of frames.keys()) {
-      new Image().src = `/shots/flow-${name}-${i}-${scheme}.webp`;
+      const file = `flow-${name}-${i}-${scheme}`;
+      const img = new Image();
+      img.sizes = sizes;
+      img.srcset = shotSrcSet(file) ?? "";
+      img.src = `/shots/${file}.webp`;
     }
-  }, [started, frames, name]);
+  }, [started, frames, name, sizes]);
 
   useEffect(() => {
     if (!started || !inView) {
@@ -159,6 +166,8 @@ export function ShotFlow({
               >
                 <img
                   src={`/shots/flow-${name}-${i}-light.webp`}
+                  srcSet={shotSrcSet(`flow-${name}-${i}-light`)}
+                  sizes={sizes}
                   alt={i === 0 ? alt : ""}
                   width={flow.width}
                   height={flow.height}
@@ -168,6 +177,8 @@ export function ShotFlow({
                 />
                 <img
                   src={`/shots/flow-${name}-${i}-dark.webp`}
+                  srcSet={shotSrcSet(`flow-${name}-${i}-dark`)}
+                  sizes={sizes}
                   alt={i === 0 ? alt : ""}
                   width={flow.width}
                   height={flow.height}

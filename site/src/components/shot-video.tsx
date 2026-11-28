@@ -7,7 +7,7 @@
 import { useEffect, useRef } from "react";
 
 import { cx } from "@/utils/cx";
-
+import { sectionWidth, shotSrcSet, upTo } from "../shot-src";
 import { SHOTS } from "../shots";
 
 function syncPlayback(container: HTMLElement, visible: boolean) {
@@ -42,6 +42,8 @@ export function ShotVideo({
 }) {
   const shot = SHOTS[poster];
   const root = useRef<HTMLDivElement>(null);
+  // A bleed hero spans its section inside a 16px frame; a row panel's still sits in a 12px one.
+  const sizes = bleed ? sectionWidth(16) : upTo(Math.min(shot.width, maxWidth ?? shot.width) - 12);
 
   useEffect(() => {
     const el = root.current;
@@ -106,6 +108,8 @@ export function ShotVideo({
             </video>
             <img
               src={`/shots/${poster}-light.webp`}
+              srcSet={shotSrcSet(`${poster}-light`)}
+              sizes={sizes}
               alt={alt}
               width={shot.width}
               height={shot.height}
@@ -115,6 +119,8 @@ export function ShotVideo({
             />
             <img
               src={`/shots/${poster}-dark.webp`}
+              srcSet={shotSrcSet(`${poster}-dark`)}
+              sizes={sizes}
               alt={alt}
               width={shot.width}
               height={shot.height}
