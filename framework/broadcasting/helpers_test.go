@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dimmihq/dimmi/framework/broadcasting"
-	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/log"
 	"github.com/dimmihq/dimmi/framework/redis"
@@ -342,6 +341,26 @@ func (c *wsClient) subscribe(channel, epoch string, offset uint64) frame {
 }
 
 /*
+follow subscribes to the channel and returns once every broadcast on it
+reaches the client. The server writes the subscribe reply before it lets
+the channel's broadcasts through: it queues those with an offset until
+then and drops those without one, the ephemeral ones and every one on a
+channel without history. It handles a connection's commands one at a
+time, so the reply to the next command comes after that.
+*/
+func (c *wsClient) follow(channel string) subscription {
+	c.t.Helper()
+
+	reply := c.subscribe(channel, "", 0)
+	require.Nil(c.t, reply.Error)
+	require.NotNil(c.t, reply.Subscribe)
+
+	c.command(map[string]any{"presence": map[string]any{"channel": channel}})
+
+	return *reply.Subscribe
+}
+
+/*
 push returns the next push, answering pings on the way.
 */
 func (c *wsClient) push() push {
@@ -401,33 +420,6 @@ func (c *wsClient) unsubscribed() string {
 			return p.Channel
 		}
 	}
-}
-
-/*
-keepBroadcasting publishes the event on the channel now and every
-quarter second until the test ends.
-*/
-func keepBroadcasting(t *testing.T, n *node, channel, event string) {
-	t.Helper()
-
-	require.NoError(t, n.server.Broadcast(t.Context(), channel, event, nil))
-
-	ctx, stop := context.WithCancel(t.Context())
-	t.Cleanup(stop)
-
-	go func() {
-		tick := clock.System().NewTicker(250 * time.Millisecond)
-		defer tick.Stop()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-tick.Chan():
-				_ = n.server.Broadcast(ctx, channel, event, nil)
-			}
-		}
-	}()
 }
 
 /*
