@@ -115,6 +115,38 @@ function formatCardTitle(route: RouteMeta): string {
   return withoutBrand;
 }
 
+/**
+ * Keeps hyphenated words such as "in-app" whole, so a title never
+ * breaks after its hyphen.
+ */
+function titleHtml(title: string): string {
+  return title
+    .split(" ")
+    .map((word) => (word.includes("-") ? `<span class="whole">${escapeHtml(word)}</span>` : escapeHtml(word)))
+    .join(" ");
+}
+
+/**
+ * Shrinks a card's title, down to a floor, until it fits on one line.
+ * A title still too long at the floor wraps, balanced.
+ */
+const FIT_TITLE_SCRIPT = `(() => {
+  const title = document.querySelector(".title");
+  if (!title) return;
+  const floor = 40;
+  const start = parseFloat(getComputedStyle(title).fontSize);
+  let size = start;
+  const lines = () => title.getBoundingClientRect().height / (size * 1.12);
+  while (lines() > 1.5 && size > floor) {
+    size -= 1;
+    title.style.fontSize = size + "px";
+  }
+  if (lines() > 1.5) {
+    size = start;
+    title.style.fontSize = start + "px";
+  }
+})()`;
+
 function titleFontSize(title: string): number {
   if (title.length > 76) {
     return 42;
@@ -362,6 +394,9 @@ function buildPageCardHtml(route: RouteMeta, assets: BrandAssets): string {
         color: #ffffff;
         text-wrap: balance;
       }
+      .title .whole {
+        white-space: nowrap;
+      }
       .description {
         font-size: 24px;
         font-weight: 400;
@@ -417,7 +452,7 @@ function buildPageCardHtml(route: RouteMeta, assets: BrandAssets): string {
         </div>
         <div class="body">
           <div class="eyebrow">${escapeHtml(eyebrow)}</div>
-          <div class="title">${escapeHtml(cardTitle)}</div>
+          <div class="title">${titleHtml(cardTitle)}</div>
           <div class="description">${escapeHtml(route.description)}</div>
         </div>
         <div class="footer">
@@ -459,6 +494,7 @@ async function renderPng(
   const page = await context.newPage();
   await page.setContent(html, { waitUntil: "load" });
   await page.evaluate("document.fonts.ready");
+  await page.evaluate(FIT_TITLE_SCRIPT);
   const buffer = await page.screenshot({ type: "png" });
   writeFileSync(outPath, buffer);
   await context.close();
