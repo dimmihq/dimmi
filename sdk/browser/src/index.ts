@@ -132,10 +132,21 @@ export function dimmi(name: string, ...args: unknown[]): void {
 }
 
 /*
+ * trimTrailingSlashes drops every "/" at the end of a URL, in linear time.
+ */
+function trimTrailingSlashes(url: string): string {
+  let end = url.length;
+  while (end > 0 && url[end - 1] === "/") {
+    end--;
+  }
+  return url.slice(0, end);
+}
+
+/*
  * loaderUrl is the loader's address on a host.
  */
 export function loaderUrl(host: string): string {
-  return `${host.replace(/\/+$/, "")}${LOADER_PATH}`;
+  return `${trimTrailingSlashes(host)}${LOADER_PATH}`;
 }
 
 let loading: Promise<void> | undefined;
@@ -155,7 +166,7 @@ function inject(options: DimmiOptions): Promise<void> {
   script.dataset.appId = options.appId;
   script.dataset.dimmiLoader = "";
   if (options.apiBase) {
-    script.dataset.apiBase = options.apiBase.replace(/\/+$/, "");
+    script.dataset.apiBase = trimTrailingSlashes(options.apiBase);
   }
   if (options.identityUrl) {
     script.dataset.identityUrl = options.identityUrl;

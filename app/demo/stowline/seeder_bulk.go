@@ -49,11 +49,14 @@ limit allows.
 */
 func insertMany(ctx context.Context, tx *database.Tx, set rowSet) error {
 	per := max(1, maxParams/len(set.cols))
+	// A full batch holds at most maxParams values, or one row when a row
+	// alone is wider, so the buffer is sized once from that bound.
+	args := make([]any, 0, max(maxParams, len(set.cols)))
 	for start := 0; start < len(set.rows); start += per {
 		batch := set.rows[start:min(start+per, len(set.rows))]
 		var b strings.Builder
 		b.WriteString("INSERT INTO " + set.name + " (" + strings.Join(set.cols, ", ") + ") VALUES ")
-		args := make([]any, 0, len(batch)*len(set.cols))
+		args = args[:0]
 		for i, row := range batch {
 			if i > 0 {
 				b.WriteString(", ")

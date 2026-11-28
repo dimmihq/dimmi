@@ -152,6 +152,19 @@ func TestAppPage(t *testing.T) {
 		assert.NotContains(t, quiet.Header.Get("Content-Security-Policy"), "sessions.example.com")
 	})
 
+	t.Run("names the server's own messenger to the app only when one is set", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, withBuild(),
+			tests.WithEnv("DIMMI_FRONTEND__SUPPORT_MESSENGER=wgt_01m89n8mc6e64trfb4yt4xfh1p"))
+
+		res := tc.Client().Send(fhttp.MethodGet, "/d", nil).AssertOK()
+		assert.Contains(t, string(res.Body),
+			`<meta name="dimmi-support-messenger" content="wgt_01m89n8mc6e64trfb4yt4xfh1p">`)
+
+		quiet := tests.New(t, withBuild()).Client().Send(fhttp.MethodGet, "/d", nil).AssertOK()
+		assert.NotContains(t, string(quiet.Body), "dimmi-support-messenger")
+	})
+
 	t.Run("serves the same page for every path of the app, with a fresh nonce each time", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, withBuild())

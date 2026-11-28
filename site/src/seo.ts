@@ -13,10 +13,22 @@ export function canonicalUrl(path: string): string {
   return clean === "/" ? `${SITE_URL}/` : `${SITE_URL}${clean}`;
 }
 
+export function ogImageUrl(route: Route | undefined): string {
+  const image = route?.ogImage?.trim();
+  if (!image) {
+    return OG_IMAGE_URL;
+  }
+  if (/^https?:\/\//i.test(image)) {
+    return image;
+  }
+  return `${SITE_URL}${image.startsWith("/") ? image : `/${image}`}`;
+}
+
 export function headElements(route: Route | undefined) {
   const title = route?.title ?? DEFAULT_TITLE;
   const description = route?.description ?? "";
   const url = canonicalUrl(route?.path ?? "/");
+  const image = ogImageUrl(route);
 
   return new Set([
     { type: "link", props: { rel: "canonical", href: url } },
@@ -26,14 +38,14 @@ export function headElements(route: Route | undefined) {
     { type: "meta", props: { property: "og:url", content: url } },
     { type: "meta", props: { property: "og:title", content: title } },
     { type: "meta", props: { property: "og:description", content: description } },
-    { type: "meta", props: { property: "og:image", content: OG_IMAGE_URL } },
+    { type: "meta", props: { property: "og:image", content: image } },
     { type: "meta", props: { property: "og:image:width", content: "1200" } },
     { type: "meta", props: { property: "og:image:height", content: "630" } },
     { type: "meta", props: { property: "og:image:alt", content: title } },
     { type: "meta", props: { name: "twitter:card", content: "summary_large_image" } },
     { type: "meta", props: { name: "twitter:title", content: title } },
     { type: "meta", props: { name: "twitter:description", content: description } },
-    { type: "meta", props: { name: "twitter:image", content: OG_IMAGE_URL } },
+    { type: "meta", props: { name: "twitter:image", content: image } },
   ]);
 }
 
@@ -54,6 +66,7 @@ export function syncHead(route: Route | undefined) {
   const title = route?.title ?? DEFAULT_TITLE;
   const description = route?.description ?? "";
   const url = canonicalUrl(route?.path ?? "/");
+  const image = ogImageUrl(route);
 
   document.title = title;
   upsertHeadTag("link", "rel", "canonical", { href: url });
@@ -63,14 +76,14 @@ export function syncHead(route: Route | undefined) {
   upsertHeadTag("meta", "property", "og:url", { content: url });
   upsertHeadTag("meta", "property", "og:title", { content: title });
   upsertHeadTag("meta", "property", "og:description", { content: description });
-  upsertHeadTag("meta", "property", "og:image", { content: OG_IMAGE_URL });
+  upsertHeadTag("meta", "property", "og:image", { content: image });
   upsertHeadTag("meta", "property", "og:image:width", { content: "1200" });
   upsertHeadTag("meta", "property", "og:image:height", { content: "630" });
   upsertHeadTag("meta", "property", "og:image:alt", { content: title });
   upsertHeadTag("meta", "name", "twitter:card", { content: "summary_large_image" });
   upsertHeadTag("meta", "name", "twitter:title", { content: title });
   upsertHeadTag("meta", "name", "twitter:description", { content: description });
-  upsertHeadTag("meta", "name", "twitter:image", { content: OG_IMAGE_URL });
+  upsertHeadTag("meta", "name", "twitter:image", { content: image });
 }
 
 const SOFTWARE_SCHEMA = {

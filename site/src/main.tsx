@@ -12,11 +12,13 @@ import { App } from "./app";
 import { startMonitoring } from "./monitoring";
 import { DEFAULT_TITLE, findRoute, loadPage, routes } from "./routes";
 import { headElements } from "./seo";
+import { startSupport } from "./support";
 import { captureUtm } from "./track";
 
 if (typeof window !== "undefined") {
   captureUtm();
   startMonitoring();
+  startSupport();
   const target = document.getElementById("root");
   if (target) {
     // The page's chunk first, so hydration finds the same page the HTML has.

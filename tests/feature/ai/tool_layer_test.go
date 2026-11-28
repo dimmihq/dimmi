@@ -65,6 +65,8 @@ func TestAiToolLayer(t *testing.T) {
 		}
 		assert.Contains(t, sent[0].System[0].Text,
 			"- inbox: tag, assign and prioritize this conversation (triage_conversation)")
+		assert.Contains(t, sent[0].System[0].Text, "These tools are ready now and you call each by its own name: "+
+			"call_tool, handoff, leave_note, load_tools, search_knowledge. Never load one of them")
 		assert.Contains(t, sent[1].Messages[len(sent[1].Messages)-1].Parts[0].Text, `"input_schema"`)
 
 		s := h.load(conv, res.RunID)
@@ -203,5 +205,35 @@ func TestAiToolLayerMisdirectedCalls(t *testing.T) {
 		assert.True(t, after.ToolError)
 		assert.Contains(t, after.Parts[0].Text, "triage_conversation is loaded, but it is not called by name.")
 		assert.Contains(t, after.Parts[0].Text, `"name": "triage_conversation"`)
+	})
+
+	t.Run("lists a group for a model that runs load_tools through call_tool", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.withToolLayer()
+		h.llm.answer.Script(
+			tools(callTool("load_tools", map[string]any{"group": "inbox"})),
+			reply("Let me check."),
+		)
+
+		conv, trigger := h.conversation("I was charged twice")
+		res := h.run(conv, trigger)
+
+		sent := h.llm.answer.Sent()
+		answer := sent[1].Messages[len(sent[1].Messages)-1]
+		assert.False(t, answer.ToolError, answer.Parts[0].Text)
+		assert.Contains(t, answer.Parts[0].Text, "triage_conversation: ")
+
+		s := h.load(conv, res.RunID)
+		r := h.layerRecord(s)
+		assert.Empty(t, r.Stats.NotFound)
+		assert.Zero(t, r.Stats.ArgErrors)
+		var names []string
+		for _, st := range s.steps {
+			if st.Kind == "tool_call" {
+				names = append(names, str(st.Model))
+			}
+		}
+		assert.Contains(t, names, "load_tools")
 	})
 }

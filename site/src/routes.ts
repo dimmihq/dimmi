@@ -10,6 +10,7 @@ export type Route = {
   path: string;
   title: string;
   description: string;
+  ogImage?: string;
   /** Loads the page's own chunk, so a visit downloads only the page it shows. */
   load: () => Promise<ComponentType>;
 };
@@ -22,6 +23,7 @@ export const routes: Route[] = [
     title: DEFAULT_TITLE,
     description:
       "Open-source (MIT) Intercom alternative: shared inbox, AI agents on your own model key, help center, and workflows. Free seats. Cloud or self-hosted.",
+    ogImage: "/og/home.png",
     load: () => import("./pages/home").then((m) => m.HomePage),
   },
   {
@@ -29,6 +31,7 @@ export const routes: Route[] = [
     title: "Shared inbox with unlimited free seats | dimmi",
     description:
       "Web chat, email, Slack, WhatsApp, Instagram, and Facebook messages in one shared inbox beside customer history, with unlimited free seats.",
+    ogImage: "/og/inbox.png",
     load: () => import("./pages/inbox").then((m) => m.InboxPage),
   },
   {
@@ -36,6 +39,7 @@ export const routes: Route[] = [
     title: "AI support agents for every queue & brand | dimmi",
     description:
       "Run dedicated AI support agents for frontline, billing, docs, and brands. Replies cite your docs, transfer quietly, and cut AI fees with BYO keys.",
+    ogImage: "/og/agents.png",
     load: () => import("./pages/agents").then((m) => m.AgentsPage),
   },
   {
@@ -43,6 +47,7 @@ export const routes: Route[] = [
     title: "Agent Studio: test & compare AI agents | dimmi",
     description:
       "Write agent guidance with @ chips, run multi-turn simulations, compare Draft against Live side by side, and roll back changes in one click.",
+    ogImage: "/og/agent-studio.png",
     load: () => import("./pages/agent-studio").then((m) => m.AgentStudioPage),
   },
   {
@@ -50,6 +55,7 @@ export const routes: Route[] = [
     title: "Operator Routines: scheduled doc sync & QA | dimmi",
     description:
       "Put Operator on a daily or weekly schedule to sync merged GitHub PRs to help articles, audit knowledge gaps, and review inline diffs.",
+    ogImage: "/og/routines.png",
     load: () => import("./pages/routines").then((m) => m.RoutinesPage),
   },
   {
@@ -57,6 +63,7 @@ export const routes: Route[] = [
     title: "Support workflows, routing & SLAs | dimmi",
     description:
       "Build visual support workflows included on every plan. Trigger on events, branch on rules, open tickets, or call your own API.",
+    ogImage: "/og/workflows.png",
     load: () => import("./pages/workflows").then((m) => m.WorkflowsPage),
   },
   {
@@ -64,6 +71,7 @@ export const routes: Route[] = [
     title: "Pricing: pay per conversation, not per seat | dimmi",
     description:
       "Unlimited free seats, 100 free conversations every month, and 50% to 83% off AI fees with your own model keys. Free to self-host under MIT.",
+    ogImage: "/og/pricing.png",
     load: () => import("./pages/pricing").then((m) => m.PricingPage),
   },
   {
@@ -71,6 +79,7 @@ export const routes: Route[] = [
     title: "Operator: internal AI teammate for support | dimmi",
     description:
       "Operator sums up long chats, searches customer history, drafts replies, and proposes edits you can undo. Customers never see it.",
+    ogImage: "/og/operator.png",
     load: () => import("./pages/operator").then((m) => m.OperatorPage),
   },
   {
@@ -78,6 +87,7 @@ export const routes: Route[] = [
     title: "Procedures: AI support policies with limits | dimmi",
     description:
       "Write how your team handles refunds, cancellations, and account changes. Agents follow every step, respect hard limits, and pause for approval.",
+    ogImage: "/og/procedures.png",
     load: () => import("./pages/procedures").then((m) => m.ProceduresPage),
   },
   {
@@ -85,6 +95,7 @@ export const routes: Route[] = [
     title: "Support tickets, SLAs & outage trackers | dimmi",
     description:
       "Turn chats into tracked tickets with custom states, SLAs, outage trackers, and links to Linear, Jira, GitHub, and PagerDuty.",
+    ogImage: "/og/tickets.png",
     load: () => import("./pages/tickets").then((m) => m.TicketsPage),
   },
   {
@@ -92,6 +103,7 @@ export const routes: Route[] = [
     title: "Support reports, CSAT & agent metrics | dimmi",
     description:
       "Track volume, reply times, CSAT, and AI agent results by team or channel. Click any number to inspect the exact conversations behind it.",
+    ogImage: "/og/reports.png",
     load: () => import("./pages/reports").then((m) => m.ReportsPage),
   },
   {
@@ -99,6 +111,7 @@ export const routes: Route[] = [
     title: "Help center for customers and AI agents | dimmi",
     description:
       "Publish help articles on your own domain. Customers get instant answers, and your support agents read from the same docs.",
+    ogImage: "/og/help-center.png",
     load: () => import("./pages/help-center").then((m) => m.HelpCenterPage),
   },
   {
@@ -106,6 +119,7 @@ export const routes: Route[] = [
     title: "Customer broadcasts people can reply to | dimmi",
     description:
       "Send broadcasts and series by email, WhatsApp, chat, and Slack from your own domain. Every reply opens in your inbox.",
+    ogImage: "/og/broadcasts.png",
     load: () => import("./pages/broadcasts").then((m) => m.BroadcastsPage),
   },
   {
@@ -113,6 +127,7 @@ export const routes: Route[] = [
     title: "Product changelog in app and by email | dimmi",
     description:
       "Publish product updates once and reach customers on your changelog, inside the messenger, and by email.",
+    ogImage: "/og/changelog.png",
     load: () => import("./pages/changelog").then((m) => m.ChangelogPage),
   },
   {
@@ -120,6 +135,7 @@ export const routes: Route[] = [
     title: "Feature request boards & public roadmap | dimmi",
     description:
       "Collect customer votes on your help center, link live support chats, and email every voter the day you ship.",
+    ogImage: "/og/feedback.png",
     load: () => import("./pages/feedback").then((m) => m.FeedbackPage),
   },
   {
@@ -127,6 +143,7 @@ export const routes: Route[] = [
     title: "Support channels: chat, email, Slack & Meta | dimmi",
     description:
       "Connect live web messenger, verified support email, Slack Connect, WhatsApp Business, Instagram DMs, Facebook Messenger, and custom API channels.",
+    ogImage: "/og/channels.png",
     load: () => import("./pages/channels/index").then((m) => m.ChannelsIndexPage),
   },
   {
@@ -134,6 +151,7 @@ export const routes: Route[] = [
     title: "Web messenger: in-app chat, docs & updates | dimmi",
     description:
       "Embed live chat, help center search, and release notes with one script tag or 6 framework packages. Verified identity and AI agents included.",
+    ogImage: "/og/channels-messenger.png",
     load: () => import("./pages/channels/messenger").then((m) => m.MessengerChannelPage),
   },
   {
@@ -141,6 +159,7 @@ export const routes: Route[] = [
     title: "Shared email inbox for support@ teams | dimmi",
     description:
       "Forward support@, billing@, and security@ into one shared inbox with verified SPF/DKIM/DMARC domains, collision alerts, and AI support agents.",
+    ogImage: "/og/channels-email.png",
     load: () => import("./pages/channels/email").then((m) => m.EmailChannelPage),
   },
   {
@@ -148,6 +167,7 @@ export const routes: Route[] = [
     title: "Slack Connect customer support inbox | dimmi",
     description:
       "Turn Slack Connect, community, and internal help desk channels into tracked support threads with two-way sync, SLAs, tickets, and Operator.",
+    ogImage: "/og/channels-slack.png",
     load: () => import("./pages/channels/slack").then((m) => m.SlackChannelPage),
   },
   {
@@ -155,6 +175,7 @@ export const routes: Route[] = [
     title: "WhatsApp Business shared inbox & templates | dimmi",
     description:
       "Connect official WhatsApp Business numbers via Meta, manage approved templates, track 24-hour windows, and answer with zero message markup.",
+    ogImage: "/og/channels-whatsapp.png",
     load: () => import("./pages/channels/whatsapp").then((m) => m.WhatsAppChannelPage),
   },
   {
@@ -162,6 +183,7 @@ export const routes: Route[] = [
     title: "Instagram DM shared inbox for support | dimmi",
     description:
       "Connect Instagram Business accounts via Meta OAuth, answer DMs and story replies beside order history, and automate returns with AI agents.",
+    ogImage: "/og/channels-instagram.png",
     load: () => import("./pages/channels/instagram").then((m) => m.InstagramChannelPage),
   },
   {
@@ -169,12 +191,14 @@ export const routes: Route[] = [
     title: "Facebook Messenger support inbox | dimmi",
     description:
       "Connect Facebook Pages via Meta OAuth, route multiple brands into dedicated inboxes, and answer Page messages beside email and WhatsApp.",
+    ogImage: "/og/channels-facebook-messenger.png",
     load: () => import("./pages/channels/facebook-messenger").then((m) => m.FacebookMessengerChannelPage),
   },
   {
     path: "/channels/api",
     title: `Headless chat API, webhooks & ${SDK_COUNT} SDKs | dimmi`,
     description: `Build custom web or mobile chat on /widget/v1, sync backend threads over /api/v1, subscribe to signed webhooks, and use ${SDK_COUNT} typed SDKs and MCP.`,
+    ogImage: "/og/channels-api.png",
     load: () => import("./pages/channels/api").then((m) => m.ApiChannelPage),
   },
   {
@@ -182,6 +206,7 @@ export const routes: Route[] = [
     title: "Terms of Service | dimmi",
     description:
       "dimmi Cloud Terms of Service, Product-Specific Terms, Acceptable Use Policy, and Self-Hosting Notice by Hivy Technologies Limited.",
+    ogImage: "/og/terms.png",
     load: () => import("./pages/terms").then((m) => m.TermsPage),
   },
   {
@@ -189,6 +214,7 @@ export const routes: Route[] = [
     title: "Privacy Policy & Data Governance | dimmi",
     description:
       "dimmi Cloud Privacy Policy, End-User Notice, Cookie Notice, Subprocessor List, AI Transparency, Security Overview, and Global DPA.",
+    ogImage: "/og/privacy.png",
     load: () => import("./pages/privacy").then((m) => m.PrivacyPage),
   },
 ];

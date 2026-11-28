@@ -198,6 +198,18 @@ func (e *Engine) openLayer(ctx context.Context, s *session) {
 	}
 	ls.suggested = ls.set.Suggest(ctx, toolset.Keywords{}, s.question)
 	s.layer = ls
+	ls.set.WithDirect(specNames(e.layerSpecs(s)))
+}
+
+/*
+specNames are the names of the given specs.
+*/
+func specNames(specs []contracts.ToolSpec) []string {
+	names := []string{}
+	for _, spec := range specs {
+		names = append(names, spec.Name)
+	}
+	return names
 }
 
 /*
@@ -259,10 +271,14 @@ layerCall runs one of the layer's own tools.
 func (e *Engine) layerCall(ctx context.Context, s *session, p *pending) (result, error) {
 	set := s.layer.set
 	if p.call.Name == toolset.LoadTool {
-		out, err := set.Load(p.call.Arguments)
-		return result{text: out, step: Step{Tool: toolset.LoadTool, Summary: "Looked up tools"}}, err
+		return loadTools(set, p.call.Arguments)
 	}
-	if inner := innerName(p.call.Arguments); set.IsFixed(inner) {
+	inner, innerArgs := toolset.Inner(p.call.Arguments)
+	if inner == toolset.LoadTool {
+		p.ran = inner
+		return loadTools(set, innerArgs)
+	}
+	if set.IsFixed(inner) {
 		return e.runFixed(ctx, s, p, inner)
 	}
 	c, err := set.Check(p.call.Arguments)
@@ -292,6 +308,14 @@ func (e *Engine) layerCall(ctx context.Context, s *session, p *pending) (result,
 		out.text = set.Shape(out.text, c.Fields)
 	}
 	return out, err
+}
+
+/*
+loadTools runs load_tools, called by name or through call_tool.
+*/
+func loadTools(set *toolset.Set, args json.RawMessage) (result, error) {
+	out, err := set.Load(args)
+	return result{text: out, step: Step{Tool: toolset.LoadTool, Summary: "Looked up tools"}}, err
 }
 
 /*

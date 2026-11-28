@@ -34,8 +34,9 @@ func bootHelpCenterDomains(a *app.App) {
 	probe := customdomain.Probe{Path: helpcenters.DomainProbePath, Key: a.DerivedKey("help.domain-probe")}
 	acts.HelpDomains = &helpcenters.Domains{
 		DB: a.DB, Clock: a.Clock, Verifier: customdomain.NewVerifier(a.DNS, a.HTTP, probe), Target: target,
-		Reserved: []string{appHost, a.Config.HelpCenters.BaseDomain, target}, Schedule: customdomain.DefaultSchedule(),
-		Probe: probe, Resolver: a.DNS,
+		Reserved: []string{appHost, target}, ReservedZones: []string{a.Config.HelpCenters.BaseDomain},
+		Schedule: customdomain.DefaultSchedule(),
+		Probe:    probe, Resolver: a.DNS,
 	}
 	if a.Domains != nil {
 		acts.HelpDomains.TLS = a.Domains
