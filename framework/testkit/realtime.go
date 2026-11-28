@@ -94,11 +94,11 @@ type RealtimeOptions struct {
 Realtime is a connected realtime test client.
 */
 type Realtime struct {
-	tb    testing.TB
-	conn  *websocket.Conn
-	id    int
-	queue []realtimeFrame
-	inbox chan realtimeMessage
+	tb       testing.TB
+	conn     *websocket.Conn
+	id       int
+	queue    []realtimeFrame
+	received chan realtimeMessage
 }
 
 /*
@@ -122,7 +122,7 @@ func DialRealtime(tb testing.TB, baseURL string, opts RealtimeOptions) (*Realtim
 	require.NoError(tb, err)
 	Cleanup(tb, func() { _ = conn.CloseNow() })
 
-	c := &Realtime{tb: tb, conn: conn, inbox: make(chan realtimeMessage, realtimeInbox)}
+	c := &Realtime{tb: tb, conn: conn, received: make(chan realtimeMessage, realtimeBacklog)}
 	go c.listen()
 
 	reply := c.command(map[string]any{"connect": map[string]any{"token": opts.Token}})
@@ -246,7 +246,7 @@ func (c *Realtime) Closed() int {
 
 	for {
 		select {
-		case m := <-c.inbox:
+		case m := <-c.received:
 			if m.err != nil {
 				return int(websocket.CloseStatus(m.err))
 			}

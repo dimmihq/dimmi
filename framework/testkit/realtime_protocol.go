@@ -132,10 +132,10 @@ func (c *Realtime) push() realtimePush {
 }
 
 /*
-realtimeInbox is how many messages the reader holds before a test takes
+realtimeBacklog is how many messages the reader holds before a test takes
 them.
 */
-const realtimeInbox = 1024
+const realtimeBacklog = 1024
 
 /*
 realtimeMessage is one message the reader took off the connection: its
@@ -150,19 +150,19 @@ type realtimeMessage struct {
 listen reads the connection for as long as it stays open, so the
 server's pings are answered while a test is busy elsewhere. A ping is an
 empty frame and the pong is one too; the server drops a client that
-misses one. Every other frame goes to the inbox, in order.
+misses one. Every other frame is handed to the test, in order.
 */
 func (c *Realtime) listen() {
 	for {
 		_, data, err := c.conn.Read(context.Background())
 		if err != nil {
-			c.inbox <- realtimeMessage{err: err}
+			c.received <- realtimeMessage{err: err}
 
 			return
 		}
 
 		if m := c.frames(data); len(m.frames) > 0 || m.err != nil {
-			c.inbox <- m
+			c.received <- m
 		}
 	}
 }
@@ -211,7 +211,7 @@ func (c *Realtime) read() {
 	defer cancel()
 
 	select {
-	case m := <-c.inbox:
+	case m := <-c.received:
 		require.NoError(c.tb, m.err)
 
 		c.queue = append(c.queue, m.frames...)
