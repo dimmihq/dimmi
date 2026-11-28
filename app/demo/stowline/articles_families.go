@@ -256,7 +256,7 @@ The connection only imports orders in the statuses you chose. An order that is u
 
 ## 3. Is the connection still authorized?
 
-If the last sync shows an authorisation error, reconnect. Passwords, app permissions and tokens change on the %[1]s side without Stowline being told.
+If the last sync shows an authorisation error, reconnect. Sign-in details, app permissions and tokens change on the %[1]s side without Stowline being told.
 
 ## 4. The problem we see most with %[1]s
 
