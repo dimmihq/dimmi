@@ -74,15 +74,10 @@ func TestChannels(t *testing.T) {
 			}))
 
 		c := connect(t, n, "u1")
-		reply := c.subscribe("team:7:board:main", "", 0)
-
-		require.Nil(t, reply.Error)
+		c.follow("team:7:board:main")
 		assert.Equal(t, map[string]string{"team": "7", "board": "main"}, <-got)
 
-		// Without history a publication is sent once, and the shared Valkey
-		// may drop its Pub/Sub connection under load, so publish until one
-		// arrives.
-		keepBroadcasting(t, n, "team:7:board:main", "moved")
+		require.NoError(t, n.server.Broadcast(t.Context(), "team:7:board:main", "moved", nil))
 		assert.Equal(t, "moved", decode(t, c.publication().Pub).Event, "a channel without history still delivers")
 	})
 }
@@ -187,7 +182,7 @@ func TestBroadcast(t *testing.T) {
 		t.Parallel()
 		n := newNode(t, testkit.NewValkey(t))
 		live := connect(t, n, "u1")
-		sub := live.subscribe("room:1", "", 0).Subscribe
+		sub := live.follow("room:1")
 
 		require.NoError(t, n.server.BroadcastEphemeral(t.Context(), "room:1", "typing", nil))
 		require.NoError(t, n.server.Broadcast(t.Context(), "room:1", "kept", nil))
