@@ -200,7 +200,7 @@ func requestSection(r Resource, op operation) string {
 		curl += " \\\n  -H \"Idempotency-Key: 4b1d-" + r.Key + "-" + op.verb + "\""
 	}
 	if body != "" {
-		curl += " \\\n  -H \"Content-Type: application/json\" \\\n  -d '" + body + "'"
+		curl += " \\\n  -H \"Content-Type: application/json\" \\\n  -d '" + shellQuoted(body) + "'"
 	}
 	b.WriteString(code("bash", curl))
 	method := camel(strings.ReplaceAll(r.Plural, " ", "_")) + "." + map[string]string{
@@ -236,20 +236,34 @@ responseFor is the example response of the operation.
 func responseFor(r Resource, op operation) string {
 	switch op.verb {
 	case "list":
-		return "{\n  \"data\": [\n" + indent(exampleObject(r, nil), "    ") +
-			"\n  ],\n  \"next_cursor\": \"c_eyJpZCI6IjAxSkM4WjRNMlEifQ\"\n}"
+		return listResponse(exampleObject(r, nil))
 	case "delete":
 		return fmt.Sprintf("{\n  \"id\": %s,\n  \"deleted\": true\n}", r.Fields[0].Example)
 	}
 	return exampleObject(r, nil)
 }
 
-func indent(s, prefix string) string {
-	lines := strings.Split(s, "\n")
-	for i := range lines {
-		lines[i] = prefix + lines[i]
+/*
+listResponse wraps one example object in a page of results.
+*/
+func listResponse(object string) string {
+	page := struct {
+		Data       []json.RawMessage `json:"data"`
+		NextCursor string            `json:"next_cursor"`
+	}{Data: []json.RawMessage{json.RawMessage(object)}, NextCursor: "c_eyJpZCI6IjAxSkM4WjRNMlEifQ"}
+	out, err := json.MarshalIndent(page, "", "  ")
+	if err != nil {
+		return object
 	}
-	return strings.Join(lines, "\n")
+	return string(out)
+}
+
+/*
+shellQuoted escapes single quotes so the text stays inside a
+single-quoted shell argument.
+*/
+func shellQuoted(s string) string {
+	return strings.ReplaceAll(s, "'", `'\''`)
 }
 
 /*

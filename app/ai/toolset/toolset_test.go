@@ -65,6 +65,26 @@ func TestPromptListsGroupsOneLineEach(t *testing.T) {
 	}
 }
 
+func TestPromptNamesTheToolsCalledByName(t *testing.T) {
+	p := toolset.New(entries(), groups(), nil).
+		WithDirect([]string{"search_knowledge", "load_tools", "call_tool", "handoff"}).Prompt()
+	want := "These tools are ready now and you call each by its own name: call_tool, handoff, load_tools, " +
+		"search_knowledge. Never load one of them, and never pass one of them to call_tool.\n\nMore tools are"
+	if !strings.HasPrefix(p, want) {
+		t.Fatalf("prompt = %q", p)
+	}
+}
+
+func TestInnerReadsTheToolACallNamesAndItsArguments(t *testing.T) {
+	name, args := toolset.Inner(json.RawMessage(`{"name":"load_tools","arguments":{"group":"tickets"}}`))
+	if name != "load_tools" || string(args) != `{"group":"tickets"}` {
+		t.Fatalf("inner = %q, %s", name, args)
+	}
+	if name, args = toolset.Inner(json.RawMessage(`{"name":"x"}`)); name != "x" || string(args) != "{}" {
+		t.Fatalf("inner = %q, %s", name, args)
+	}
+}
+
 func TestCallRunsAToolNotLoadedWhenItsArgumentsFit(t *testing.T) {
 	s := toolset.New(entries(), groups(), nil)
 	c, err := s.Check(json.RawMessage(`{"name":"open_ticket","arguments":{"title":"x"}}`))

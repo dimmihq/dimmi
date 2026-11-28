@@ -11,6 +11,7 @@ import { CHECKED_ON, COMPETITORS, RESOLUTION_RATE, SCENARIOS } from "../pricing/
 import { bill, dollars, EMAIL_PER_THOUSAND, FREE_CONVERSATIONS } from "../pricing/prices";
 import { SERVERS } from "../pricing/servers";
 import { FinalCta } from "../sections/final-cta";
+import { track } from "../track";
 
 const mono = "font-mono text-[12px] leading-5 font-medium tracking-[0.04em] uppercase";
 
@@ -188,7 +189,9 @@ function SelfHost() {
           <p className="text-[16px] leading-7 text-pretty text-text-primary">
             You pay your server, your AI provider, and your email provider. We are not in that sentence.
           </p>
-          <MonoLink href={GITHUB_URL}>Install from GitHub</MonoLink>
+          <MonoLink href={GITHUB_URL} onClick={() => track("github_click", { location: "pricing" })}>
+            Install from GitHub
+          </MonoLink>
         </div>
       </div>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3 [&>*]:min-w-0">

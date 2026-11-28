@@ -11,12 +11,23 @@ import { ButtonLink } from "@/components/base/buttons/button";
 import { cx } from "@/utils/cx";
 
 import { APP_URL } from "../links";
+import { track } from "../track";
 
 import { COMPETITORS, competitorBill } from "./competitors";
 import { ModelChoice } from "./model-choice";
 import { PlanTip } from "./plan-tip";
 import { bill, dollars, FREE_CONVERSATIONS } from "./prices";
 import { Range } from "./range";
+
+let calculatorChanged = false;
+
+function trackCalculatorChange(field: "conversations" | "ai_share" | "operator" | "seats" | "own_model") {
+  if (calculatorChanged) {
+    return;
+  }
+  calculatorChanged = true;
+  track("pricing_calc_change", { field });
+}
 
 export function Calculator() {
   const [conversations, setConversations] = useState(100);
@@ -47,7 +58,12 @@ export function Calculator() {
           label="Customer support conversations"
           hint="Per month, on every channel."
           value={conversations}
-          onChange={setConversations}
+          onChange={(value) => {
+            if (value !== conversations) {
+              setConversations(value);
+              trackCalculatorChange("conversations");
+            }
+          }}
           max={10000}
           curve
           freeUpTo={FREE_CONVERSATIONS}
@@ -56,7 +72,12 @@ export function Calculator() {
           label="Answered by the AI agent"
           hint="The share the agent replies in."
           value={aiShare}
-          onChange={setAiShare}
+          onChange={(value) => {
+            if (value !== aiShare) {
+              setAiShare(value);
+              trackCalculatorChange("ai_share");
+            }
+          }}
           max={100}
           format={{ style: "unit", unit: "percent" }}
         />
@@ -64,7 +85,12 @@ export function Calculator() {
           label="Operator conversations"
           hint="Threads your team starts with Operator."
           value={operator}
-          onChange={setOperator}
+          onChange={(value) => {
+            if (value !== operator) {
+              setOperator(value);
+              trackCalculatorChange("operator");
+            }
+          }}
           max={5000}
           curve
         />
@@ -72,12 +98,25 @@ export function Calculator() {
           label="Teammates"
           hint="Free on dimmi. Only prices the competitors."
           value={seats}
-          onChange={setSeats}
+          onChange={(value) => {
+            if (value !== seats) {
+              setSeats(value);
+              trackCalculatorChange("seats");
+            }
+          }}
           max={50}
         />
         <div className="flex flex-col gap-3">
           <span className="text-[15px] leading-6 font-medium text-text-primary">AI model</span>
-          <ModelChoice own={ownModel} onChange={setOwnModel} />
+          <ModelChoice
+            own={ownModel}
+            onChange={(value) => {
+              if (value !== ownModel) {
+                setOwnModel(value);
+                trackCalculatorChange("own_model");
+              }
+            }}
+          />
         </div>
       </div>
 
@@ -132,7 +171,12 @@ export function Calculator() {
         </dl>
 
         <div className="flex flex-col items-center gap-2.5">
-          <ButtonLink href={`${APP_URL}/signup`} trailingIcon={RiArrowRightLine} className="w-full">
+          <ButtonLink
+            href={`${APP_URL}/signup`}
+            trailingIcon={RiArrowRightLine}
+            className="w-full"
+            onClick={() => track("cta_start_free", { location: "pricing" })}
+          >
             Start free
           </ButtonLink>
           <span className="inline-flex items-center gap-1.5 text-[13px] leading-5 text-text-secondary">

@@ -15,6 +15,7 @@ package testkit
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 
@@ -131,9 +132,77 @@ func (c *Realtime) push() realtimePush {
 }
 
 /*
-read reads one message and queues its frames in order. The server may
-batch several frames in one message, so a reply can arrive behind a push.
-A ping is an empty frame, which callers skip.
+realtimeBacklog is how many messages the reader holds before a test takes
+them.
+*/
+const realtimeBacklog = 1024
+
+/*
+realtimeMessage is one message the reader took off the connection: its
+frames, or the error that ended the connection.
+*/
+type realtimeMessage struct {
+	frames []realtimeFrame
+	err    error
+}
+
+/*
+listen reads the connection for as long as it stays open, so the
+server's pings are answered while a test is busy elsewhere. A ping is an
+empty frame and the pong is one too; the server drops a client that
+misses one. Every other frame is handed to the test, in order.
+*/
+func (c *Realtime) listen() {
+	for {
+		_, data, err := c.conn.Read(context.Background())
+		if err != nil {
+			c.received <- realtimeMessage{err: err}
+
+			return
+		}
+
+		if m := c.frames(data); len(m.frames) > 0 || m.err != nil {
+			c.received <- m
+		}
+	}
+}
+
+/*
+frames splits one message into its frames, answering a ping on the way.
+*/
+func (c *Realtime) frames(data []byte) realtimeMessage {
+	var m realtimeMessage
+
+	for line := range bytes.SplitSeq(bytes.TrimSpace(data), []byte("\n")) {
+		if bytes.Equal(line, []byte("{}")) {
+			m.err = cmp.Or(m.err, c.pong())
+
+			continue
+		}
+
+		var f realtimeFrame
+
+		m.err = cmp.Or(m.err, json.Unmarshal(line, &f))
+		m.frames = append(m.frames, f)
+	}
+
+	return m
+}
+
+/*
+pong answers a ping.
+*/
+func (c *Realtime) pong() error {
+	ctx, cancel := context.WithTimeout(context.Background(), RealtimeWait)
+	defer cancel()
+
+	return c.conn.Write(ctx, websocket.MessageText, []byte("{}"))
+}
+
+/*
+read waits for the reader's next message and queues its frames in order.
+The server may batch several frames in one message, so a reply can arrive
+behind a push.
 */
 func (c *Realtime) read() {
 	c.tb.Helper()
@@ -141,12 +210,12 @@ func (c *Realtime) read() {
 	ctx, cancel := context.WithTimeout(c.tb.Context(), RealtimeWait)
 	defer cancel()
 
-	_, data, err := c.conn.Read(ctx)
-	require.NoError(c.tb, err)
+	select {
+	case m := <-c.received:
+		require.NoError(c.tb, m.err)
 
-	for line := range bytes.SplitSeq(bytes.TrimSpace(data), []byte("\n")) {
-		var f realtimeFrame
-		require.NoError(c.tb, json.Unmarshal(line, &f))
-		c.queue = append(c.queue, f)
+		c.queue = append(c.queue, m.frames...)
+	case <-ctx.Done():
+		require.FailNow(c.tb, "no realtime message arrived")
 	}
 }

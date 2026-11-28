@@ -95,16 +95,21 @@ export function PrivacySupportingParts() {
         subtitle="Complete inventory of every first-party cookie and browser storage entry used by trydimmi.com, dimmi Cloud, customer help centers, and the web messenger."
       />
 
-      <Clause anchor="cookies-inventory" number="III.1" title="Zero advertising trackers">
+      <Clause anchor="cookies-inventory" number="III.1" title="Cookieless visit counts and zero ad trackers">
         <p>
-          dimmi sets{" "}
+          trydimmi.com and our docs count visits and button clicks on our own self-hosted Rustrak server with{" "}
           <strong className="font-medium text-text-primary">
-            zero analytics cookies, zero advertising pixels, and zero cross-site tracking cookies
-          </strong>{" "}
-          across trydimmi.com, our docs, the dimmi Cloud dashboard, and the web messenger. Every entry below is
-          first-party and strictly necessary, a preference, or the dashboard's own diagnostics. If we ever introduce
-          non-essential cookies in the future, an explicit Accept / Reject consent banner visible without scrolling will
-          be deployed first.
+            no analytics cookies, no advertising pixels, and no third-party tracking scripts
+          </strong>
+          . Each visitor is counted as a hash of their IP address, their browser, and a salt that changes every day. The
+          IP address itself is never stored.
+        </p>
+        <p>
+          The dimmi Cloud dashboard sends no page views and only counts two sign-up events (opening the sign-up page and
+          creating a workspace), never emails, names, or user IDs. Self-hosted installs never load this script. Every
+          cookie and browser storage entry below is first-party and strictly necessary, a local preference, or our own
+          diagnostics. If we ever add non-essential cookies, we will show an Accept / Reject consent banner before
+          setting them.
         </p>
         <LegalTable
           caption="Complete cookie and browser storage inventory"

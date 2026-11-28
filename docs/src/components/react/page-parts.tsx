@@ -143,6 +143,7 @@ export function FooterBar() {
           <a
             href={GITHUB_URL}
             aria-label="GitHub"
+            data-traffic-event="github_click"
             className="text-foreground-icon-secondary hover:text-foreground-icon-primary"
           >
             <RiGithubFill className="size-4.5" />

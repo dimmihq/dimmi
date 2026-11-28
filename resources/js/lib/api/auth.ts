@@ -6,6 +6,7 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { type RequestOptions, signWithPasskey } from "@/lib/passkeys";
 import { stopRecording } from "@/lib/sessions";
+import { forgetSupportVisitor } from "@/lib/support";
 
 import { ApiError, request } from "./client";
 
@@ -252,8 +253,9 @@ export function verifyEmail(id: string, token: string, claim = false): Promise<u
   });
 }
 
-/* Signing out also stops recording the dashboard's session. */
+/* Signing out also stops recording the dashboard's session and forgets the messenger's visitor. */
 export async function signOut(): Promise<void> {
   await request<void>("DELETE", "/sessions/current");
   stopRecording();
+  forgetSupportVisitor();
 }

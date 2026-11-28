@@ -17,14 +17,7 @@ import {
   starButtonLabel,
 } from "../github-stars";
 import { GITHUB_URL } from "../links";
-
-declare global {
-  interface Window {
-    webTraffic?: {
-      track?: (name: string, data?: Record<string, unknown>) => void;
-    };
-  }
-}
+import { track } from "../track";
 
 export interface GitHubStarsProps {
   /** Spot on the site where this button sits, sent with github_click events. */
@@ -51,7 +44,7 @@ export function GitHubStars({
   const ariaLabel = starButtonLabel(count, threshold);
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    window.webTraffic?.track?.("github_click", { location });
+    track("github_click", { location });
     onClick?.(event);
   };
 

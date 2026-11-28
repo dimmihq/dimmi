@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@dimmi/browser':
+        specifier: ^0.1.0
+        version: 0.1.0
+      '@dimmi/react':
+        specifier: ^0.1.0
+        version: 0.1.0(react@19.3.1)
       '@fontsource-variable/inter':
         specifier: ^5.3.0
         version: 5.3.0
@@ -697,6 +703,14 @@ packages:
 
   '@dimforge/rapier3d-compat@0.12.0':
     resolution: {integrity: sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==}
+
+  '@dimmi/browser@0.1.0':
+    resolution: {integrity: sha512-5V+dawkvmeBJ2dN1VS/RSX4pStRZ1ZoizJGAh1cnavDO8qnLO4bZVTx9/tTEU4oyd0q57dAO5zl/HVhwzesuSw==}
+
+  '@dimmi/react@0.1.0':
+    resolution: {integrity: sha512-8IdA3/h+sx17SJWBp3IuQCDY9xOcn96fEeL6hymvLqSUmgcHEV5EmkCSbrrlXspT+SUh1HAOzy0DODtxeZTP9g==}
+    peerDependencies:
+      react: '>=18'
 
   '@emnapi/core@1.11.1':
     resolution: {integrity: sha512-RSvbQmHzdKzNsLYa/wHrbc3KN4sYLKAdPZxqiM2HATqv/SBk2/ENSHpvXGaLOMcsAyz0poEGqkmmKYG3OWiJEQ==}
@@ -5204,6 +5218,13 @@ snapshots:
   '@ctrl/tinycolor@4.3.1': {}
 
   '@dimforge/rapier3d-compat@0.12.0': {}
+
+  '@dimmi/browser@0.1.0': {}
+
+  '@dimmi/react@0.1.0(react@19.3.1)':
+    dependencies:
+      '@dimmi/browser': 0.1.0
+      react: 19.3.1
 
   '@emnapi/core@1.11.1':
     dependencies:

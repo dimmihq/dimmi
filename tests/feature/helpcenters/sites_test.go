@@ -17,6 +17,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/tests"
 )
 
 /*
@@ -64,6 +65,24 @@ func TestHelpCenterSites(t *testing.T) {
 		confirm := "?confirm=" + url.QueryEscape("Acme API Docs")
 		c.d.Owner.Delete("/api/v1/help-centers/" + id + confirm).AssertNoContent()
 		c.d.Owner.GetJSON("/api/v1/help-centers/" + id).AssertNotFound()
+	})
+
+	t.Run("takes a subdomain of the install's own domain, never its hosts or help center domain", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t, tests.WithEnv(
+			"DIMMI_APP__URL=https://dimmi.test",
+			"DIMMI_HELP_CENTERS__BASE_DOMAIN=docs.test",
+			"DIMMI_HELP_CENTERS__CUSTOM_DOMAIN_TARGET=edge.dimmi.test",
+		))
+		id := d.Owner.GetJSON("/api/v1/help-centers").AssertOK().String("data.0.id")
+		domain := "/api/v1/help-centers/" + id + "/domain"
+
+		for _, host := range []string{"edge.dimmi.test", "acme.docs.test"} {
+			d.Owner.PatchJSON(domain, testkit.JSON{"hostname": host}).
+				AssertStatus(fhttp.StatusUnprocessableEntity).AssertJSONPath("code", "domain_reserved")
+		}
+		d.Owner.PatchJSON(domain, testkit.JSON{"hostname": "help.dimmi.test"}).AssertOK().
+			AssertJSONPath("data.hostname", "help.dimmi.test").AssertJSONPath("data.status", "pending")
 	})
 
 	t.Run("serves a help center on its own domain once its records verify", func(t *testing.T) {

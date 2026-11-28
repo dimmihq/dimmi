@@ -271,6 +271,13 @@ export const RETENTION_SCHEDULE: RetentionRow[] = [
       "Masked in the browser and kept on dimmi's own servers in the EU. Deleted automatically after 30 days, and sooner when the workspace is purged.",
   },
   {
+    category: "Website and docs session recordings (visitors)",
+    scope: "Controller",
+    period: "30 days",
+    notes:
+      "Masked in the browser, linked to a random browser ID, and kept on dimmi's own servers in the EU. Deleted automatically after 30 days.",
+  },
+  {
     category: "Server access logs and application traces",
     scope: "Controller",
     period: "14 to 30 days",
@@ -500,6 +507,31 @@ export const COOKIES_AND_STORAGE: CookieEntry[] = [
     mechanism: "Local Storage",
     purpose: "Remembers light or dark appearance across pages. No analytics or advertising cookies are set.",
     lifetime: "Persistent until cleared",
+    category: "Preference",
+  },
+  {
+    surface: "trydimmi.com website & docs",
+    name: "kimmi.session & kimmi.halted",
+    mechanism: "Session Storage",
+    purpose: "Joins a visitor's masked session recording across page loads.",
+    lifetime: "Until the tab closes",
+    category: "Diagnostics",
+  },
+  {
+    surface: "trydimmi.com website & docs",
+    name: "kimmi.anonymousId",
+    mechanism: "Local Storage",
+    purpose: "Holds the recorder's random browser ID, which names no one.",
+    lifetime: "Persistent until cleared",
+    category: "Diagnostics",
+  },
+  {
+    surface: "trydimmi.com website, docs & sign-up",
+    name: "dimmi_utm",
+    mechanism: "Session Storage",
+    purpose:
+      "Keeps first-touch utm_* campaign parameters from a landing URL for the current tab so sign-up counts can include utm_source. Written only when UTM parameters are in the URL.",
+    lifetime: "Until browser tab closes",
     category: "Preference",
   },
 ];

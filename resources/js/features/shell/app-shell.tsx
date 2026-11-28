@@ -10,8 +10,11 @@
  * leaves that page. The shell also opens the app's one realtime
  * connection, for the workspace on screen, and says when it drops.
  */
+
+import { Dimmi } from "@dimmi/react";
 import {
   RiAddLine,
+  RiCustomerService2Line,
   RiLogoutBoxRLine,
   RiMenuLine,
   RiSettings4Line,
@@ -24,6 +27,7 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 import {
   type DashboardAccount,
+  type DashboardNavItem,
   DashboardSidebar,
   type DashboardSwitcher,
 } from "@/components/application/dashboard/dashboard-sidebar";
@@ -48,6 +52,7 @@ import { notificationCountsQuery } from "@/lib/api/notifications";
 import { callerQuery } from "@/lib/api/workspace";
 import { RealtimeProvider } from "@/lib/realtime/provider";
 import { recordSession } from "@/lib/sessions";
+import { openSupport, readSupportMessenger, supportSettings } from "@/lib/support";
 
 import { useAvailability } from "./availability";
 import { GetStarted } from "./get-started";
@@ -232,6 +237,8 @@ function SignedInShell({
 }) {
   const switcher = useSwitcher(me);
   const { current: onScreen } = useCurrentWorkspace(me.workspaces);
+  // The server's own messenger, when its page names one, for the signed-in teammate.
+  const [support] = useState(() => readSupportMessenger());
   const account = useAccount(me, onScreen?.id);
   const { current: workspace } = useCurrentWorkspace(me.workspaces);
   const { id } = me.user;
@@ -266,7 +273,11 @@ function SignedInShell({
         },
         caller?.member?.permissions,
       );
-  const secondary = inSettings ? [] : [settingsLink];
+  // Below Settings, so it shows on every page and as an icon on the folded rail.
+  const help: DashboardNavItem[] = support
+    ? [{ key: "support", label: "Chat with support", icon: RiCustomerService2Line, onSelect: openSupport }]
+    : [];
+  const secondary = inSettings ? help : [settingsLink, ...help];
   const selected = selectedKey(sections, secondary, path);
   const sidebar = (mobile: boolean) => (
     <DashboardSidebar
@@ -288,6 +299,7 @@ function SignedInShell({
 
   return (
     <RealtimeProvider workspace={workspace?.id ?? null}>
+      {support ? <Dimmi appId={support.appId} host={support.host} settings={supportSettings} /> : null}
       <div className="flex h-dvh flex-col gap-3 bg-background-full p-3 lg:flex-row lg:gap-4">
         <div className="hidden h-full lg:flex">{sidebar(false)}</div>
 

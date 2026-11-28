@@ -492,7 +492,9 @@ tokens:
 # project; both empty to record nothing. SessionsProjectID is the id of
 # that project and SessionsToken a write API token of the recorder, which
 # the server uses to erase a purged workspace's recordings; either empty
-# to erase nothing there.
+# to erase nothing there. SupportMessenger is the app id, wgt_..., of the
+# messenger on this server the browser app shows its signed-in teammates,
+# empty to show none.
 frontend:
   hot_path: public/hot  # DIMMI_FRONTEND__HOT_PATH
   errors_dsn: ""  # DIMMI_FRONTEND__ERRORS_DSN
@@ -500,6 +502,7 @@ frontend:
   sessions_key: ""  # DIMMI_FRONTEND__SESSIONS_KEY
   sessions_project_id: ""  # DIMMI_FRONTEND__SESSIONS_PROJECT_ID
   sessions_token: ""  # DIMMI_FRONTEND__SESSIONS_TOKEN (secret; or DIMMI_FRONTEND__SESSIONS_TOKEN_FILE naming a file)
+  support_messenger: ""  # DIMMI_FRONTEND__SUPPORT_MESSENGER
 
 # WidgetConfig configures the messenger widget. AssetsBaseURL is the
 # origin serving the widget's hashed files, such as a CDN in front of

@@ -94,3 +94,42 @@ func TestFrontendSessionRecorder(t *testing.T) {
 		}
 	})
 }
+
+func TestFrontendSupportMessenger(t *testing.T) {
+	t.Parallel()
+
+	load := func(t *testing.T, values settings) (config.Config, error) {
+		t.Helper()
+
+		var cfg config.Config
+
+		err := frameworkconfig.LoadInto(t.Context(), frameworkconfig.LoadOptions{Runtime: values}, &cfg)
+
+		return cfg, err
+	}
+
+	t.Run("shows no messenger by default", func(t *testing.T) {
+		t.Parallel()
+
+		cfg, err := load(t, settings{})
+		require.NoError(t, err)
+		assert.Empty(t, cfg.Frontend.SupportMessenger)
+	})
+
+	t.Run("takes a messenger's app id", func(t *testing.T) {
+		t.Parallel()
+
+		cfg, err := load(t, settings{"frontend.support_messenger": "wgt_01abc"})
+		require.NoError(t, err)
+		assert.Equal(t, "wgt_01abc", cfg.Frontend.SupportMessenger)
+	})
+
+	t.Run("refuses what is not a messenger's app id", func(t *testing.T) {
+		t.Parallel()
+
+		for _, value := range []string{"wgt_", "01abc", "https://example.com"} {
+			_, err := load(t, settings{"frontend.support_messenger": value})
+			require.ErrorIs(t, err, config.ErrInvalid, value)
+		}
+	})
+}
