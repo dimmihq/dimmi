@@ -35,13 +35,14 @@ const Entry = "resources/js/app.tsx"
 /*
 AppController serves the page the browser app mounts into. Reporting
 tells the app where to report its errors, Recording where to record its
-sessions.
+sessions, and Support which messenger of this server to show teammates.
 */
 type AppController struct {
 	Vite      *vite.Bundle
 	Errors    fhttp.Errors
 	Reporting spa.Reporting
 	Recording spa.Recording
+	Support   spa.Support
 }
 
 /*
@@ -65,7 +66,7 @@ func (c *AppController) ShowAuth(w fhttp.ResponseWriter, r *fhttp.Request) {
 
 func (c *AppController) render(w fhttp.ResponseWriter, r *fhttp.Request) {
 	page := spa.Shell(cmp.Or(i18n.Locale(r.Context()), "en"), theme.Of(r), c.Reporting, c.Recording,
-		c.Vite.Tags(Entry))
+		c.Support, c.Vite.Tags(Entry))
 	if err := view.Respond(w, r, fhttp.StatusOK, page); err != nil {
 		c.Errors.Render(w, r, err)
 	}

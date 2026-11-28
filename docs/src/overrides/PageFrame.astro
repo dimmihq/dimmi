@@ -34,10 +34,12 @@ const { hasSidebar } = Astro.locals.starlightRoute;
 <div id="docs-end" hidden></div>
 <script>
   import { startMonitoring } from "../../../site/src/monitoring";
+  import { startSupport } from "../../../site/src/support";
   import { captureUtm, track } from "../../../site/src/track";
 
   captureUtm();
   startMonitoring();
+  startSupport();
 
   document.addEventListener("click", (event) => {
     const button = (event.target as Element | null)?.closest<HTMLButtonElement>(".expressive-code .copy button");

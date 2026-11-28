@@ -232,6 +232,8 @@ export interface DashboardNavItem {
   label: string;
   icon: IconComponent;
   href?: string;
+  /** Runs instead of following `href`: an action row, such as opening the messenger. */
+  onSelect?: () => void;
   badge?: string | number;
   /** Opens this panel beside the sidebar instead of following `href`. */
   panel?: DashboardNavPanel;
@@ -354,6 +356,7 @@ function NavRows({ items, selected, collapsed }: { items: DashboardNavItem[]; se
           icon={item.icon}
           label={item.label}
           href={item.href}
+          onClick={item.onSelect}
           isSelected={isSelected}
           collapsed={collapsed}
           badge={

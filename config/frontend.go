@@ -20,6 +20,11 @@
 | With SessionsProjectID and SessionsToken also set, the server erases a
 | workspace's recordings on the recorder when it purges the workspace.
 |
+| The browser app shows its signed-in teammates a messenger of this same
+| server when SupportMessenger names one: the way the team that runs the
+| server supports the people who use it, with dimmi itself. Empty by
+| default, so a server shows its teammates no messenger.
+|
 */
 
 package config
@@ -27,6 +32,7 @@ package config
 import (
 	"fmt"
 	"net/url"
+	"strings"
 )
 
 /*
@@ -40,7 +46,9 @@ https://sessions.example.com, and SessionsKey the public key of its
 project; both empty to record nothing. SessionsProjectID is the id of
 that project and SessionsToken a write API token of the recorder, which
 the server uses to erase a purged workspace's recordings; either empty
-to erase nothing there.
+to erase nothing there. SupportMessenger is the app id, wgt_..., of the
+messenger on this server the browser app shows its signed-in teammates,
+empty to show none.
 */
 type FrontendConfig struct {
 	HotPath           string `koanf:"hot_path"`
@@ -49,6 +57,7 @@ type FrontendConfig struct {
 	SessionsKey       string `koanf:"sessions_key"`
 	SessionsProjectID string `koanf:"sessions_project_id"`
 	SessionsToken     string `koanf:"sessions_token"      secret:"true"`
+	SupportMessenger  string `koanf:"support_messenger"`
 }
 
 /*
@@ -59,11 +68,21 @@ func (c FrontendConfig) Records() bool {
 }
 
 /*
-check reports a session recorder that cannot work: a host without a key
-or a key without a host, or a host that is not a bare http or https
-origin.
+supportMessengerPrefix starts every messenger's app id.
+*/
+const supportMessengerPrefix = "wgt_"
+
+/*
+check reports a support messenger that is not a messenger's app id, and
+a session recorder that cannot work: a host without a key or a key
+without a host, or a host that is not a bare http or https origin.
 */
 func (c FrontendConfig) check() error {
+	if c.SupportMessenger != "" && (!strings.HasPrefix(c.SupportMessenger, supportMessengerPrefix) ||
+		len(c.SupportMessenger) == len(supportMessengerPrefix)) {
+		return fmt.Errorf("%w: frontend.support_messenger", ErrInvalid)
+	}
+
 	if c.SessionsHost == "" && c.SessionsKey == "" {
 		return nil
 	}
