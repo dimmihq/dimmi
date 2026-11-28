@@ -13,7 +13,7 @@ import { cx } from "@/utils/cx";
 
 import { SiteFooter } from "./components/site-footer";
 import { SiteNav } from "./components/site-nav";
-import { findRoute } from "./routes";
+import { findRoute, loadedPage, loadPage } from "./routes";
 import { pageSchemas, syncHead } from "./seo";
 
 // useLayoutEffect warns when it runs on the server; the prerender has no scroll to set.
@@ -25,7 +25,7 @@ export function App({ path: initial }: { path: string }) {
   const shown = useRef(location.path);
   shown.current = location.path;
   const route = findRoute(location.path);
-  const Page = route?.page;
+  const Page = loadedPage(route);
 
   // A link to another page of the site, clicked plainly, becomes an in-place swap.
   const onClick = (event: MouseEvent<HTMLDivElement>) => {
@@ -57,10 +57,20 @@ export function App({ path: initial }: { path: string }) {
       return;
     }
     event.preventDefault();
-    window.history.replaceState({ scroll: window.scrollY }, "");
-    window.history.pushState({ scroll: 0 }, "", link.pathname + link.hash);
-    navigated.current = true;
-    setLocation({ path: next.path, hash: link.hash, scroll: 0 });
+    void loadPage(next).then(() => {
+      window.history.replaceState({ scroll: window.scrollY }, "");
+      window.history.pushState({ scroll: 0 }, "", link.pathname + link.hash);
+      navigated.current = true;
+      setLocation({ path: next.path, hash: link.hash, scroll: 0 });
+    });
+  };
+
+  // Pointing at a link to another page fetches that page's chunk ahead of the click.
+  const onPointerOver = (event: MouseEvent<HTMLDivElement>) => {
+    const link = (event.target as HTMLElement).closest("a");
+    if (link && link.origin === window.location.origin) {
+      void loadPage(findRoute(link.pathname));
+    }
   };
 
   // Back and forward swap pages too, and return to where the reader was.
@@ -70,9 +80,12 @@ export function App({ path: initial }: { path: string }) {
       if (findRoute(window.location.pathname)?.path === shown.current) {
         return;
       }
-      navigated.current = true;
       const scroll = (event.state as { scroll?: number } | null)?.scroll ?? 0;
-      setLocation({ path: window.location.pathname, hash: window.location.hash, scroll });
+      const { pathname, hash } = window.location;
+      void loadPage(findRoute(pathname)).then(() => {
+        navigated.current = true;
+        setLocation({ path: pathname, hash, scroll });
+      });
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -97,7 +110,7 @@ export function App({ path: initial }: { path: string }) {
     // The handler only reads clicks that bubble up from real links.
     // biome-ignore lint/a11y/noStaticElementInteractions: links inside stay the interactive elements
     // biome-ignore lint/a11y/useKeyWithClickEvents: Enter on a link fires the same click
-    <div className="flex min-h-screen flex-col bg-background-full" onClick={onClick}>
+    <div className="flex min-h-screen flex-col bg-background-full" onClick={onClick} onPointerOver={onPointerOver}>
       <SiteNav path={location.path} />
       <main key={location.path} className={cx("flex-1", navigated.current && "animate-page-in")}>
         {pageSchemas(route).map((schema) => (

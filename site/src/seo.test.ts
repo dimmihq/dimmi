@@ -35,7 +35,7 @@ describe("ogImageUrl and SEO head metadata", () => {
       path: "/example",
       title: "Example | dimmi",
       description: "Example route without a custom OG card.",
-      page: () => null,
+      load: async () => () => null,
     };
 
     const elements = headElements(routeWithoutImage);
@@ -49,7 +49,7 @@ describe("ogImageUrl and SEO head metadata", () => {
       title: "External | dimmi",
       description: "Route with an absolute OG image URL.",
       ogImage: "https://cdn.trydimmi.com/og/custom.png",
-      page: () => null,
+      load: async () => () => null,
     };
 
     expect(ogImageUrl(routeWithAbsolute)).toBe("https://cdn.trydimmi.com/og/custom.png");

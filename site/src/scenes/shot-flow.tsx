@@ -162,7 +162,7 @@ export function ShotFlow({
                   alt={i === 0 ? alt : ""}
                   width={flow.width}
                   height={flow.height}
-                  loading={i === 0 ? "eager" : undefined}
+                  loading="lazy"
                   decoding="async"
                   className="block size-full dark:hidden"
                 />
@@ -171,7 +171,7 @@ export function ShotFlow({
                   alt={i === 0 ? alt : ""}
                   width={flow.width}
                   height={flow.height}
-                  loading={i === 0 ? "eager" : undefined}
+                  loading="lazy"
                   decoding="async"
                   className="hidden size-full dark:block"
                 />

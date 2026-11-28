@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- The body font, fetched beside the stylesheet instead of after it. -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      crossorigin
+      href="../node_modules/@fontsource-variable/inter/files/inter-latin-opsz-normal.woff2"
+    />
     <script>
       try {
         var t = localStorage.getItem("boardui:theme");

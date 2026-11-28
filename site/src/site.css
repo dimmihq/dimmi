@@ -1,11 +1,24 @@
 /*
- * The site's stylesheet is the app's: BoardUI tokens, type scale, fonts
- * and the dimmi accent, so marketing pages and the product match. The
- * site's own files are added as a Tailwind source on top.
+ * The site's stylesheet shares the app's look: BoardUI tokens, type
+ * scale, fonts and the dimmi accent, so marketing pages and the product
+ * match.
  */
-@import "../../resources/js/app.css";
+@import "../../resources/js/base.css";
 
+/*
+ * Only the site's files and the app files they import are Tailwind
+ * sources, so the site never ships the dashboard's classes.
+ */
 @source "./";
+@source "../../resources/js/components/base";
+@source "../../resources/js/components/foundations";
+@source "../../resources/js/components/application/agent-thinking";
+@source "../../resources/js/components/application/brand";
+@source "../../resources/js/components/application/theme";
+@source "../../resources/js/features/ai/logos.tsx";
+@source "../../resources/js/features/brand";
+@source "../../resources/js/features/tickets/issues/tool-logos.tsx";
+@source "../../resources/js/utils";
 
 /* Headlines use the app's Inter, set larger and tighter than body text. */
 @theme {

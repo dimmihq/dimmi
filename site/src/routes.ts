@@ -4,31 +4,6 @@
  * produces an empty HTML file.
  */
 import type { ComponentType } from "react";
-import { AgentStudioPage } from "./pages/agent-studio";
-import { AgentsPage } from "./pages/agents";
-import { BroadcastsPage } from "./pages/broadcasts";
-import { ChangelogPage } from "./pages/changelog";
-import { ApiChannelPage } from "./pages/channels/api";
-import { EmailChannelPage } from "./pages/channels/email";
-import { FacebookMessengerChannelPage } from "./pages/channels/facebook-messenger";
-import { ChannelsIndexPage } from "./pages/channels/index";
-import { InstagramChannelPage } from "./pages/channels/instagram";
-import { MessengerChannelPage } from "./pages/channels/messenger";
-import { SlackChannelPage } from "./pages/channels/slack";
-import { WhatsAppChannelPage } from "./pages/channels/whatsapp";
-import { FeedbackPage } from "./pages/feedback";
-import { HelpCenterPage } from "./pages/help-center";
-import { HomePage } from "./pages/home";
-import { InboxPage } from "./pages/inbox";
-import { OperatorPage } from "./pages/operator";
-import { PricingPage } from "./pages/pricing";
-import { PrivacyPage } from "./pages/privacy";
-import { ProceduresPage } from "./pages/procedures";
-import { ReportsPage } from "./pages/reports";
-import { RoutinesPage } from "./pages/routines";
-import { TermsPage } from "./pages/terms";
-import { TicketsPage } from "./pages/tickets";
-import { WorkflowsPage } from "./pages/workflows";
 import { SDK_COUNT } from "./sdks";
 
 export type Route = {
@@ -36,7 +11,8 @@ export type Route = {
   title: string;
   description: string;
   ogImage?: string;
-  page: ComponentType;
+  /** Loads the page's own chunk, so a visit downloads only the page it shows. */
+  load: () => Promise<ComponentType>;
 };
 
 export const DEFAULT_TITLE = "dimmi: Open-source Intercom alternative for customer support";
@@ -48,7 +24,7 @@ export const routes: Route[] = [
     description:
       "Open-source (MIT) Intercom alternative: shared inbox, AI agents on your own model key, help center, and workflows. Free seats. Cloud or self-hosted.",
     ogImage: "/og/home.png",
-    page: HomePage,
+    load: () => import("./pages/home").then((m) => m.HomePage),
   },
   {
     path: "/inbox",
@@ -56,7 +32,7 @@ export const routes: Route[] = [
     description:
       "Web chat, email, Slack, WhatsApp, Instagram, and Facebook messages in one shared inbox beside customer history, with unlimited free seats.",
     ogImage: "/og/inbox.png",
-    page: InboxPage,
+    load: () => import("./pages/inbox").then((m) => m.InboxPage),
   },
   {
     path: "/agents",
@@ -64,7 +40,7 @@ export const routes: Route[] = [
     description:
       "Run dedicated AI support agents for frontline, billing, docs, and brands. Replies cite your docs, transfer quietly, and cut AI fees with BYO keys.",
     ogImage: "/og/agents.png",
-    page: AgentsPage,
+    load: () => import("./pages/agents").then((m) => m.AgentsPage),
   },
   {
     path: "/agent-studio",
@@ -72,7 +48,7 @@ export const routes: Route[] = [
     description:
       "Write agent guidance with @ chips, run multi-turn simulations, compare Draft against Live side by side, and roll back changes in one click.",
     ogImage: "/og/agent-studio.png",
-    page: AgentStudioPage,
+    load: () => import("./pages/agent-studio").then((m) => m.AgentStudioPage),
   },
   {
     path: "/routines",
@@ -80,7 +56,7 @@ export const routes: Route[] = [
     description:
       "Put Operator on a daily or weekly schedule to sync merged GitHub PRs to help articles, audit knowledge gaps, and review inline diffs.",
     ogImage: "/og/routines.png",
-    page: RoutinesPage,
+    load: () => import("./pages/routines").then((m) => m.RoutinesPage),
   },
   {
     path: "/workflows",
@@ -88,7 +64,7 @@ export const routes: Route[] = [
     description:
       "Build visual support workflows included on every plan. Trigger on events, branch on rules, open tickets, or call your own API.",
     ogImage: "/og/workflows.png",
-    page: WorkflowsPage,
+    load: () => import("./pages/workflows").then((m) => m.WorkflowsPage),
   },
   {
     path: "/pricing",
@@ -96,7 +72,7 @@ export const routes: Route[] = [
     description:
       "Unlimited free seats, 100 free conversations every month, and 50% to 83% off AI fees with your own model keys. Free to self-host under MIT.",
     ogImage: "/og/pricing.png",
-    page: PricingPage,
+    load: () => import("./pages/pricing").then((m) => m.PricingPage),
   },
   {
     path: "/operator",
@@ -104,7 +80,7 @@ export const routes: Route[] = [
     description:
       "Operator sums up long chats, searches customer history, drafts replies, and proposes edits you can undo. Customers never see it.",
     ogImage: "/og/operator.png",
-    page: OperatorPage,
+    load: () => import("./pages/operator").then((m) => m.OperatorPage),
   },
   {
     path: "/procedures",
@@ -112,7 +88,7 @@ export const routes: Route[] = [
     description:
       "Write how your team handles refunds, cancellations, and account changes. Agents follow every step, respect hard limits, and pause for approval.",
     ogImage: "/og/procedures.png",
-    page: ProceduresPage,
+    load: () => import("./pages/procedures").then((m) => m.ProceduresPage),
   },
   {
     path: "/tickets",
@@ -120,7 +96,7 @@ export const routes: Route[] = [
     description:
       "Turn chats into tracked tickets with custom states, SLAs, outage trackers, and links to Linear, Jira, GitHub, and PagerDuty.",
     ogImage: "/og/tickets.png",
-    page: TicketsPage,
+    load: () => import("./pages/tickets").then((m) => m.TicketsPage),
   },
   {
     path: "/reports",
@@ -128,7 +104,7 @@ export const routes: Route[] = [
     description:
       "Track volume, reply times, CSAT, and AI agent results by team or channel. Click any number to inspect the exact conversations behind it.",
     ogImage: "/og/reports.png",
-    page: ReportsPage,
+    load: () => import("./pages/reports").then((m) => m.ReportsPage),
   },
   {
     path: "/help-center",
@@ -136,7 +112,7 @@ export const routes: Route[] = [
     description:
       "Publish help articles on your own domain. Customers get instant answers, and your support agents read from the same docs.",
     ogImage: "/og/help-center.png",
-    page: HelpCenterPage,
+    load: () => import("./pages/help-center").then((m) => m.HelpCenterPage),
   },
   {
     path: "/broadcasts",
@@ -144,7 +120,7 @@ export const routes: Route[] = [
     description:
       "Send broadcasts and series by email, WhatsApp, chat, and Slack from your own domain. Every reply opens in your inbox.",
     ogImage: "/og/broadcasts.png",
-    page: BroadcastsPage,
+    load: () => import("./pages/broadcasts").then((m) => m.BroadcastsPage),
   },
   {
     path: "/changelog",
@@ -152,7 +128,7 @@ export const routes: Route[] = [
     description:
       "Publish product updates once and reach customers on your changelog, inside the messenger, and by email.",
     ogImage: "/og/changelog.png",
-    page: ChangelogPage,
+    load: () => import("./pages/changelog").then((m) => m.ChangelogPage),
   },
   {
     path: "/feedback",
@@ -160,7 +136,7 @@ export const routes: Route[] = [
     description:
       "Collect customer votes on your help center, link live support chats, and email every voter the day you ship.",
     ogImage: "/og/feedback.png",
-    page: FeedbackPage,
+    load: () => import("./pages/feedback").then((m) => m.FeedbackPage),
   },
   {
     path: "/channels",
@@ -168,7 +144,7 @@ export const routes: Route[] = [
     description:
       "Connect live web messenger, verified support email, Slack Connect, WhatsApp Business, Instagram DMs, Facebook Messenger, and custom API channels.",
     ogImage: "/og/channels.png",
-    page: ChannelsIndexPage,
+    load: () => import("./pages/channels/index").then((m) => m.ChannelsIndexPage),
   },
   {
     path: "/channels/messenger",
@@ -176,7 +152,7 @@ export const routes: Route[] = [
     description:
       "Embed live chat, help center search, and release notes with one script tag or 6 framework packages. Verified identity and AI agents included.",
     ogImage: "/og/channels-messenger.png",
-    page: MessengerChannelPage,
+    load: () => import("./pages/channels/messenger").then((m) => m.MessengerChannelPage),
   },
   {
     path: "/channels/email",
@@ -184,7 +160,7 @@ export const routes: Route[] = [
     description:
       "Forward support@, billing@, and security@ into one shared inbox with verified SPF/DKIM/DMARC domains, collision alerts, and AI support agents.",
     ogImage: "/og/channels-email.png",
-    page: EmailChannelPage,
+    load: () => import("./pages/channels/email").then((m) => m.EmailChannelPage),
   },
   {
     path: "/channels/slack",
@@ -192,7 +168,7 @@ export const routes: Route[] = [
     description:
       "Turn Slack Connect, community, and internal help desk channels into tracked support threads with two-way sync, SLAs, tickets, and Operator.",
     ogImage: "/og/channels-slack.png",
-    page: SlackChannelPage,
+    load: () => import("./pages/channels/slack").then((m) => m.SlackChannelPage),
   },
   {
     path: "/channels/whatsapp",
@@ -200,7 +176,7 @@ export const routes: Route[] = [
     description:
       "Connect official WhatsApp Business numbers via Meta, manage approved templates, track 24-hour windows, and answer with zero message markup.",
     ogImage: "/og/channels-whatsapp.png",
-    page: WhatsAppChannelPage,
+    load: () => import("./pages/channels/whatsapp").then((m) => m.WhatsAppChannelPage),
   },
   {
     path: "/channels/instagram",
@@ -208,7 +184,7 @@ export const routes: Route[] = [
     description:
       "Connect Instagram Business accounts via Meta OAuth, answer DMs and story replies beside order history, and automate returns with AI agents.",
     ogImage: "/og/channels-instagram.png",
-    page: InstagramChannelPage,
+    load: () => import("./pages/channels/instagram").then((m) => m.InstagramChannelPage),
   },
   {
     path: "/channels/facebook-messenger",
@@ -216,14 +192,14 @@ export const routes: Route[] = [
     description:
       "Connect Facebook Pages via Meta OAuth, route multiple brands into dedicated inboxes, and answer Page messages beside email and WhatsApp.",
     ogImage: "/og/channels-facebook-messenger.png",
-    page: FacebookMessengerChannelPage,
+    load: () => import("./pages/channels/facebook-messenger").then((m) => m.FacebookMessengerChannelPage),
   },
   {
     path: "/channels/api",
     title: `Headless chat API, webhooks & ${SDK_COUNT} SDKs | dimmi`,
     description: `Build custom web or mobile chat on /widget/v1, sync backend threads over /api/v1, subscribe to signed webhooks, and use ${SDK_COUNT} typed SDKs and MCP.`,
     ogImage: "/og/channels-api.png",
-    page: ApiChannelPage,
+    load: () => import("./pages/channels/api").then((m) => m.ApiChannelPage),
   },
   {
     path: "/terms",
@@ -231,7 +207,7 @@ export const routes: Route[] = [
     description:
       "dimmi Cloud Terms of Service, Product-Specific Terms, Acceptable Use Policy, and Self-Hosting Notice by Hivy Technologies Limited.",
     ogImage: "/og/terms.png",
-    page: TermsPage,
+    load: () => import("./pages/terms").then((m) => m.TermsPage),
   },
   {
     path: "/privacy",
@@ -239,9 +215,29 @@ export const routes: Route[] = [
     description:
       "dimmi Cloud Privacy Policy, End-User Notice, Cookie Notice, Subprocessor List, AI Transparency, Security Overview, and Global DPA.",
     ogImage: "/og/privacy.png",
-    page: PrivacyPage,
+    load: () => import("./pages/privacy").then((m) => m.PrivacyPage),
   },
 ];
+
+const loaded = new Map<string, ComponentType>();
+
+/**
+ * The route's page once loadPage has fetched it. The browser loads the
+ * first page before it hydrates, so the prerendered HTML always has its
+ * page ready.
+ */
+export function loadedPage(route: Route | undefined): ComponentType | undefined {
+  return route ? loaded.get(route.path) : undefined;
+}
+
+export async function loadPage(route: Route | undefined): Promise<ComponentType | undefined> {
+  if (!route) {
+    return undefined;
+  }
+  const page = loaded.get(route.path) ?? (await route.load());
+  loaded.set(route.path, page);
+  return page;
+}
 
 export function findRoute(path: string): Route | undefined {
   const clean = path.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
