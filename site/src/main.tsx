@@ -10,7 +10,7 @@ import { createRoot, hydrateRoot } from "react-dom/client";
 
 import { App } from "./app";
 import { startMonitoring } from "./monitoring";
-import { DEFAULT_TITLE, findRoute, routes } from "./routes";
+import { DEFAULT_TITLE, findRoute, loadPage, routes } from "./routes";
 import { headElements } from "./seo";
 import { captureUtm } from "./track";
 
@@ -19,16 +19,19 @@ if (typeof window !== "undefined") {
   startMonitoring();
   const target = document.getElementById("root");
   if (target) {
-    const app = (
-      <StrictMode>
-        <App path={window.location.pathname} />
-      </StrictMode>
-    );
-    if (target.hasChildNodes()) {
-      hydrateRoot(target, app);
-    } else {
-      createRoot(target).render(app);
-    }
+    // The page's chunk first, so hydration finds the same page the HTML has.
+    void loadPage(findRoute(window.location.pathname)).then(() => {
+      const app = (
+        <StrictMode>
+          <App path={window.location.pathname} />
+        </StrictMode>
+      );
+      if (target.hasChildNodes()) {
+        hydrateRoot(target, app);
+      } else {
+        createRoot(target).render(app);
+      }
+    });
   }
 }
 
@@ -38,6 +41,7 @@ export async function prerender(data: { url: string }) {
   const { renderToString } = await import("react-dom/server.edge");
   const { parseLinks } = await import("vite-prerender-plugin/parse");
 
+  await loadPage(findRoute(data.url));
   const html = renderToString(
     <StrictMode>
       <App path={data.url} />
