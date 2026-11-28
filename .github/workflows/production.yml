@@ -87,6 +87,8 @@ jobs:
           if [[ "$previous" =~ ^[0-9a-f]{40}$ && "$previous" != "$SHA" ]]; then
             echo "PREVIOUS=$previous" >> "$GITHUB_ENV"
           fi
+          curl --silent --fail --max-time 15 https://trydimmi.com/sitemap.xml \
+            -o "$RUNNER_TEMP/previous-sitemap.xml" || true
       - name: Release
         run: deploy/k8s/scripts/release.sh production "$SHA"
       # A new edge orders its certificates when it starts, and the first
@@ -115,3 +117,15 @@ jobs:
       - name: Roll back to the previous release
         if: failure() && env.PREVIOUS != ''
         run: deploy/k8s/scripts/rollback.sh production "$PREVIOUS"
+      - name: Set up Node for IndexNow
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Notify IndexNow
+        continue-on-error: true
+        run: |
+          args=(--sitemap https://trydimmi.com/sitemap.xml)
+          if [ -s "$RUNNER_TEMP/previous-sitemap.xml" ]; then
+            args+=(--previous-sitemap "$RUNNER_TEMP/previous-sitemap.xml")
+          fi
+          node scripts/indexnow.ts "${args[@]}"

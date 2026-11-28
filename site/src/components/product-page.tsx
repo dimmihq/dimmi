@@ -470,23 +470,8 @@ export function ChannelLinks({ current }: { current: string }) {
 }
 
 export function Questions({ body, items }: { body?: string; items: { question: string; answer: string }[] }) {
-  const faqSchema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: items.map((item) => ({
-      "@type": "Question",
-      name: item.question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: item.answer,
-      },
-    })),
-  };
-
   return (
     <Section frameClassName="grid grid-cols-1 gap-10 lg:grid-cols-[0.8fr_1.2fr] [&>*]:min-w-0">
-      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static FAQPage JSON-LD matching visible Q&A */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <div className="flex flex-col gap-4">
         <h2 className="text-[40px] leading-[1.12] font-medium tracking-[-0.025em] text-text-primary max-sm:text-[30px]">
           Questions and answers.
