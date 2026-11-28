@@ -1,7 +1,10 @@
 package channels_test
 
 import (
+	"bytes"
 	"encoding/json"
+	"image"
+	"image/png"
 	"io"
 	"strconv"
 	"strings"
@@ -72,6 +75,10 @@ func (f *fakeMeta) serve(w fhttp.ResponseWriter, r *fhttp.Request) {
 		_, _ = io.WriteString(w, `{"access_token":"`+businessToken+`"}`)
 	case path == "me":
 		_, _ = io.WriteString(w, `{"client_business_id":"B77","id":"SU1"}`)
+	case path == pageID && r.URL.Query().Get("fields") == "picture{url}":
+		_, _ = io.WriteString(w, `{"picture":{"data":{"url":"https://scontent.xx.fbcdn.net/page.jpg"}}}`)
+	case path == igID && r.URL.Query().Get("fields") == "profile_picture_url":
+		_, _ = io.WriteString(w, `{"profile_picture_url":"https://scontent.cdninstagram.com/acme.jpg"}`)
 	case path == "me/assigned_pages":
 		_, _ = io.WriteString(w, `{"data":[{"id":"`+pageID+`","name":"Acme Page","access_token":"`+pageToken+`",`+
 			`"picture":{"data":{"url":"https://scontent.xx.fbcdn.net/page.jpg"}}}]}`)
@@ -106,6 +113,18 @@ func (f *fakeMeta) serve(w fhttp.ResponseWriter, r *fhttp.Request) {
 		w.WriteHeader(fhttp.StatusNotFound)
 		_, _ = io.WriteString(w, `{"error":{"code":100,"message":"unknown path"}}`)
 	}
+}
+
+/*
+servePicture answers Meta's picture hosts with a small picture.
+*/
+func servePicture(w fhttp.ResponseWriter, _ *fhttp.Request) {
+	var out bytes.Buffer
+
+	_ = png.Encode(&out, image.NewRGBA(image.Rect(0, 0, 8, 8)))
+
+	w.Header().Set("Content-Type", "image/png")
+	_, _ = w.Write(out.Bytes())
 }
 
 /*
@@ -164,7 +183,9 @@ func newSocialCase(t *testing.T, platform string) *socialCase {
 	))
 
 	fake := &fakeMeta{}
-	httpclienttest.New(tc.App.HTTP).Serve("https://graph.facebook.com/*", fhttp.HandlerFunc(fake.serve))
+	httpclienttest.New(tc.App.HTTP).Serve("https://graph.facebook.com/*", fhttp.HandlerFunc(fake.serve)).
+		Serve("https://scontent.xx.fbcdn.net/*", fhttp.HandlerFunc(servePicture)).
+		Serve("https://scontent.cdninstagram.com/*", fhttp.HandlerFunc(servePicture))
 
 	sc := &socialCase{
 		slackCase: &slackCase{TestCase: tc}, meta: fake, platform: platform, account: pageID, customer: psid,
@@ -177,6 +198,8 @@ func newSocialCase(t *testing.T, platform string) *socialCase {
 		AssertOK()
 	require.Equal(t, sc.account, grant.String("data.accounts.0.id"))
 	require.Equal(t, "false", grant.String("data.accounts.0.connected"))
+	require.True(t, strings.HasPrefix(grant.String("data.accounts.0.picture_url"), "data:image/png;base64,"),
+		"the picker shows the picture itself, never Meta's address")
 
 	res := tc.ActingAsOwner().PostJSON("/api/v1/channels/"+platform, map[string]any{
 		"grant": grant.String("data.grant"), "account_id": sc.account,
@@ -267,6 +290,32 @@ func TestSocialChannels(t *testing.T) {
 			sc.ActingAsOwner().PostJSON("/api/v1/channels/"+platform, map[string]any{
 				"grant": "nope", "account_id": sc.account,
 			}).AssertStatus(422)
+		})
+
+		t.Run(platform+" keeps its own copy of the account's picture", func(t *testing.T) {
+			t.Parallel()
+
+			sc := newSocialCase(t, platform)
+			disk, err := sc.App.Storage.Default()
+			require.NoError(t, err)
+
+			list := sc.ActingAsOwner().GetJSON("/api/v1/channels/" + platform).AssertOK()
+			kept := list.String("data.0.picture_url")
+			require.True(t, strings.HasPrefix(kept, "/avatars/"), kept)
+
+			exists, err := disk.Exists(t.Context(), strings.TrimPrefix(kept, "/"))
+			require.NoError(t, err)
+			assert.True(t, exists)
+
+			_, err = sc.Operator().Exec(t.Context(),
+				`UPDATE channel_connections SET config = config || '{"picture_url":"https://x.fbcdn.net/old.jpg"}' `+
+					`WHERE id = $1`, sc.conn.ID)
+			require.NoError(t, err)
+
+			adopted := sc.ActingAsOwner().GetJSON("/api/v1/channels/" + platform).AssertOK()
+			assert.True(t, strings.HasPrefix(adopted.String("data.0.picture_url"), "/avatars/"))
+			assert.Equal(t, adopted.String("data.0.picture_url"),
+				sc.ActingAsOwner().GetJSON("/api/v1/channels/"+platform).AssertOK().String("data.0.picture_url"))
 		})
 
 		t.Run(platform+" asks Meta what stands between a connection and its messages", func(t *testing.T) {

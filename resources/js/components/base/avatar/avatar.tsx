@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
-import type { HTMLAttributes, Ref } from "react";
+import { type HTMLAttributes, type Ref, useState } from "react";
 import { cx, sortCx } from "@/utils/cx";
 
 /**
@@ -13,7 +13,8 @@ import { cx, sortCx } from "@/utils/cx";
  *   lg = 36   people cards                   (initials 18/24 semibold)
  *
  * Renders a photo when `src` is given, otherwise centered initials on a
- * tinted disc. Initial tints from Figma:
+ * tinted disc. A photo that fails to load gives way to the initials, so
+ * a dead address never shows as a broken image. Initial tints from Figma:
  *   neutral → bg avatar/neutral/background, text text/secondary
  *   blue    → bg color/blue/300,    text color/blue/900
  *   lime    → bg color/lime/200,    text color/lime/700
@@ -60,15 +61,19 @@ export function Avatar({
   ref,
   ...props
 }: AvatarProps) {
+  const [failed, setFailed] = useState<string | null>(null);
+  const photo = src && failed !== src ? src : undefined;
+
   return (
     <span
       ref={ref}
       className={cx(styles.base, styles.size[size], styles.color[color], className)}
       {...props}
     >
-      {src ? (
+      {photo ? (
         <img
-          src={src}
+          src={photo}
+          onError={() => setFailed(photo)}
           alt={alt ?? ""}
           loading="lazy"
           decoding="async"

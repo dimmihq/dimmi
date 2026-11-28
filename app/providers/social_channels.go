@@ -51,8 +51,8 @@ func bootSocial(a *app.App) error {
 		channel := &channels.Social{
 			Platform: platform, DB: a.DB, Clock: a.Clock, Queue: a.Queue, Cache: a.Cache, IDs: a.IDs, Log: a.Log,
 			Keys: a.Keys, Driver: driver, Config: cfg, App: a.Config.Services.MetaApp(), Login: login,
-			AppURL: a.Application.Config.App.URL,
-			Edits:  &conversations.InboundEdits{DB: a.DB, Events: a.Events, Clock: a.Clock},
+			AppURL: a.Application.Config.App.URL, Pictures: disk,
+			Edits: &conversations.InboundEdits{DB: a.DB, Events: a.Events, Clock: a.Clock},
 			Receiver: &conversations.ReceiveInboundMessage{
 				DB: a.DB, Events: a.Events, Clock: a.Clock, Disk: disk, DiskName: diskName, Queue: a.Queue,
 				ReopenWindow: a.Config.Channels.Email.Inbound.ReopenWindow,
